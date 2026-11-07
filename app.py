@@ -22,10 +22,14 @@ def init_db():
                   shift TEXT,
                   lux TEXT,
                   temp TEXT,
+                  bgm TEXT,
                   checklist TEXT,
                   status TEXT,
                   follower TEXT,
                   note TEXT,
+                  lux_issue TEXT,
+                  temp_issue TEXT,
+                  db_issue TEXT,
                   created_at TIMESTAMP DEFAULT NOW())''')
     conn.commit()
     conn.close()
@@ -40,8 +44,12 @@ def submit():
     data = request.json
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("INSERT INTO records (name, shift, lux, temp, checklist, status, follower, note) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", 
-              (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('checklist'), data.get('status'), data.get('follower'), data.get('note')))
+    c.execute("""INSERT INTO records 
+                 (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue) 
+                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+              (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
+               data.get('checklist'), data.get('status'), data.get('follower'), data.get('note'),
+               data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue')))
     conn.commit()
     conn.close()
     return jsonify({"message": "交更成功！", "status": "success"})
@@ -50,17 +58,18 @@ def submit():
 def get_records():
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("SELECT name, shift, lux, temp, checklist, status, follower, note, created_at FROM records ORDER BY id DESC")
+    c.execute("""SELECT name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, created_at 
+                 FROM records ORDER BY id DESC""")
     rows = c.fetchall()
     conn.close()
 
     records = []
     for row in rows:
         records.append({
-            "name": row[0], "shift": row[1], "lux": row[2], 
-            "temp": row[3], "checklist": row[4], "status": row[5], 
-            "follower": row[6], "note": row[7],
-            "created_at": str(row[8]) if row[8] else None
+            "name": row[0], "shift": row[1], "lux": row[2], "temp": row[3], "bgm": row[4],
+            "checklist": row[5], "status": row[6], "follower": row[7], "note": row[8],
+            "lux_issue": row[9], "temp_issue": row[10], "db_issue": row[11],
+            "created_at": str(row[12]) if row[12] else None
         })
     return jsonify(records)
 
