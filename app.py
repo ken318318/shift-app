@@ -8,7 +8,7 @@ CORS(app)
 
 # ⚠️ 極度重要：請將下面引號入面嘅字，換成你喺 Supabase Copy 落嚟嗰條完整網址！
 # 記得要將 [YOUR-PASSWORD] 換成你嘅密碼
-DB_URL = "postgresql://postgres.mwnwvpvmtjgqwchtpenv:[ye6fM4*ETc5nGiR]@aws-0-ap-south-1.pooler.supabase.com:5432/postgres"
+DB_URL = "postgresql://postgres.mwnwvpvmtjgqwchtpenv:KenShiftHandover2026@aws-0-ap-south-1.pooler.supabase.com:5432/postgres"
 
 def get_db_connection():
     conn = psycopg2.connect(DB_URL)
