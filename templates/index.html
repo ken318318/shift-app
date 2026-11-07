@@ -56,7 +56,7 @@ function submitForm() {
     }
 
     // 將資料發送去 Python
-    fetch('http://127.0.0.1:5000/api/submit', {
+    fetch('/api/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name, shift: shift, note: note })
@@ -79,7 +79,7 @@ function submitForm() {
 
 // 從 Python 後端讀取紀錄
 function displayRecords() {
-    fetch('http://127.0.0.1:5000/api/records')
+    fetch('/api/records')
     .then(response => response.json())
     .then(records => {
         let listDiv = document.getElementById('recordList');
