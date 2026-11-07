@@ -19,33 +19,26 @@
         
         .issue-group { display: block; background: #fff3cd; padding: 10px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 5px; }
         .issue-title { font-size: 12px; color: #856404; margin-bottom: 5px; font-weight: bold;}
-        
         .issue-item { border-bottom: 1px dashed #e0c97e; padding-bottom: 8px; margin-bottom: 8px; }
         .issue-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-        
         .issue-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px;}
         .issue-row select, .issue-row input { padding: 8px; font-size: 13px; }
         .issue-row .prefix { flex: 1; min-width: 60px; }
         .issue-row .table-num { flex: 1.5; min-width: 70px; }
         .issue-row .value { flex: 1.5; min-width: 70px; background: #fff; border: 1px solid #f5b041;}
-        
         .box-row { display: flex; gap: 5px; margin-top: 5px;}
         .box-item { flex: 1; }
         .box-item span { font-size: 11px; color: #856404; font-weight: bold; display: block; margin-bottom: 2px;}
         .box-item input { width: 100%; padding: 6px; font-size: 13px; border: 1px solid #f5b041; border-radius: 4px;}
-        
         .btn-add { background: #f5b041; color: white; border: none; border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; margin-top: 5px; display: inline-block; font-weight: bold;}
-
         button.submit-btn { width: 100%; padding: 14px; margin-top: 25px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold;}
         button.submit-btn:active { background: #1557b0; }
         #result { margin-top: 20px; color: #2ecc71; text-align: center; font-weight: bold; }
-        
         .record-card { background: #fff; border-left: 5px solid #1a73e8; padding: 15px; margin-bottom: 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .record-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; font-size: 14px; border-bottom: 1px dashed #eee; padding-bottom: 8px;}
         .record-data { font-size: 13px; color: #555; margin-bottom: 8px; background: #f4f6f8; padding: 8px; border-radius: 4px;}
         .issue-data { font-size: 13px; color: #d32f2f; margin-bottom: 8px; background: #ffebee; padding: 8px; border-radius: 4px; line-height: 1.5;}
         .record-note { font-size: 14px; white-space: pre-wrap; line-height: 1.5; color: #222;}
-        
         .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; color: white; white-space: nowrap;}
         .status-pending { background: #e67c73; }
         .status-processing { background: #f5b041; }
@@ -251,45 +244,45 @@
     function addNfcRow() {
         document.getElementById('nfc-container').insertAdjacentHTML('beforeend', `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div></div>`);
     }
-        function submitForm() {
-            let selectedHall = document.getElementById('nfc-hall-select').value;
-            let nfcDetails = [];
-            document.querySelectorAll('.nfc-item').forEach(item => {
-                let nfcPrefix = item.querySelector('.nfc-prefix').value;
-                let nfcTable = item.querySelector('.nfc-table').value;
-                let boxArray = [];
-                item.querySelectorAll('.nfc-box:checked').forEach(cb => boxArray.push(cb.value));
-                if (nfcTable || boxArray.length > 0) {
-                    let boxStr = boxArray.length > 0 ? `Box: ${boxArray.join(', ')}` : '未選Box';
-                    nfcDetails.push(`${nfcPrefix}${nfcTable} (${boxStr})`);
-                }
-            });
-            
-            let nfcNormalStr = `NFC正常: ${selectedHall}`;
-            let nfcIssueStr = nfcDetails.length > 0 ? `NFC異常: ${nfcDetails.join(', ')}` : '';
-            
-            let nfcChecklistArray = [nfcNormalStr];
-            if (nfcIssueStr) nfcChecklistArray.push(nfcIssueStr);
 
-            let checklistString = nfcChecklistArray.concat(Array.from(document.querySelectorAll('.check-item:checked')).map(cb => cb.value)).join(' | ');
-            let followerString = Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無';
+    function submitForm() {
+        let selectedHall = document.getElementById('nfc-hall-select').value;
+        let nfcDetails = [];
+        document.querySelectorAll('.nfc-item').forEach(item => {
+            let nfcPrefix = item.querySelector('.nfc-prefix').value;
+            let nfcTable = item.querySelector('.nfc-table').value;
+            let boxArray = [];
+            item.querySelectorAll('.nfc-box:checked').forEach(cb => boxArray.push(cb.value));
+            if (nfcTable || boxArray.length > 0) {
+                let boxStr = boxArray.length > 0 ? `Box: ${boxArray.join(', ')}` : '未選Box';
+                nfcDetails.push(`${nfcPrefix}${nfcTable} (${boxStr})`);
+            }
+        });
+        
+        let nfcNormalStr = `NFC正常: ${selectedHall}`;
+        let nfcIssueStr = nfcDetails.length > 0 ? `NFC個別異常: ${nfcDetails.join(', ')}` : '';
+        
+        let nfcChecklistArray = [nfcNormalStr];
+        if (nfcIssueStr) nfcChecklistArray.push(nfcIssueStr);
 
-            let luxIssue = Array.from(document.querySelectorAll('.lux-item')).map(item => {
-                let bStr = [];
-                if(item.querySelector('.lux-box1').value) bStr.push(`Box 1: ${item.querySelector('.lux-box1').value}`);
-                if(item.querySelector('.lux-box3').value) bStr.push(`Box 3: ${item.querySelector('.lux-box3').value}`);
-                if(item.querySelector('.lux-box6').value) bStr.push(`Box 6: ${item.querySelector('.lux-box6').value}`);
-                return (item.querySelector('.lux-table').value || bStr.length > 0) ? `${item.querySelector('.lux-prefix').value}${item.querySelector('.lux-table').value} (${bStr.join(', ')})` : "";
-            }).filter(Boolean).join(' | ');
+        let checklistString = nfcChecklistArray.concat(Array.from(document.querySelectorAll('.check-item:checked')).map(cb => cb.value)).join(' | ');
+        let followerString = Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無';
 
-            let tempIssue = Array.from(document.querySelectorAll('.temp-item')).map(item => {
-                return (item.querySelector('.temp-table').value || item.querySelector('.temp-value').value) ? `${item.querySelector('.temp-prefix').value}${item.querySelector('.temp-table').value} (數值: ${item.querySelector('.temp-value').value})` : "";
-            }).filter(Boolean).join(' | ');
+        let luxIssue = Array.from(document.querySelectorAll('.lux-item')).map(item => {
+            let bStr = [];
+            if(item.querySelector('.lux-box1').value) bStr.push(`Box 1: ${item.querySelector('.lux-box1').value}`);
+            if(item.querySelector('.lux-box3').value) bStr.push(`Box 3: ${item.querySelector('.lux-box3').value}`);
+            if(item.querySelector('.lux-box6').value) bStr.push(`Box 6: ${item.querySelector('.lux-box6').value}`);
+            return (item.querySelector('.lux-table').value || bStr.length > 0) ? `${item.querySelector('.lux-prefix').value}${item.querySelector('.lux-table').value} (${bStr.join(', ')})` : "";
+        }).filter(Boolean).join(' | ');
 
-            let dbIssue = Array.from(document.querySelectorAll('.bgm-item')).map(item => {
-                return (item.querySelector('.bgm-table').value || item.querySelector('.bgm-value').value) ? `${item.querySelector('.bgm-prefix').value}${item.querySelector('.bgm-table').value} (數值: ${item.querySelector('.bgm-value').value})` : "";
-            }).filter(Boolean).join(' | ');
+        let tempIssue = Array.from(document.querySelectorAll('.temp-item')).map(item => {
+            return (item.querySelector('.temp-table').value || item.querySelector('.temp-value').value) ? `${item.querySelector('.temp-prefix').value}${item.querySelector('.temp-table').value} (數值: ${item.querySelector('.temp-value').value})` : "";
+        }).filter(Boolean).join(' | ');
 
+        let dbIssue = Array.from(document.querySelectorAll('.bgm-item')).map(item => {
+            return (item.querySelector('.bgm-table').value || item.querySelector('.bgm-value').value) ? `${item.querySelector('.bgm-prefix').value}${item.querySelector('.bgm-table').value} (數值: ${item.querySelector('.bgm-value').value})` : "";
+        }).filter(Boolean).join(' | ');
             let data = {
                 name: document.getElementById('staffName').value, shift: document.getElementById('shiftType').value,
                 lux: document.getElementById('lux').value, temp: document.getElementById('temp').value, bgm: document.getElementById('bgm').value,
@@ -331,7 +324,7 @@
                 records.forEach(r => {
                     let statusClass = r.status === "已處理" ? "status-done" : (r.status === "跟進中" ? "status-processing" : "status-pending");
                     
-                    let issuesHtml = (r.lux_issue ? `<div class="issue-data">⚠️ Lux異常: ${r.lux_issue}</div>` : '') + (r.temp_issue ? `<div class="issue-data">⚠️ 溫度異常: ${r.temp_issue}</div>` : '') + (r.db_issue ? `<div class="issue-data">⚠️ 分貝異常: ${r.db_issue}</div>` : '');
+                    let issuesHtml = (r.lux_issue ? `<div class="issue-data">⚠️ Lux個別異常: ${r.lux_issue}</div>` : '') + (r.temp_issue ? `<div class="issue-data">⚠️ 溫度個別異常: ${r.temp_issue}</div>` : '') + (r.db_issue ? `<div class="issue-data">⚠️ 分貝個別異常: ${r.db_issue}</div>` : '');
                     
                     let checkItemsHtml = '';
                     if (r.checklist) {
@@ -340,7 +333,9 @@
                         let issueItems = [];
                         items.forEach(item => {
                             if (item.includes('異常') || item.includes('⚠️')) {
-                                issueItems.push(item.replace('✅ 檢查: ', ''));
+                                let text = item.replace('✅ 檢查: ', '');
+                                text = text.replace(/異常/g, '個別異常');
+                                issueItems.push(text);
                             } else {
                                 normalItems.push(item);
                             }
@@ -356,8 +351,8 @@
                     }
 
                     let luxStr = r.lux === '450-650' ? 'Lux數值大致在於450-650之間' : `Lux: ${r.lux}`;
-                    let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常') ? '全場溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
-                    let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常') ? '全場分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
+                    let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常') ? '溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
+                    let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常') ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
                     let dataHtml = `<div class="record-data">📊 ${luxStr} | ${tempStr} | ${bgmStr}</div>`;
 
                     let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${new Date(r.created_at).toLocaleString('zh-HK')}</div>` : "";
@@ -381,9 +376,9 @@
                                 <div><strong>${r.name} (${r.shift})</strong>${timeStr}</div>
                                 <span class="status-badge ${statusClass}">${r.status}</span>
                             </div>
-                            ${checkItemsHtml}
                             ${dataHtml}
                             ${issuesHtml}
+                            ${checkItemsHtml}
                             ${followerHtml}
                             <div class="record-note">${r.note}</div>
                         </div>
