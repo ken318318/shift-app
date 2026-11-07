@@ -6,15 +6,14 @@ import os
 app = Flask(__name__)
 CORS(app)
 
-# ⚠️ 極度重要：請將下面引號入面嘅字，換成你喺 Supabase Copy 落嚟嗰條完整網址！
-# 記得要將 [YOUR-PASSWORD] 換成你嘅密碼
+# ⚠️ 呢度保留你原本嗰條 Supabase 網址
 DB_URL = "postgresql://postgres.mwnwvpvmtjgqwchtpenv:KenShiftHandover2026@aws-0-ap-south-1.pooler.supabase.com:5432/postgres"
 
 def get_db_connection():
     conn = psycopg2.connect(DB_URL)
     return conn
 
-# 初始化數據庫（建立資料表）
+# 初始化數據庫（加入新欄位 lux, temp, status）
 def init_db():
     conn = get_db_connection()
     c = conn.cursor()
@@ -22,11 +21,14 @@ def init_db():
                  (id SERIAL PRIMARY KEY,
                   name TEXT,
                   shift TEXT,
+                  lux TEXT,
+                  temp TEXT,
+                  checklist TEXT,
+                  status TEXT,
                   note TEXT)''')
     conn.commit()
     conn.close()
 
-# 每次啟動程式前先檢查數據庫
 try:
     init_db()
 except Exception as e:
@@ -36,16 +38,12 @@ except Exception as e:
 @app.route('/api/submit', methods=['POST'])
 def submit():
     data = request.json
-    name = data.get('name')
-    shift = data.get('shift')
-    note = data.get('note')
-
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("INSERT INTO records (name, shift, note) VALUES (%s, %s, %s)", (name, shift, note))
+    c.execute("INSERT INTO records (name, shift, lux, temp, checklist, status, note) VALUES (%s, %s, %s, %s, %s, %s, %s)", 
+              (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('checklist'), data.get('status'), data.get('note')))
     conn.commit()
     conn.close()
-
     return jsonify({"message": "交更成功！", "status": "success"})
 
 # 2. 讀取所有交更紀錄嘅 API
@@ -53,21 +51,19 @@ def submit():
 def get_records():
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("SELECT name, shift, note FROM records ORDER BY id DESC")
+    c.execute("SELECT name, shift, lux, temp, checklist, status, note FROM records ORDER BY id DESC")
     rows = c.fetchall()
     conn.close()
 
     records = []
     for row in rows:
         records.append({
-            "name": row[0],
-            "shift": row[1],
-            "note": row[2]
+            "name": row[0], "shift": row[1], "lux": row[2], 
+            "temp": row[3], "checklist": row[4], "status": row[5], "note": row[6]
         })
-
     return jsonify(records)
 
-# 派發首頁 index.html
+# 派發首頁
 @app.route('/')
 def index():
     return render_template('index.html')
