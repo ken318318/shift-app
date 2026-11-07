@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify,send_from_directory
+from flask import Flask, request, jsonify,render_template
 from flask_cors import CORS
 import os
 
@@ -27,6 +27,6 @@ def get_records():
 # 派發首頁 index.html
 @app.route('/')
 def index():
-    return send_from_directory(os.patf.dirname(_file_), 'index.html')
+    return render_template('index.html')
 if __name__ == '__main__':
     app.run()
