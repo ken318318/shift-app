@@ -53,7 +53,6 @@
     </style>
 </head>
 <body>
-
 <div class="card" id="list-container">
     <h2>📋 歷史交更紀錄</h2>
     <button class="submit-btn" onclick="showForm()" style="margin-top: 0; margin-bottom: 20px; background-color: #2ecc71;">📝 新增交更紀錄</button>
@@ -139,8 +138,7 @@
             </div>
         </div>
     </div>
-
-<div class="row">
+    <div class="row">
         <div>
             <label>BGM 分貝：</label>
             <select id="bgm">
@@ -216,10 +214,10 @@
     
     <label>負責跟進人 (可多選)：</label>
     <div class="checkbox-group" style="display:block;">
-        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Carman" class="follower-item"> Carman (女)</label>
-        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="David" class="follower-item"> David (男)</label>
-        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Nam" class="follower-item"> Nam (男)</label>
-        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Stella" class="follower-item"> Stella (女)</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Carman" class="follower-item"> Carman</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="David" class="follower-item"> David</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Nam" class="follower-item"> Nam</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Stella" class="follower-item"> Stella</label>
     </div>
 
     <label>詳細交更事項：</label>
@@ -228,33 +226,31 @@
     <button class="submit-btn" onclick="submitForm()">提交交更</button>
     <div id="result"></div>
 </div>
+<script>
+    function showForm() {
+        document.getElementById('list-container').style.display = 'none';
+        document.getElementById('form-container').style.display = 'block';
+        window.scrollTo(0, 0); 
+    }
+    function showList() {
+        document.getElementById('form-container').style.display = 'none';
+        document.getElementById('list-container').style.display = 'block';
+        displayRecords(); 
+        window.scrollTo(0, 0);
+    }
 
- <script>
-        function showForm() {
-            document.getElementById('list-container').style.display = 'none';
-            document.getElementById('form-container').style.display = 'block';
-            window.scrollTo(0, 0); 
-        }
-        function showList() {
-            document.getElementById('form-container').style.display = 'none';
-            document.getElementById('list-container').style.display = 'block';
-            displayRecords(); 
-            window.scrollTo(0, 0);
-        }
-
-        function addLuxRow() {
-            document.getElementById('lux-container').insertAdjacentHTML('beforeend', `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div></div>`);
-        }
-        function addTempRow() {
-            document.getElementById('temp-container').insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div></div>`);
-        }
-        function addBgmRow() {
-            document.getElementById('bgm-container').insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div></div>`);
-        }
-        function addNfcRow() {
-            document.getElementById('nfc-container').insertAdjacentHTML('beforeend', `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div></div>`);
-        }
-
+    function addLuxRow() {
+        document.getElementById('lux-container').insertAdjacentHTML('beforeend', `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div></div>`);
+    }
+    function addTempRow() {
+        document.getElementById('temp-container').insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div></div>`);
+    }
+    function addBgmRow() {
+        document.getElementById('bgm-container').insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div></div>`);
+    }
+    function addNfcRow() {
+        document.getElementById('nfc-container').insertAdjacentHTML('beforeend', `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div></div>`);
+    }
         function submitForm() {
             let selectedHall = document.getElementById('nfc-hall-select').value;
             let nfcDetails = [];
@@ -269,7 +265,6 @@
                 }
             });
             
-            // 將 NFC 分開「正常」同「異常」字串
             let nfcNormalStr = `NFC正常: ${selectedHall}`;
             let nfcIssueStr = nfcDetails.length > 0 ? `NFC異常: ${nfcDetails.join(', ')}` : '';
             
@@ -351,29 +346,29 @@
                             }
                         });
                         
-                        // 異常放前面 (紅色)
                         issueItems.forEach(item => {
                             issuesHtml += `<div class="issue-data">⚠️ ${item}</div>`;
                         });
                         
-                        // 正常放後面 (綠色)
                         if (normalItems.length > 0) {
                             checkItemsHtml = `<div class="record-data">✅ 檢查: ${normalItems.join(' | ')}</div>`;
                         }
                     }
 
+                    let luxStr = r.lux === '450-650' ? 'Lux數值大致在於450-650之間' : `Lux: ${r.lux}`;
+                    let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常') ? '全場溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
+                    let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常') ? '全場分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
+                    let dataHtml = `<div class="record-data">📊 ${luxStr} | ${tempStr} | ${bgmStr}</div>`;
+
                     let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${new Date(r.created_at).toLocaleString('zh-HK')}</div>` : "";
                     
-                    // 處理跟進人公仔顏色
                     let followerHtml = '';
                     if (r.follower && r.follower !== '無') {
                         let names = r.follower.split(', ');
                         let iconsHtml = names.map(name => {
                             if (name.includes('Carman') || name.includes('Stella')) {
-                                // 女仔 粉紅色
                                 return `<span style="margin-right: 8px; font-weight: bold; color: #e91e63;"><svg viewBox="0 0 24 24" width="14" height="14" fill="#e91e63" style="vertical-align: text-top; margin-right: 2px;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>${name}</span>`;
                             } else {
-                                // 男仔 藍色
                                 return `<span style="margin-right: 8px; font-weight: bold; color: #1a73e8;"><svg viewBox="0 0 24 24" width="14" height="14" fill="#1a73e8" style="vertical-align: text-top; margin-right: 2px;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>${name}</span>`;
                             }
                         }).join('');
@@ -386,9 +381,9 @@
                                 <div><strong>${r.name} (${r.shift})</strong>${timeStr}</div>
                                 <span class="status-badge ${statusClass}">${r.status}</span>
                             </div>
-                            <div class="record-data">📊 Lux: ${r.lux} | 溫度: ${r.temp} | 分貝: ${r.bgm}</div>
-                            ${issuesHtml}
                             ${checkItemsHtml}
+                            ${dataHtml}
+                            ${issuesHtml}
                             ${followerHtml}
                             <div class="record-note">${r.note}</div>
                         </div>
