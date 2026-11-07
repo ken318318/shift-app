@@ -9,7 +9,7 @@
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
         h2 { text-align: center; color: #333; margin-top: 0; }
         label { display: block; margin-top: 15px; font-weight: bold; font-size: 14px; color: #444; }
-        input[type="text"], textarea, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px;}
+        input[type="text"], textarea, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; background-color: #fff;}
         .row { display: flex; gap: 10px; }
         .row > div { flex: 1; }
         
@@ -22,13 +22,12 @@
         
         #result { margin-top: 20px; color: #2ecc71; text-align: center; font-weight: bold; }
         
-        /* 紀錄卡片樣式 */
         .record-card { background: #fff; border-left: 5px solid #1a73e8; padding: 15px; margin-bottom: 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 14px; border-bottom: 1px dashed #eee; padding-bottom: 8px;}
+        .record-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; font-size: 14px; border-bottom: 1px dashed #eee; padding-bottom: 8px;}
         .record-data { font-size: 13px; color: #555; margin-bottom: 8px; background: #f4f6f8; padding: 8px; border-radius: 4px;}
         .record-note { font-size: 14px; white-space: pre-wrap; line-height: 1.5; color: #222;}
         
-        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; color: white;}
+        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; color: white; white-space: nowrap;}
         .status-pending { background: #e67c73; }
         .status-processing { background: #f5b041; }
         .status-done { background: #2ecc71; }
@@ -41,29 +40,53 @@
         <div class="row">
             <div>
                 <label>交更人：</label>
-                <input type="text" id="staffName" placeholder="例如：Ken">
+                <select id="staffName">
+                    <option value="" disabled selected>請選擇...</option>
+                    <option value="龍ken (8000285)">龍ken (8000285)</option>
+                    <option value="陳ken (80571)">陳ken (80571)</option>
+                    <option value="Fish (8047495)">Fish (8047495)</option>
+                    <option value="阿能 (8055532)">阿能 (8055532)</option>
+                    <option value="阿威 (8055475)">阿威 (8055475)</option>
+                    <option value="阿倫 (8017308)">阿倫 (8017308)</option>
+                    <option value="阿mio (298)">阿mio (298)</option>
+                    <option value="Paco (8047393)">Paco (8047393)</option>
+                    <option value="小信 (8056027)">小信 (8056027)</option>
+                    <option value="kiko (1227)">kiko (1227)</option>
+                    <option value="Wawa (1145)">Wawa (1145)</option>
+                    <option value="Ivy (8001161)">Ivy (8001161)</option>
+                    <option value="秋龍 (67162)">秋龍 (67162)</option>
+                    <option value="炳 (6234)">炳 (6234)</option>
+                </select>
             </div>
             <div>
                 <label>更份：</label>
-                <input type="text" id="shiftType" placeholder="例如：早更">
+                <input type="text" id="shiftType" value="早更" readonly style="background-color: #e9ecef; cursor: not-allowed;">
             </div>
         </div>
 
         <div class="row">
             <div>
-                <label>全場 Lux (數值)：</label>
-                <input type="text" id="lux" placeholder="例如：450-650">
+                <label>全場 Lux：</label>
+                <select id="lux">
+                    <option value="< 450">&lt; 450</option>
+                    <option value="450-650" selected>450 - 650</option>
+                    <option value="> 650">&gt; 650</option>
+                </select>
             </div>
             <div>
                 <label>溫度/分貝：</label>
-                <input type="text" id="temp" placeholder="例如：正常">
+                <select id="temp">
+                    <option value="正常" selected>正常</option>
+                    <option value="偏高">偏高</option>
+                    <option value="偏低">偏低</option>
+                </select>
             </div>
         </div>
 
         <label>日常必須檢查項目：</label>
         <div class="checkbox-group">
             <label><input type="checkbox" value="Hall5 NFC 檢測正常" class="check-item"> Hall5 NFC 檢測正常</label>
-            <label><input type="checkbox" value="Display 屏幕正常" class="check-item"> Display 屏幕正常 (無黑屏/LED熄滅)</label>
+            <label><input type="checkbox" value="Display 屏幕正常" class="check-item"> Display 屏幕正常</label>
             <label><input type="checkbox" value="掃描槍運作正常" class="check-item"> 掃描槍運作正常</label>
             <label><input type="checkbox" value="賭檯木紋/地墊無明顯破損" class="check-item"> 賭檯木紋/地墊無明顯破損</label>
         </div>
@@ -74,15 +97,22 @@
             <option value="跟進中">跟進中 (已Send Email/待零件)</option>
             <option value="已處理">已處理 (已維修/已修復)</option>
         </select>
+        
+        <label>負責跟進人 (可多選)：</label>
+        <div class="checkbox-group">
+            <label><input type="checkbox" value="Carman" class="follower-item"> Carman</label>
+            <label><input type="checkbox" value="David" class="follower-item"> David</label>
+            <label><input type="checkbox" value="Nam" class="follower-item"> Nam</label>
+            <label><input type="checkbox" value="Stella" class="follower-item"> Stella</label>
+        </div>
 
         <label>詳細交更事項：</label>
-        <textarea id="notes" rows="6" placeholder="請輸入詳細問題、位置及跟進情況...&#10;例如：&#10;1. NB1817 細mon (黑屏) - 已處理&#10;2. Hall3 PLA16 植物枯萎 - 已通知花房"></textarea>
+        <textarea id="notes" rows="5" placeholder="請輸入詳細問題、位置及跟進情況..."></textarea>
 
         <button onclick="submitForm()">提交交更</button>
         <div id="result"></div>
     </div>
 
-    <!-- 歷史紀錄區 -->
     <div class="card" style="margin-top: 20px;">
         <h3 style="text-align: center; color: #555;">📋 歷史交更紀錄</h3>
         <div id="recordList"></div>
@@ -95,6 +125,11 @@
             checkboxes.forEach((cb) => checklistArray.push(cb.value));
             let checklistString = checklistArray.join(' | ');
 
+            let followerCheckboxes = document.querySelectorAll('.follower-item:checked');
+            let followerArray = [];
+            followerCheckboxes.forEach((cb) => followerArray.push(cb.value));
+            let followerString = followerArray.length > 0 ? followerArray.join(', ') : '無';
+
             let data = {
                 name: document.getElementById('staffName').value,
                 shift: document.getElementById('shiftType').value,
@@ -102,11 +137,16 @@
                 temp: document.getElementById('temp').value,
                 checklist: checklistString,
                 status: document.getElementById('status').value,
+                follower: followerString,
                 note: document.getElementById('notes').value
             };
 
-            if (!data.name || !data.note) {
-                alert("請填寫姓名同交更事項！");
+            if (!data.name) {
+                alert("請選擇交更人！");
+                return;
+            }
+            if (!data.note) {
+                alert("請填寫交更事項！");
                 return;
             }
 
@@ -117,14 +157,11 @@
             })
             .then(response => response.json())
             .then(res => {
-                document.getElementById('result').innerHTML = "✅ 交更成功！";
-                // 清空表單
+                document.getElementById('result').innerHTML = "✅ " + data.name + " 交更成功！";
                 document.getElementById('staffName').value = '';
-                document.getElementById('shiftType').value = '';
-                document.getElementById('lux').value = '';
-                document.getElementById('temp').value = '';
                 document.getElementById('notes').value = '';
                 document.querySelectorAll('.check-item').forEach(cb => cb.checked = false);
+                document.querySelectorAll('.follower-item').forEach(cb => cb.checked = false);
                 displayRecords();
             })
             .catch(error => {
@@ -153,16 +190,29 @@
                     if (r.lux) extraData.push(`Lux: ${r.lux}`);
                     if (r.temp) extraData.push(`溫度: ${r.temp}`);
                     let extraHtml = extraData.length > 0 ? `<div class="record-data">📊 ${extraData.join(' | ')}</div>` : '';
+                    
                     let checklistHtml = r.checklist ? `<div class="record-data">✅ 檢查: ${r.checklist}</div>` : '';
+                    
+                    let followerHtml = (r.follower && r.follower !== '無') ? `<div class="record-data" style="background:#fff3cd; color:#856404;">👤 跟進人: ${r.follower}</div>` : '';
+
+                    let timeStr = "";
+                    if (r.created_at) {
+                        let d = new Date(r.created_at);
+                        timeStr = `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${d.toLocaleString('zh-HK')}</div>`;
+                    }
 
                     html += `
                         <div class="record-card">
                             <div class="record-header">
-                                <strong>${r.name} (${r.shift})</strong>
+                                <div>
+                                    <strong>${r.name} (${r.shift})</strong>
+                                    ${timeStr} 
+                                </div>
                                 <span class="status-badge ${statusClass}">${r.status}</span>
                             </div>
                             ${extraHtml}
                             ${checklistHtml}
+                            ${followerHtml}
                             <div class="record-note">${r.note}</div>
                         </div>
                     `;
