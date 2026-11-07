@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>工作交更系統</title>
+    <title>BS交更系統</title>
     <style>
         body { font-family: sans-serif; background: #f0f2f5; padding: 15px; margin: 0; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 500px; margin: auto; margin-bottom: 20px;}
         h2 { text-align: center; color: #333; margin-top: 0; }
         label { display: block; margin-top: 15px; font-weight: bold; font-size: 14px; color: #444; }
         input[type="text"], textarea, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; background-color: #fff;}
@@ -54,8 +54,17 @@
 </head>
 <body>
 
-<div class="card">
-    <h2>📝 工作交更表</h2>
+<!-- ================= 歷史紀錄區 (預設顯示) ================= -->
+<div class="card" id="list-container">
+    <h2>📋 歷史交更紀錄</h2>
+    <button class="submit-btn" onclick="showForm()" style="margin-top: 0; margin-bottom: 20px; background-color: #2ecc71;">📝 新增交更紀錄</button>
+    <div id="recordList"></div>
+</div>
+
+<!-- ================= 交更表單區 (預設隱藏) ================= -->
+<div class="card" id="form-container" style="display: none;">
+    <h2>📝 BS交更內容</h2>
+    <button type="button" class="btn-add" style="background-color: #e67c73; width: 100%; margin-bottom: 15px; padding: 10px; font-size: 14px;" onclick="showList()">❌ 取消並返回紀錄</button>
     
     <div class="row">
         <div>
@@ -193,41 +202,49 @@
         <button type="button" class="btn-add" onclick="addNfcRow()">+ 新增位置</button>
     </div>
 
-<label>其他日常檢查項目：</label>
-        <div class="checkbox-group" style="display:block;">
-            <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Display 屏幕正常" class="check-item"> Display 屏幕正常</label>
-            <label style="width:100%; margin-top:8px;"><input type="checkbox" value="掃描槍運作正常" class="check-item"> 掃描槍運作正常</label>
-            <label style="width:100%; margin-top:8px;"><input type="checkbox" value="賭檯木紋/地墊無明顯破損" class="check-item"> 賭檯木紋/地墊無明顯破損</label>
-        </div>
-
-        <label>跟進狀態：</label>
-        <select id="status">
-            <option value="待處理">待處理 (需通知相關部門)</option>
-            <option value="跟進中">跟進中 (已Send Email/待零件)</option>
-            <option value="已處理">已處理 (已維修/已修復)</option>
-        </select>
-        
-        <label>負責跟進人 (可多選)：</label>
-        <div class="checkbox-group" style="display:block;">
-            <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Carman" class="follower-item"> Carman</label>
-            <label style="width:100%; margin-top:8px;"><input type="checkbox" value="David" class="follower-item"> David</label>
-            <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Nam" class="follower-item"> Nam</label>
-            <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Stella" class="follower-item"> Stella</label>
-        </div>
-
-        <label>詳細交更事項：</label>
-        <textarea id="notes" rows="4" placeholder="請輸入詳細問題、位置及跟進情況..."></textarea>
-
-        <button class="submit-btn" onclick="submitForm()">提交交更</button>
-        <div id="result"></div>
+    <label>其他日常檢查項目：</label>
+    <div class="checkbox-group" style="display:block;">
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Display 屏幕正常" class="check-item"> Display 屏幕正常</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="掃描槍運作正常" class="check-item"> 掃描槍運作正常</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="賭檯木紋/地墊無明顯破損" class="check-item"> 賭檯木紋/地墊無明顯破損</label>
     </div>
 
-    <div class="card" style="margin-top: 20px;">
-        <h3 style="text-align: center; color: #555;">📋 歷史交更紀錄</h3>
-        <div id="recordList"></div>
+    <label>跟進狀態：</label>
+    <select id="status">
+        <option value="待處理">待處理 (需通知相關部門)</option>
+        <option value="跟進中">跟進中 (已Send Email/待零件)</option>
+        <option value="已處理">已處理 (已維修/已修復)</option>
+    </select>
+    
+    <label>負責跟進人 (可多選)：</label>
+    <div class="checkbox-group" style="display:block;">
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Carman" class="follower-item"> Carman</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="David" class="follower-item"> David</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Nam" class="follower-item"> Nam</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Stella" class="follower-item"> Stella</label>
     </div>
 
-    <script>
+    <label>詳細交更事項：</label>
+    <textarea id="notes" rows="4" placeholder="請輸入詳細問題、位置及跟進情況..."></textarea>
+
+    <button class="submit-btn" onclick="submitForm()">提交交更</button>
+    <div id="result"></div>
+</div>
+
+<script>
+        // 切換介面功能
+        function showForm() {
+            document.getElementById('list-container').style.display = 'none';
+            document.getElementById('form-container').style.display = 'block';
+            window.scrollTo(0, 0); // 自動跳到頂部
+        }
+        function showList() {
+            document.getElementById('form-container').style.display = 'none';
+            document.getElementById('list-container').style.display = 'block';
+            displayRecords(); // 刷新列表
+            window.scrollTo(0, 0);
+        }
+
         function addLuxRow() {
             document.getElementById('lux-container').innerHTML += `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div></div>`;
         }
@@ -250,7 +267,8 @@
                 let boxArray = [];
                 item.querySelectorAll('.nfc-box:checked').forEach(cb => boxArray.push(cb.value));
                 if (nfcTable || boxArray.length > 0) {
-                    nfcDetails.push(`${nfcPrefix}${nfcTable} [${boxArray.length > 0 ? boxArray.join(', ') : '未選Box'}]`);
+                    let boxStr = boxArray.length > 0 ? `Box: ${boxArray.join(', ')}` : '未選Box';
+                    nfcDetails.push(`${nfcPrefix}${nfcTable} (${boxStr})`);
                 }
             });
             let nfcStr = `NFC: 檢測 ${selectedHall}`;
@@ -261,18 +279,18 @@
 
             let luxIssue = Array.from(document.querySelectorAll('.lux-item')).map(item => {
                 let bStr = [];
-                if(item.querySelector('.lux-box1').value) bStr.push(`B1:${item.querySelector('.lux-box1').value}`);
-                if(item.querySelector('.lux-box3').value) bStr.push(`B3:${item.querySelector('.lux-box3').value}`);
-                if(item.querySelector('.lux-box6').value) bStr.push(`B6:${item.querySelector('.lux-box6').value}`);
-                return (item.querySelector('.lux-table').value || bStr.length > 0) ? `${item.querySelector('.lux-prefix').value}${item.querySelector('.lux-table').value} (${bStr.join(',')})` : "";
+                if(item.querySelector('.lux-box1').value) bStr.push(`Box 1: ${item.querySelector('.lux-box1').value}`);
+                if(item.querySelector('.lux-box3').value) bStr.push(`Box 3: ${item.querySelector('.lux-box3').value}`);
+                if(item.querySelector('.lux-box6').value) bStr.push(`Box 6: ${item.querySelector('.lux-box6').value}`);
+                return (item.querySelector('.lux-table').value || bStr.length > 0) ? `${item.querySelector('.lux-prefix').value}${item.querySelector('.lux-table').value} (${bStr.join(', ')})` : "";
             }).filter(Boolean).join(' | ');
 
             let tempIssue = Array.from(document.querySelectorAll('.temp-item')).map(item => {
-                return (item.querySelector('.temp-table').value || item.querySelector('.temp-value').value) ? `${item.querySelector('.temp-prefix').value}${item.querySelector('.temp-table').value} (數值:${item.querySelector('.temp-value').value})` : "";
+                return (item.querySelector('.temp-table').value || item.querySelector('.temp-value').value) ? `${item.querySelector('.temp-prefix').value}${item.querySelector('.temp-table').value} (數值: ${item.querySelector('.temp-value').value})` : "";
             }).filter(Boolean).join(' | ');
 
             let dbIssue = Array.from(document.querySelectorAll('.bgm-item')).map(item => {
-                return (item.querySelector('.bgm-table').value || item.querySelector('.bgm-value').value) ? `${item.querySelector('.bgm-prefix').value}${item.querySelector('.bgm-table').value} (數值:${item.querySelector('.bgm-value').value})` : "";
+                return (item.querySelector('.bgm-table').value || item.querySelector('.bgm-value').value) ? `${item.querySelector('.bgm-prefix').value}${item.querySelector('.bgm-table').value} (數值: ${item.querySelector('.bgm-value').value})` : "";
             }).filter(Boolean).join(' | ');
 
             let data = {
@@ -290,7 +308,7 @@
             })
             .then(response => response.json())
             .then(res => {
-                document.getElementById('result').innerHTML = "✅ " + data.name + " 交更成功！";
+                alert("✅ " + data.name + " 交更成功！");
                 document.getElementById('staffName').value = ''; document.getElementById('notes').value = '';
                 document.querySelectorAll('.check-item, .follower-item').forEach(cb => cb.checked = false);
                 
@@ -303,7 +321,8 @@
                 document.getElementById('bgm-container').innerHTML = `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div></div>`;
                 document.getElementById('nfc-container').innerHTML = `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div></div>`;
                 
-                displayRecords();
+                // 成功後自動切換返去列表
+                showList();
             })
             .catch(error => { alert("連線失敗！"); console.error(error); });
         }
@@ -323,7 +342,7 @@
             }).catch(error => console.error("讀取失敗:", error));
         }
 
-        window.onload = function() { displayRecords(); };
+        window.onload = function() { showList(); };
     </script>
 </body>
 </html>
