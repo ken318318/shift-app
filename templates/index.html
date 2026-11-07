@@ -54,14 +54,12 @@
 </head>
 <body>
 
-<!-- ================= 歷史紀錄區 (預設顯示) ================= -->
 <div class="card" id="list-container">
     <h2>📋 歷史交更紀錄</h2>
     <button class="submit-btn" onclick="showForm()" style="margin-top: 0; margin-bottom: 20px; background-color: #2ecc71;">📝 新增交更紀錄</button>
     <div id="recordList"></div>
 </div>
 
-<!-- ================= 交更表單區 (預設隱藏) ================= -->
 <div class="card" id="form-container" style="display: none;">
     <h2>📝 BS交更內容</h2>
     <button type="button" class="btn-add" style="background-color: #e67c73; width: 100%; margin-bottom: 15px; padding: 10px; font-size: 14px;" onclick="showList()">❌ 取消並返回紀錄</button>
@@ -142,7 +140,7 @@
         </div>
     </div>
 
-    <div class="row">
+ <div class="row">
         <div>
             <label>BGM 分貝：</label>
             <select id="bgm">
@@ -232,30 +230,29 @@
 </div>
 
 <script>
-        // 切換介面功能
         function showForm() {
             document.getElementById('list-container').style.display = 'none';
             document.getElementById('form-container').style.display = 'block';
-            window.scrollTo(0, 0); // 自動跳到頂部
+            window.scrollTo(0, 0); 
         }
         function showList() {
             document.getElementById('form-container').style.display = 'none';
             document.getElementById('list-container').style.display = 'block';
-            displayRecords(); // 刷新列表
+            displayRecords(); 
             window.scrollTo(0, 0);
         }
 
         function addLuxRow() {
-            document.getElementById('lux-container').innerHTML += `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div></div>`;
+            document.getElementById('lux-container').insertAdjacentHTML('beforeend', `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div></div>`);
         }
         function addTempRow() {
-            document.getElementById('temp-container').innerHTML += `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div></div>`;
+            document.getElementById('temp-container').insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div></div>`);
         }
         function addBgmRow() {
-            document.getElementById('bgm-container').innerHTML += `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div></div>`;
+            document.getElementById('bgm-container').insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div></div>`);
         }
         function addNfcRow() {
-            document.getElementById('nfc-container').innerHTML += `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div></div>`;
+            document.getElementById('nfc-container').insertAdjacentHTML('beforeend', `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div></div>`);
         }
 
         function submitForm() {
@@ -321,7 +318,6 @@
                 document.getElementById('bgm-container').innerHTML = `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div></div>`;
                 document.getElementById('nfc-container').innerHTML = `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div></div>`;
                 
-                // 成功後自動切換返去列表
                 showList();
             })
             .catch(error => { alert("連線失敗！"); console.error(error); });
@@ -334,9 +330,40 @@
                 let html = "";
                 records.forEach(r => {
                     let statusClass = r.status === "已處理" ? "status-done" : (r.status === "跟進中" ? "status-processing" : "status-pending");
+                    
                     let issuesHtml = (r.lux_issue ? `<div class="issue-data">⚠️ Lux異常: ${r.lux_issue}</div>` : '') + (r.temp_issue ? `<div class="issue-data">⚠️ 溫度異常: ${r.temp_issue}</div>` : '') + (r.db_issue ? `<div class="issue-data">⚠️ 分貝異常: ${r.db_issue}</div>` : '');
+                    
+                    let checkItemsHtml = '';
+                    if (r.checklist) {
+                        let items = r.checklist.split(' | ');
+                        let normalItems = [];
+                        items.forEach(item => {
+                            if (item.includes('異常') || item.includes('⚠️')) {
+                                issuesHtml += `<div class="issue-data">⚠️ ${item.replace('✅ 檢查: ', '')}</div>`;
+                            } else {
+                                normalItems.push(item);
+                            }
+                        });
+                        if (normalItems.length > 0) {
+                            checkItemsHtml = `<div class="record-data">✅ 檢查: ${normalItems.join(' | ')}</div>`;
+                        }
+                    }
+
                     let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${new Date(r.created_at).toLocaleString('zh-HK')}</div>` : "";
-                    html += `<div class="record-card"><div class="record-header"><div><strong>${r.name} (${r.shift})</strong>${timeStr}</div><span class="status-badge ${statusClass}">${r.status}</span></div><div class="record-data">📊 Lux: ${r.lux} | 溫度: ${r.temp} | 分貝: ${r.bgm}</div>${issuesHtml}${r.checklist ? `<div class="record-data">✅ 檢查: ${r.checklist}</div>` : ''}${r.follower && r.follower !== '無' ? `<div class="record-data" style="background:#fff3cd; color:#856404;">👤 跟進人: ${r.follower}</div>` : ''}<div class="record-note">${r.note}</div></div>`;
+                    
+                    html += `
+                        <div class="record-card">
+                            <div class="record-header">
+                                <div><strong>${r.name} (${r.shift})</strong>${timeStr}</div>
+                                <span class="status-badge ${statusClass}">${r.status}</span>
+                            </div>
+                            <div class="record-data">📊 Lux: ${r.lux} | 溫度: ${r.temp} | 分貝: ${r.bgm}</div>
+                            ${issuesHtml}
+                            ${checkItemsHtml}
+                            ${r.follower && r.follower !== '無' ? `<div class="record-data" style="background:#fff3cd; color:#856404;">👤 跟進人: ${r.follower}</div>` : ''}
+                            <div class="record-note">${r.note}</div>
+                        </div>
+                    `;
                 });
                 listDiv.innerHTML = html;
             }).catch(error => console.error("讀取失敗:", error));
