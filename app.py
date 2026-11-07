@@ -1,5 +1,6 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,send_from_directory
 from flask_cors import CORS
+import os
 
 app = Flask(__name__)
 CORS(app) # 允許我哋個網頁呼叫呢個 API
@@ -23,6 +24,9 @@ def submit():
 @app.route('/api/records', methods=['GET'])
 def get_records():
     return jsonify(handover_records)
-
+# 派發首頁 index.html
+@app.route('/')
+def index():
+    return send_from_directory(os.patf.dirname(_file_), 'index.html')
 if __name__ == '__main__':
     app.run()
