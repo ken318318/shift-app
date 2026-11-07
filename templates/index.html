@@ -97,10 +97,7 @@
                 <div id="lux-container">
                     <div class="issue-item lux-item">
                         <div class="issue-row">
-                            <select class="prefix lux-prefix">
-                                <option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option>
-                                <option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option>
-                            </select>
+                            <select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select>
                             <input type="text" class="table-num lux-table" placeholder="台號">
                         </div>
                         <div class="box-row">
@@ -125,10 +122,7 @@
                 <div id="temp-container">
                     <div class="issue-item temp-item">
                         <div class="issue-row">
-                            <select class="prefix temp-prefix">
-                                <option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option>
-                                <option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option>
-                            </select>
+                            <select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select>
                             <input type="text" class="table-num temp-table" placeholder="台號">
                             <input type="text" class="value temp-value" placeholder="數值">
                         </div>
@@ -152,10 +146,7 @@
                 <div id="bgm-container">
                     <div class="issue-item bgm-item">
                         <div class="issue-row">
-                            <select class="prefix bgm-prefix">
-                                <option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option>
-                                <option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option>
-                            </select>
+                            <select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select>
                             <input type="text" class="table-num bgm-table" placeholder="台號">
                             <input type="text" class="value bgm-value" placeholder="數值">
                         </div>
@@ -171,38 +162,43 @@
         <option value="正常" selected>正常</option>
         <option value="異常">異常</option>
     </select>
-    <div id="nfc-issue-group" class="issue-group">
-        <div class="issue-title">請選擇異常位置：</div>
-        <div style="font-size:12px; font-weight:bold; color:#856404; margin-top:5px;">Hall：</div>
-        <div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:2px; gap:5px;">
-            <label style="width:45%;"><input type="checkbox" value="1" class="nfc-hall"> Hall 1</label>
-            <label style="width:45%;"><input type="checkbox" value="2" class="nfc-hall"> Hall 2</label>
-            <label style="width:45%;"><input type="checkbox" value="3" class="nfc-hall"> Hall 3</label>
-            <label style="width:45%;"><input type="checkbox" value="4" class="nfc-hall"> Hall 4</label>
-            <label style="width:45%;"><input type="checkbox" value="5" class="nfc-hall"> Hall 5</label>
-            <label style="width:45%;"><input type="checkbox" value="6" class="nfc-hall"> Hall 6</label>
-        </div>
-        <div style="font-size:12px; font-weight:bold; color:#856404; margin-top:8px;">台號 (可選)：</div>
-        <div class="issue-row" style="margin-top:2px;">
-            <select id="nfc-prefix" class="prefix">
-                <option value="">無</option>
-                <option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option>
-                <option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option>
-            </select>
-            <input type="text" id="nfc-table" placeholder="台號" class="table-num">
-        </div>
-        <div style="font-size:12px; font-weight:bold; color:#856404; margin-top:8px;">Box：</div>
-        <div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:2px; gap:5px;">
-            <label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label>
-            <label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label>
-            <label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label>
-            <label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label>
-            <label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label>
-            <label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label>
-        </div>
+    
+    <!-- 正常：選擇今日檢測的 Hall -->
+    <div id="nfc-normal-group" style="display: block; margin-top: 5px; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee;">
+        <div style="font-size:12px; font-weight:bold; color:#444; margin-bottom:5px;">請選擇今日檢測正常的 Hall：</div>
+        <select id="nfc-normal-hall">
+            <option value="Hall 1">Hall 1</option>
+            <option value="Hall 2">Hall 2</option>
+            <option value="Hall 3">Hall 3</option>
+            <option value="Hall 4">Hall 4</option>
+            <option value="Hall 5">Hall 5</option>
+            <option value="Hall 6">Hall 6</option>
+        </select>
     </div>
 
-<label>其他日常檢查項目：</label>
+    <!-- 異常：輸入台號與 Box -->
+    <div id="nfc-issue-group" class="issue-group">
+        <div class="issue-title">請輸入異常台號及 Box：</div>
+        <div id="nfc-container">
+            <div class="issue-item nfc-item">
+                <div class="issue-row">
+                    <select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select>
+                    <input type="text" class="table-num nfc-table" placeholder="台號">
+                </div>
+                <div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;">
+                    <label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label>
+                    <label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label>
+                    <label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label>
+                    <label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label>
+                    <label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label>
+                    <label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn-add" onclick="addNfcRow()">+ 新增位置</button>
+    </div>
+
+ <label>其他日常檢查項目：</label>
         <div class="checkbox-group" style="display:block;">
             <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Display 屏幕正常" class="check-item"> Display 屏幕正常</label>
             <label style="width:100%; margin-top:8px;"><input type="checkbox" value="掃描槍運作正常" class="check-item"> 掃描槍運作正常</label>
@@ -246,144 +242,88 @@
                 if (selectEl.value.includes('偏高') || selectEl.value.includes('偏低')) { groupEl.style.display = 'block'; } else { groupEl.style.display = 'none'; }
             }
         }
-
+        
         function toggleNFC() {
-            let nfcEl = document.getElementById('nfc');
-            let groupEl = document.getElementById('nfc-issue-group');
-            if (nfcEl.value === '異常') { groupEl.style.display = 'block'; } else { groupEl.style.display = 'none'; }
+            let nfcVal = document.getElementById('nfc').value;
+            if (nfcVal === '正常') {
+                document.getElementById('nfc-normal-group').style.display = 'block';
+                document.getElementById('nfc-issue-group').style.display = 'none';
+            } else {
+                document.getElementById('nfc-normal-group').style.display = 'none';
+                document.getElementById('nfc-issue-group').style.display = 'block';
+            }
         }
 
         function addLuxRow() {
-            let container = document.getElementById('lux-container');
-            let newRow = document.createElement('div');
-            newRow.className = 'issue-item lux-item';
-            newRow.innerHTML = `
-                <div class="issue-row">
-                    <select class="prefix lux-prefix">
-                        <option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option>
-                        <option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option>
-                    </select>
-                    <input type="text" class="table-num lux-table" placeholder="台號">
-                </div>
-                <div class="box-row">
-                    <div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div>
-                    <div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div>
-                    <div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div>
-                </div>
-            `;
-            container.appendChild(newRow);
+            document.getElementById('lux-container').innerHTML += `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div></div>`;
         }
-
         function addTempRow() {
-            let container = document.getElementById('temp-container');
-            let newRow = document.createElement('div');
-            newRow.className = 'issue-item temp-item';
-            newRow.innerHTML = `
-                <div class="issue-row">
-                    <select class="prefix temp-prefix">
-                        <option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option>
-                        <option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option>
-                    </select>
-                    <input type="text" class="table-num temp-table" placeholder="台號">
-                    <input type="text" class="value temp-value" placeholder="數值">
-                </div>
-            `;
-            container.appendChild(newRow);
+            document.getElementById('temp-container').innerHTML += `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div></div>`;
         }
-
         function addBgmRow() {
-            let container = document.getElementById('bgm-container');
-            let newRow = document.createElement('div');
-            newRow.className = 'issue-item bgm-item';
-            newRow.innerHTML = `
-                <div class="issue-row">
-                    <select class="prefix bgm-prefix">
-                        <option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option>
-                        <option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option>
-                    </select>
-                    <input type="text" class="table-num bgm-table" placeholder="台號">
-                    <input type="text" class="value bgm-value" placeholder="數值">
-                </div>
-            `;
-            container.appendChild(newRow);
+            document.getElementById('bgm-container').innerHTML += `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div></div>`;
+        }
+        function addNfcRow() {
+            document.getElementById('nfc-container').innerHTML += `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div></div>`;
         }
 
         function submitForm() {
-            let nfcEl = document.getElementById('nfc').value;
             let nfcStr = "";
-            if (nfcEl === '正常') {
-                nfcStr = "NFC: 正常";
+            if (document.getElementById('nfc').value === '正常') {
+                let selectedHall = document.getElementById('nfc-normal-hall').value;
+                nfcStr = `NFC: 正常 (${selectedHall})`;
             } else {
-                let hallArray = [];
-                document.querySelectorAll('.nfc-hall:checked').forEach(cb => hallArray.push("Hall " + cb.value));
-                let nfcPrefix = document.getElementById('nfc-prefix').value;
-                let nfcTable = document.getElementById('nfc-table').value;
-                let tableStr = (nfcPrefix && nfcTable) ? `${nfcPrefix}${nfcTable}` : '無';
-                let boxArray = [];
-                document.querySelectorAll('.nfc-box:checked').forEach(cb => boxArray.push(cb.value));
-                nfcStr = `NFC: 異常 (${hallArray.length > 0 ? hallArray.join(', ') : '未選'} | 台號: ${tableStr} | ${boxArray.length > 0 ? boxArray.join(', ') : '未選'})`;
+                let nfcDetails = [];
+                document.querySelectorAll('.nfc-item').forEach(item => {
+                    let nfcPrefix = item.querySelector('.nfc-prefix').value;
+                    let nfcTable = item.querySelector('.nfc-table').value;
+                    let boxArray = [];
+                    item.querySelectorAll('.nfc-box:checked').forEach(cb => boxArray.push(cb.value));
+                    if (nfcTable || boxArray.length > 0) {
+                        nfcDetails.push(`${nfcPrefix}${nfcTable} [${boxArray.length > 0 ? boxArray.join(', ') : '未選Box'}]`);
+                    }
+                });
+                nfcStr = `NFC: 異常 (${nfcDetails.join(' | ')})`;
             }
 
             let checklistString = [nfcStr].concat(Array.from(document.querySelectorAll('.check-item:checked')).map(cb => cb.value)).join(' | ');
             let followerString = Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無';
 
-            let luxIssue = "";
-            if (document.getElementById('lux-issue-group').style.display === 'block') {
-                luxIssue = Array.from(document.querySelectorAll('.lux-item')).map(item => {
-                    let bStr = [];
-                    if(item.querySelector('.lux-box1').value) bStr.push(`B1:${item.querySelector('.lux-box1').value}`);
-                    if(item.querySelector('.lux-box3').value) bStr.push(`B3:${item.querySelector('.lux-box3').value}`);
-                    if(item.querySelector('.lux-box6').value) bStr.push(`B6:${item.querySelector('.lux-box6').value}`);
-                    if (item.querySelector('.lux-table').value || bStr.length > 0) return `${item.querySelector('.lux-prefix').value}${item.querySelector('.lux-table').value} (${bStr.join(',')})`;
-                    return "";
-                }).filter(Boolean).join(' | ');
-            }
+            let luxIssue = document.getElementById('lux-issue-group').style.display === 'block' ? Array.from(document.querySelectorAll('.lux-item')).map(item => {
+                let bStr = [];
+                if(item.querySelector('.lux-box1').value) bStr.push(`B1:${item.querySelector('.lux-box1').value}`);
+                if(item.querySelector('.lux-box3').value) bStr.push(`B3:${item.querySelector('.lux-box3').value}`);
+                if(item.querySelector('.lux-box6').value) bStr.push(`B6:${item.querySelector('.lux-box6').value}`);
+                return (item.querySelector('.lux-table').value || bStr.length > 0) ? `${item.querySelector('.lux-prefix').value}${item.querySelector('.lux-table').value} (${bStr.join(',')})` : "";
+            }).filter(Boolean).join(' | ') : "";
 
-            let tempIssue = "";
-            if (document.getElementById('temp-issue-group').style.display === 'block') {
-                tempIssue = Array.from(document.querySelectorAll('.temp-item')).map(item => {
-                    if (item.querySelector('.temp-table').value || item.querySelector('.temp-value').value) return `${item.querySelector('.temp-prefix').value}${item.querySelector('.temp-table').value} (數值:${item.querySelector('.temp-value').value})`;
-                    return "";
-                }).filter(Boolean).join(' | ');
-            }
+            let tempIssue = document.getElementById('temp-issue-group').style.display === 'block' ? Array.from(document.querySelectorAll('.temp-item')).map(item => {
+                return (item.querySelector('.temp-table').value || item.querySelector('.temp-value').value) ? `${item.querySelector('.temp-prefix').value}${item.querySelector('.temp-table').value} (數值:${item.querySelector('.temp-value').value})` : "";
+            }).filter(Boolean).join(' | ') : "";
 
-            let dbIssue = "";
-            if (document.getElementById('bgm-issue-group').style.display === 'block') {
-                dbIssue = Array.from(document.querySelectorAll('.bgm-item')).map(item => {
-                    if (item.querySelector('.bgm-table').value || item.querySelector('.bgm-value').value) return `${item.querySelector('.bgm-prefix').value}${item.querySelector('.bgm-table').value} (數值:${item.querySelector('.bgm-value').value})`;
-                    return "";
-                }).filter(Boolean).join(' | ');
-            }
+            let dbIssue = document.getElementById('bgm-issue-group').style.display === 'block' ? Array.from(document.querySelectorAll('.bgm-item')).map(item => {
+                return (item.querySelector('.bgm-table').value || item.querySelector('.bgm-value').value) ? `${item.querySelector('.bgm-prefix').value}${item.querySelector('.bgm-table').value} (數值:${item.querySelector('.bgm-value').value})` : "";
+            }).filter(Boolean).join(' | ') : "";
 
             let data = {
-                name: document.getElementById('staffName').value,
-                shift: document.getElementById('shiftType').value,
-                lux: document.getElementById('lux').value,
-                temp: document.getElementById('temp').value,
-                bgm: document.getElementById('bgm').value,
-                checklist: checklistString,
-                status: document.getElementById('status').value,
-                follower: followerString,
-                note: document.getElementById('notes').value,
-                lux_issue: luxIssue,
-                temp_issue: tempIssue,
-                db_issue: dbIssue
+                name: document.getElementById('staffName').value, shift: document.getElementById('shiftType').value,
+                lux: document.getElementById('lux').value, temp: document.getElementById('temp').value, bgm: document.getElementById('bgm').value,
+                checklist: checklistString, status: document.getElementById('status').value, follower: followerString,
+                note: document.getElementById('notes').value, lux_issue: luxIssue, temp_issue: tempIssue, db_issue: dbIssue
             };
 
             if (!data.name) { alert("請選擇交更人！"); return; }
             if (!data.note) { alert("請填寫交更事項！"); return; }
 
             fetch('/api/submit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
             })
             .then(response => response.json())
             .then(res => {
                 document.getElementById('result').innerHTML = "✅ " + data.name + " 交更成功！";
-                document.getElementById('staffName').value = '';
-                document.getElementById('notes').value = '';
-                document.querySelectorAll('.check-item, .follower-item, .nfc-hall, .nfc-box').forEach(cb => cb.checked = false);
+                document.getElementById('staffName').value = ''; document.getElementById('notes').value = '';
+                document.querySelectorAll('.check-item, .follower-item').forEach(cb => cb.checked = false);
+                
                 document.getElementById('lux').value = '450-650'; toggleIssue('lux');
                 document.getElementById('temp').value = '正常 (22.5-24.5)'; toggleIssue('temp');
                 document.getElementById('bgm').value = '正常 (65-75)'; toggleIssue('bgm');
@@ -392,66 +332,29 @@
                 document.getElementById('lux-container').innerHTML = `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div></div>`;
                 document.getElementById('temp-container').innerHTML = `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div></div>`;
                 document.getElementById('bgm-container').innerHTML = `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div></div>`;
+                document.getElementById('nfc-container').innerHTML = `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div></div>`;
+                
                 displayRecords();
             })
             .catch(error => { alert("連線失敗！"); console.error(error); });
         }
 
         function displayRecords() {
-            fetch('/api/records')
-            .then(response => response.json())
-            .then(records => {
+            fetch('/api/records').then(res => res.json()).then(records => {
                 let listDiv = document.getElementById('recordList');
-                if (records.length === 0) {
-                    listDiv.innerHTML = "<p style='color: #888; text-align: center;'>暫時未有紀錄。</p >";
-                    return;
-                }
-
+                if (records.length === 0) { listDiv.innerHTML = "<p style='color: #888; text-align: center;'>暫時未有紀錄。</p >"; return; }
                 let html = "";
-                records.forEach(function(r) {
-                    let statusClass = "status-pending";
-                    if (r.status === "已處理") statusClass = "status-done";
-                    else if (r.status === "跟進中") statusClass = "status-processing";
-
-                    let dataHtml = `<div class="record-data">📊 Lux: ${r.lux} | 溫度: ${r.temp} | 分貝: ${r.bgm}</div>`;
-                    
-                    let issuesHtml = "";
-                    if (r.lux_issue) issuesHtml += `<div class="issue-data">⚠️ Lux異常: ${r.lux_issue}</div>`;
-                    if (r.temp_issue) issuesHtml += `<div class="issue-data">⚠️ 溫度異常: ${r.temp_issue}</div>`;
-                    if (r.db_issue) issuesHtml += `<div class="issue-data">⚠️ 分貝異常: ${r.db_issue}</div>`;
-
-                    let checklistHtml = r.checklist ? `<div class="record-data">✅ 檢查: ${r.checklist}</div>` : '';
-                    let followerHtml = (r.follower && r.follower !== '無') ? `<div class="record-data" style="background:#fff3cd; color:#856404;">👤 跟進人: ${r.follower}</div>` : '';
-
-                    let timeStr = "";
-                    if (r.created_at) {
-                        let d = new Date(r.created_at);
-                        timeStr = `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${d.toLocaleString('zh-HK')}</div>`;
-                    }
-
-                    html += `
-                        <div class="record-card">
-                            <div class="record-header">
-                                <div><strong>${r.name} (${r.shift})</strong>${timeStr}</div>
-                                <span class="status-badge ${statusClass}">${r.status}</span>
-                            </div>
-                            ${dataHtml}
-                            ${issuesHtml}
-                            ${checklistHtml}
-                            ${followerHtml}
-                            <div class="record-note">${r.note}</div>
-                        </div>
-                    `;
+                records.forEach(r => {
+                    let statusClass = r.status === "已處理" ? "status-done" : (r.status === "跟進中" ? "status-processing" : "status-pending");
+                    let issuesHtml = (r.lux_issue ? `<div class="issue-data">⚠️ Lux異常: ${r.lux_issue}</div>` : '') + (r.temp_issue ? `<div class="issue-data">⚠️ 溫度異常: ${r.temp_issue}</div>` : '') + (r.db_issue ? `<div class="issue-data">⚠️ 分貝異常: ${r.db_issue}</div>` : '');
+                    let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${new Date(r.created_at).toLocaleString('zh-HK')}</div>` : "";
+                    html += `<div class="record-card"><div class="record-header"><div><strong>${r.name} (${r.shift})</strong>${timeStr}</div><span class="status-badge ${statusClass}">${r.status}</span></div><div class="record-data">📊 Lux: ${r.lux} | 溫度: ${r.temp} | 分貝: ${r.bgm}</div>${issuesHtml}${r.checklist ? `<div class="record-data">✅ 檢查: ${r.checklist}</div>` : ''}${r.follower && r.follower !== '無' ? `<div class="record-data" style="background:#fff3cd; color:#856404;">👤 跟進人: ${r.follower}</div>` : ''}<div class="record-note">${r.note}</div></div>`;
                 });
                 listDiv.innerHTML = html;
-            })
-            .catch(error => console.error("讀取失敗:", error));
+            }).catch(error => console.error("讀取失敗:", error));
         }
 
-        window.onload = function() { 
-            toggleIssue('lux'); toggleIssue('temp'); toggleIssue('bgm'); toggleNFC();
-            displayRecords(); 
-        };
+        window.onload = function() { toggleIssue('lux'); toggleIssue('temp'); toggleIssue('bgm'); toggleNFC(); displayRecords(); };
     </script>
 </body>
 </html>
