@@ -216,10 +216,10 @@
     
     <label>負責跟進人 (可多選)：</label>
     <div class="checkbox-group" style="display:block;">
-        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="👩 Carman" class="follower-item"> 👩 Carman (女)</label>
-        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="👨 David" class="follower-item"> 👨 David (男)</label>
-        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="👨 Nam" class="follower-item"> 👨 Nam (男)</label>
-        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="👩 Stella" class="follower-item"> 👩 Stella (女)</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Carman" class="follower-item"> Carman (女)</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="David" class="follower-item"> David (男)</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Nam" class="follower-item"> Nam (男)</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Stella" class="follower-item"> Stella (女)</label>
     </div>
 
     <label>詳細交更事項：</label>
@@ -229,7 +229,7 @@
     <div id="result"></div>
 </div>
 
-<script>
+ <script>
         function showForm() {
             document.getElementById('list-container').style.display = 'none';
             document.getElementById('form-container').style.display = 'block';
@@ -268,11 +268,15 @@
                     nfcDetails.push(`${nfcPrefix}${nfcTable} (${boxStr})`);
                 }
             });
-            // 解決拆散問題：用逗號分隔，令前端知道呢個係一個整體
-            let nfcStr = `NFC: 檢測 ${selectedHall}`;
-            nfcStr += nfcDetails.length > 0 ? ` (異常: ${nfcDetails.join(', ')})` : ` (無異常)`;
+            
+            // 將 NFC 分開「正常」同「異常」字串
+            let nfcNormalStr = `NFC正常: ${selectedHall}`;
+            let nfcIssueStr = nfcDetails.length > 0 ? `NFC異常: ${nfcDetails.join(', ')}` : '';
+            
+            let nfcChecklistArray = [nfcNormalStr];
+            if (nfcIssueStr) nfcChecklistArray.push(nfcIssueStr);
 
-            let checklistString = [nfcStr].concat(Array.from(document.querySelectorAll('.check-item:checked')).map(cb => cb.value)).join(' | ');
+            let checklistString = nfcChecklistArray.concat(Array.from(document.querySelectorAll('.check-item:checked')).map(cb => cb.value)).join(' | ');
             let followerString = Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無';
 
             let luxIssue = Array.from(document.querySelectorAll('.lux-item')).map(item => {
@@ -338,19 +342,43 @@
                     if (r.checklist) {
                         let items = r.checklist.split(' | ');
                         let normalItems = [];
+                        let issueItems = [];
                         items.forEach(item => {
                             if (item.includes('異常') || item.includes('⚠️')) {
-                                issuesHtml += `<div class="issue-data">⚠️ ${item.replace('✅ 檢查: ', '')}</div>`;
+                                issueItems.push(item.replace('✅ 檢查: ', ''));
                             } else {
                                 normalItems.push(item);
                             }
                         });
+                        
+                        // 異常放前面 (紅色)
+                        issueItems.forEach(item => {
+                            issuesHtml += `<div class="issue-data">⚠️ ${item}</div>`;
+                        });
+                        
+                        // 正常放後面 (綠色)
                         if (normalItems.length > 0) {
                             checkItemsHtml = `<div class="record-data">✅ 檢查: ${normalItems.join(' | ')}</div>`;
                         }
                     }
 
                     let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${new Date(r.created_at).toLocaleString('zh-HK')}</div>` : "";
+                    
+                    // 處理跟進人公仔顏色
+                    let followerHtml = '';
+                    if (r.follower && r.follower !== '無') {
+                        let names = r.follower.split(', ');
+                        let iconsHtml = names.map(name => {
+                            if (name.includes('Carman') || name.includes('Stella')) {
+                                // 女仔 粉紅色
+                                return `<span style="margin-right: 8px; font-weight: bold; color: #e91e63;"><svg viewBox="0 0 24 24" width="14" height="14" fill="#e91e63" style="vertical-align: text-top; margin-right: 2px;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>${name}</span>`;
+                            } else {
+                                // 男仔 藍色
+                                return `<span style="margin-right: 8px; font-weight: bold; color: #1a73e8;"><svg viewBox="0 0 24 24" width="14" height="14" fill="#1a73e8" style="vertical-align: text-top; margin-right: 2px;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>${name}</span>`;
+                            }
+                        }).join('');
+                        followerHtml = `<div class="record-data" style="background:#fff3cd; color:#856404; display:flex; align-items:center;">👤 跟進人: <div style="margin-left:5px;">${iconsHtml}</div></div>`;
+                    }
                     
                     html += `
                         <div class="record-card">
@@ -361,7 +389,7 @@
                             <div class="record-data">📊 Lux: ${r.lux} | 溫度: ${r.temp} | 分貝: ${r.bgm}</div>
                             ${issuesHtml}
                             ${checkItemsHtml}
-                            ${r.follower && r.follower !== '無' ? `<div class="record-data" style="background:#fff3cd; color:#856404;">👤 跟進人: ${r.follower}</div>` : ''}
+                            ${followerHtml}
                             <div class="record-note">${r.note}</div>
                         </div>
                     `;
