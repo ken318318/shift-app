@@ -140,7 +140,7 @@
         </div>
     </div>
 
- <div class="row">
+<div class="row">
         <div>
             <label>BGM 分貝：</label>
             <select id="bgm">
@@ -216,10 +216,10 @@
     
     <label>負責跟進人 (可多選)：</label>
     <div class="checkbox-group" style="display:block;">
-        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Carman" class="follower-item"> Carman</label>
-        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="David" class="follower-item"> David</label>
-        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Nam" class="follower-item"> Nam</label>
-        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Stella" class="follower-item"> Stella</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="👩 Carman" class="follower-item"> 👩 Carman (女)</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="👨 David" class="follower-item"> 👨 David (男)</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="👨 Nam" class="follower-item"> 👨 Nam (男)</label>
+        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="👩 Stella" class="follower-item"> 👩 Stella (女)</label>
     </div>
 
     <label>詳細交更事項：</label>
@@ -268,8 +268,9 @@
                     nfcDetails.push(`${nfcPrefix}${nfcTable} (${boxStr})`);
                 }
             });
+            // 解決拆散問題：用逗號分隔，令前端知道呢個係一個整體
             let nfcStr = `NFC: 檢測 ${selectedHall}`;
-            nfcStr += nfcDetails.length > 0 ? ` (異常: ${nfcDetails.join(' | ')})` : ` (無異常)`;
+            nfcStr += nfcDetails.length > 0 ? ` (異常: ${nfcDetails.join(', ')})` : ` (無異常)`;
 
             let checklistString = [nfcStr].concat(Array.from(document.querySelectorAll('.check-item:checked')).map(cb => cb.value)).join(' | ');
             let followerString = Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無';
