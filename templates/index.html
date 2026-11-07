@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>交更系統</title>
+    <style>
+        /* 呢度係 CSS，負責化妝 */
+        body { font-family: sans-serif; background: #f0f2f5; padding: 20px; }
+        .card {
+            background: white; padding: 20px; border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; margin: auto;
+        }
+        h2 { text-align: center; color: #333; }
+        label { display: block; margin-top: 15px; font-weight: bold; }
+        input, textarea {
+            width: 100%; padding: 10px; margin-top: 5px;
+            border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box;
+        }
+        button {
+            width: 100%; padding: 12px; margin-top: 20px;
+            background: #1a73e8; color: white; border: none;
+            border-radius: 8px; font-size: 16px; cursor: pointer;
+        }
+        button:active { background: #1557b0; }
+        #result { margin-top: 20px; color: green; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>📝 工作交更表</h2>
+        <label>交更人姓名：</label>
+        <input type="text" id="staffName" placeholder="例如：陳大文">
+
+        <label>更份：</label>
+        <input type="text" id="shiftType" placeholder="例如：早更 / 夜更">
+
+        <label>交更事項：</label>
+        <textarea id="notes" rows="4" placeholder="請輸入注意事項..."></textarea>
+
+        <button onclick="submitForm()">提交交更</button>
+        <div id="result"></div>
+        <div id="recordList" style="margin-top: 20px;"></div>
+    </div>
+    <script> 
+   // 提交表單去 Python 後端
+function submitForm() {
+    let name = document.getElementById('staffName').value;
+    let shift = document.getElementById('shiftType').value;
+    let note = document.getElementById('notes').value;
+
+    if (!name || !note) {
+        alert("請填寫姓名同交更事項！");
+        return;
+    }
+
+    // 將資料發送去 Python
+    fetch('http://127.0.0.1:5000/api/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, shift: shift, note: note })
+    })
+    .then(response => response.json())
+    .then(data => {
+        document.getElementById('result').innerHTML = "✅ " + name + " (" + shift + ") 交更成功！";
+        // 清空輸入框
+        document.getElementById('staffName').value = '';
+        document.getElementById('shiftType').value = '';
+        document.getElementById('notes').value = '';
+        // 重新載入紀錄
+        displayRecords();
+    })
+    .catch(error => {
+        alert("連線失敗，請確認 Python 後端有冇開住！");
+        console.error(error);
+    });
+}
+
+// 從 Python 後端讀取紀錄
+function displayRecords() {
+    fetch('http://127.0.0.1:5000/api/records')
+    .then(response => response.json())
+    .then(records => {
+        let listDiv = document.getElementById('recordList');
+        
+        if (records.length === 0) {
+            listDiv.innerHTML = "<p style='color: #888; text-align: center;'>暫時未有交更紀錄。</p >";
+            return;
+        }
+
+        let html = "";
+        records.forEach(function(r) {
+            html += `
+                <div style="border-left: 4px solid #1a73e8; background: #f8f9fa; padding: 10px; margin-bottom: 10px; border-radius: 4px;">
+                    <strong>${r.name}</strong> (${r.shift}) 
+                    <p style="margin: 5px 0 0 0;">${r.note}</p >
+                </div>
+            `;
+        });
+        listDiv.innerHTML = html;
+    })
+    .catch(error => console.error("讀取失敗:", error));
+}
+
+// 網頁一載入就讀取紀錄
+window.onload = function() {
+    displayRecords();
+};
+</script>
+
+</body>
+</html>
