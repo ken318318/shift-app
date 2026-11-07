@@ -17,7 +17,7 @@
         .checkbox-group label { font-weight: normal; display: flex; align-items: center; margin-top: 0; cursor: pointer; font-size: 13px; width: 30%;}
         .checkbox-group input { margin-right: 8px; width: 16px; height: 16px; }
         
-        .issue-group { display: none; background: #fff3cd; padding: 10px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 5px; }
+        .issue-group { display: block; background: #fff3cd; padding: 10px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 5px; }
         .issue-title { font-size: 12px; color: #856404; margin-bottom: 5px; font-weight: bold;}
         
         .issue-item { border-bottom: 1px dashed #e0c97e; padding-bottom: 8px; margin-bottom: 8px; }
@@ -87,13 +87,13 @@
     <div class="row">
         <div>
             <label>全場 Lux：</label>
-            <select id="lux" onchange="toggleIssue('lux')">
+            <select id="lux">
                 <option value="< 450">&lt; 450</option>
                 <option value="450-650" selected>450 - 650 (正常)</option>
                 <option value="> 650">&gt; 650</option>
             </select>
-            <div id="lux-issue-group" class="issue-group">
-                <div class="issue-title">請輸入異常位置及數值：</div>
+            <div class="issue-group">
+                <div class="issue-title">Lux 異常紀錄 (如正常請留空)：</div>
                 <div id="lux-container">
                     <div class="issue-item lux-item">
                         <div class="issue-row">
@@ -112,13 +112,13 @@
         </div>
         <div>
             <label>溫度：</label>
-            <select id="temp" onchange="toggleIssue('temp')">
+            <select id="temp">
                 <option value="偏低 (<22.5)">偏低 (&lt;22.5)</option>
                 <option value="正常 (22.5-24.5)" selected>正常 (22.5-24.5)</option>
                 <option value="偏高 (>24.5)">偏高 (&gt;24.5)</option>
             </select>
-            <div id="temp-issue-group" class="issue-group">
-                <div class="issue-title">請輸入異常位置及數值：</div>
+            <div class="issue-group">
+                <div class="issue-title">溫度異常紀錄 (如正常請留空)：</div>
                 <div id="temp-container">
                     <div class="issue-item temp-item">
                         <div class="issue-row">
@@ -136,13 +136,13 @@
     <div class="row">
         <div>
             <label>BGM 分貝：</label>
-            <select id="bgm" onchange="toggleIssue('bgm')">
+            <select id="bgm">
                 <option value="偏低 (<65)">偏低 (&lt;65)</option>
                 <option value="正常 (65-75)" selected>正常 (65-75)</option>
                 <option value="偏高 (>75)">偏高 (&gt;75)</option>
             </select>
-            <div id="bgm-issue-group" class="issue-group">
-                <div class="issue-title">請輸入異常位置及數值：</div>
+            <div class="issue-group">
+                <div class="issue-title">分貝異常紀錄 (如正常請留空)：</div>
                 <div id="bgm-container">
                     <div class="issue-item bgm-item">
                         <div class="issue-row">
@@ -158,27 +158,22 @@
     </div>
 
     <label>NFC 檢測：</label>
-    <select id="nfc" onchange="toggleNFC()">
-        <option value="正常" selected>正常</option>
-        <option value="異常">異常</option>
-    </select>
-    
-    <!-- 正常：選擇今日檢測的 Hall -->
-    <div id="nfc-normal-group" style="display: block; margin-top: 5px; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee;">
-        <div style="font-size:12px; font-weight:bold; color:#444; margin-bottom:5px;">請選擇今日檢測正常的 Hall：</div>
-        <select id="nfc-normal-hall">
-            <option value="Hall 1">Hall 1</option>
-            <option value="Hall 2">Hall 2</option>
-            <option value="Hall 3">Hall 3</option>
-            <option value="Hall 4">Hall 4</option>
-            <option value="Hall 5">Hall 5</option>
-            <option value="Hall 6">Hall 6</option>
-        </select>
+    <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
+        <div style="flex: 1;">
+            <span style="font-size: 13px; color: #555;">今日檢測 Hall：</span>
+            <select id="nfc-hall-select">
+                <option value="Hall 1">Hall 1</option>
+                <option value="Hall 2">Hall 2</option>
+                <option value="Hall 3">Hall 3</option>
+                <option value="Hall 4">Hall 4</option>
+                <option value="Hall 5">Hall 5</option>
+                <option value="Hall 6">Hall 6</option>
+            </select>
+        </div>
     </div>
-
-    <!-- 異常：輸入台號與 Box -->
-    <div id="nfc-issue-group" class="issue-group">
-        <div class="issue-title">請輸入異常台號及 Box：</div>
+    
+    <div class="issue-group">
+        <div class="issue-title">NFC 異常台號 (如全部正常，請留空)：</div>
         <div id="nfc-container">
             <div class="issue-item nfc-item">
                 <div class="issue-row">
@@ -198,7 +193,7 @@
         <button type="button" class="btn-add" onclick="addNfcRow()">+ 新增位置</button>
     </div>
 
- <label>其他日常檢查項目：</label>
+<label>其他日常檢查項目：</label>
         <div class="checkbox-group" style="display:block;">
             <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Display 屏幕正常" class="check-item"> Display 屏幕正常</label>
             <label style="width:100%; margin-top:8px;"><input type="checkbox" value="掃描槍運作正常" class="check-item"> 掃描槍運作正常</label>
@@ -233,27 +228,6 @@
     </div>
 
     <script>
-        function toggleIssue(type) {
-            let selectEl = document.getElementById(type);
-            let groupEl = document.getElementById(type + '-issue-group');
-            if (type === 'lux') {
-                if (selectEl.value === '< 450' || selectEl.value === '> 650') { groupEl.style.display = 'block'; } else { groupEl.style.display = 'none'; }
-            } else {
-                if (selectEl.value.includes('偏高') || selectEl.value.includes('偏低')) { groupEl.style.display = 'block'; } else { groupEl.style.display = 'none'; }
-            }
-        }
-        
-        function toggleNFC() {
-            let nfcVal = document.getElementById('nfc').value;
-            if (nfcVal === '正常') {
-                document.getElementById('nfc-normal-group').style.display = 'block';
-                document.getElementById('nfc-issue-group').style.display = 'none';
-            } else {
-                document.getElementById('nfc-normal-group').style.display = 'none';
-                document.getElementById('nfc-issue-group').style.display = 'block';
-            }
-        }
-
         function addLuxRow() {
             document.getElementById('lux-container').innerHTML += `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div></div>`;
         }
@@ -268,42 +242,38 @@
         }
 
         function submitForm() {
-            let nfcStr = "";
-            if (document.getElementById('nfc').value === '正常') {
-                let selectedHall = document.getElementById('nfc-normal-hall').value;
-                nfcStr = `NFC: 正常 (${selectedHall})`;
-            } else {
-                let nfcDetails = [];
-                document.querySelectorAll('.nfc-item').forEach(item => {
-                    let nfcPrefix = item.querySelector('.nfc-prefix').value;
-                    let nfcTable = item.querySelector('.nfc-table').value;
-                    let boxArray = [];
-                    item.querySelectorAll('.nfc-box:checked').forEach(cb => boxArray.push(cb.value));
-                    if (nfcTable || boxArray.length > 0) {
-                        nfcDetails.push(`${nfcPrefix}${nfcTable} [${boxArray.length > 0 ? boxArray.join(', ') : '未選Box'}]`);
-                    }
-                });
-                nfcStr = `NFC: 異常 (${nfcDetails.join(' | ')})`;
-            }
+            let selectedHall = document.getElementById('nfc-hall-select').value;
+            let nfcDetails = [];
+            document.querySelectorAll('.nfc-item').forEach(item => {
+                let nfcPrefix = item.querySelector('.nfc-prefix').value;
+                let nfcTable = item.querySelector('.nfc-table').value;
+                let boxArray = [];
+                item.querySelectorAll('.nfc-box:checked').forEach(cb => boxArray.push(cb.value));
+                if (nfcTable || boxArray.length > 0) {
+                    nfcDetails.push(`${nfcPrefix}${nfcTable} [${boxArray.length > 0 ? boxArray.join(', ') : '未選Box'}]`);
+                }
+            });
+            let nfcStr = `NFC: 檢測 ${selectedHall}`;
+            nfcStr += nfcDetails.length > 0 ? ` (異常: ${nfcDetails.join(' | ')})` : ` (無異常)`;
 
             let checklistString = [nfcStr].concat(Array.from(document.querySelectorAll('.check-item:checked')).map(cb => cb.value)).join(' | ');
             let followerString = Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無';
 
-            let luxIssue = document.getElementById('lux-issue-group').style.display === 'block' ? Array.from(document.querySelectorAll('.lux-item')).map(item => {
+            let luxIssue = Array.from(document.querySelectorAll('.lux-item')).map(item => {
                 let bStr = [];
                 if(item.querySelector('.lux-box1').value) bStr.push(`B1:${item.querySelector('.lux-box1').value}`);
                 if(item.querySelector('.lux-box3').value) bStr.push(`B3:${item.querySelector('.lux-box3').value}`);
                 if(item.querySelector('.lux-box6').value) bStr.push(`B6:${item.querySelector('.lux-box6').value}`);
                 return (item.querySelector('.lux-table').value || bStr.length > 0) ? `${item.querySelector('.lux-prefix').value}${item.querySelector('.lux-table').value} (${bStr.join(',')})` : "";
-            }).filter(Boolean).join(' | ') : "";
+            }).filter(Boolean).join(' | ');
 
-            let tempIssue = document.getElementById('temp-issue-group').style.display === 'block' ? Array.from(document.querySelectorAll('.temp-item')).map(item => {
+            let tempIssue = Array.from(document.querySelectorAll('.temp-item')).map(item => {
                 return (item.querySelector('.temp-table').value || item.querySelector('.temp-value').value) ? `${item.querySelector('.temp-prefix').value}${item.querySelector('.temp-table').value} (數值:${item.querySelector('.temp-value').value})` : "";
-            }).filter(Boolean).join(' | ') : "";
+            }).filter(Boolean).join(' | ');
 
-            let dbIssue = document.getElementById('bgm-issue-group').style.display === 'block' ? Array.from(document.querySelectorAll('.bgm-item')).map(item => {
+            let dbIssue = Array.from(document.querySelectorAll('.bgm-item')).map(item => {
                 return (item.querySelector('.bgm-table').value || item.querySelector('.bgm-value').value) ? `${item.querySelector('.bgm-prefix').value}${item.querySelector('.bgm-table').value} (數值:${item.querySelector('.bgm-value').value})` : "";
-            }).filter(Boolean).join(' | ') : "";
+            }).filter(Boolean).join(' | ');
 
             let data = {
                 name: document.getElementById('staffName').value, shift: document.getElementById('shiftType').value,
@@ -324,10 +294,9 @@
                 document.getElementById('staffName').value = ''; document.getElementById('notes').value = '';
                 document.querySelectorAll('.check-item, .follower-item').forEach(cb => cb.checked = false);
                 
-                document.getElementById('lux').value = '450-650'; toggleIssue('lux');
-                document.getElementById('temp').value = '正常 (22.5-24.5)'; toggleIssue('temp');
-                document.getElementById('bgm').value = '正常 (65-75)'; toggleIssue('bgm');
-                document.getElementById('nfc').value = '正常'; toggleNFC();
+                document.getElementById('lux').value = '450-650';
+                document.getElementById('temp').value = '正常 (22.5-24.5)';
+                document.getElementById('bgm').value = '正常 (65-75)';
                 
                 document.getElementById('lux-container').innerHTML = `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div></div>`;
                 document.getElementById('temp-container').innerHTML = `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div></div>`;
@@ -354,7 +323,7 @@
             }).catch(error => console.error("讀取失敗:", error));
         }
 
-        window.onload = function() { toggleIssue('lux'); toggleIssue('temp'); toggleIssue('bgm'); toggleNFC(); displayRecords(); };
+        window.onload = function() { displayRecords(); };
     </script>
 </body>
 </html>
