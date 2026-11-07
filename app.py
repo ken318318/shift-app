@@ -13,7 +13,6 @@ def get_db_connection():
     conn = psycopg2.connect(DB_URL)
     return conn
 
-# 初始化數據庫（加入新欄位 lux, temp, status）
 def init_db():
     conn = get_db_connection()
     c = conn.cursor()
@@ -25,7 +24,9 @@ def init_db():
                   temp TEXT,
                   checklist TEXT,
                   status TEXT,
-                  note TEXT)''')
+                  follower TEXT,
+                  note TEXT,
+                  created_at TIMESTAMP DEFAULT NOW())''')
     conn.commit()
     conn.close()
 
@@ -34,24 +35,22 @@ try:
 except Exception as e:
     print("數據庫連線失敗:", e)
 
-# 1. 接收交更資料嘅 API
 @app.route('/api/submit', methods=['POST'])
 def submit():
     data = request.json
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("INSERT INTO records (name, shift, lux, temp, checklist, status, note) VALUES (%s, %s, %s, %s, %s, %s, %s)", 
-              (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('checklist'), data.get('status'), data.get('note')))
+    c.execute("INSERT INTO records (name, shift, lux, temp, checklist, status, follower, note) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", 
+              (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('checklist'), data.get('status'), data.get('follower'), data.get('note')))
     conn.commit()
     conn.close()
     return jsonify({"message": "交更成功！", "status": "success"})
 
-# 2. 讀取所有交更紀錄嘅 API
 @app.route('/api/records', methods=['GET'])
 def get_records():
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("SELECT name, shift, lux, temp, checklist, status, note FROM records ORDER BY id DESC")
+    c.execute("SELECT name, shift, lux, temp, checklist, status, follower, note, created_at FROM records ORDER BY id DESC")
     rows = c.fetchall()
     conn.close()
 
@@ -59,11 +58,12 @@ def get_records():
     for row in rows:
         records.append({
             "name": row[0], "shift": row[1], "lux": row[2], 
-            "temp": row[3], "checklist": row[4], "status": row[5], "note": row[6]
+            "temp": row[3], "checklist": row[4], "status": row[5], 
+            "follower": row[6], "note": row[7],
+            "created_at": str(row[8]) if row[8] else None
         })
     return jsonify(records)
 
-# 派發首頁
 @app.route('/')
 def index():
     return render_template('index.html')
