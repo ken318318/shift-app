@@ -9,7 +9,7 @@
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
         h2 { text-align: center; color: #333; margin-top: 0; }
         label { display: block; margin-top: 15px; font-weight: bold; font-size: 14px; color: #444; }
-        input[type="text"], input[type="number"], textarea, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; background-color: #fff;}
+        input[type="text"], textarea, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; background-color: #fff;}
         .row { display: flex; gap: 10px; }
         .row > div { flex: 1; }
         
@@ -20,8 +20,12 @@
         /* 異常輸入區塊樣式 */
         .issue-group { display: none; background: #fff3cd; padding: 10px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 5px; }
         .issue-title { font-size: 12px; color: #856404; margin-bottom: 5px; font-weight: bold;}
-        .issue-row { display: flex; gap: 5px; }
+        .issue-row { display: flex; gap: 5px; flex-wrap: wrap; }
         .issue-row select, .issue-row input { padding: 8px; font-size: 13px; }
+        .issue-row .prefix { flex: 1; min-width: 60px; }
+        .issue-row .table-num { flex: 1.5; min-width: 70px; }
+        .issue-row .box { flex: 1; min-width: 60px; }
+        .issue-row .value { flex: 1.5; min-width: 70px; background: #fff; border: 1px solid #f5b041;}
 
         button { width: 100%; padding: 14px; margin-top: 25px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold;}
         button:active { background: #1557b0; }
@@ -40,6 +44,7 @@
         .status-done { background: #2ecc71; }
     </style>
 </head>
+
 <body>
     <div class="card">
         <h2>📝 工作交更表</h2>
@@ -79,18 +84,21 @@
                     <option value="450-650" selected>450 - 650 (正常)</option>
                     <option value="> 650">&gt; 650</option>
                 </select>
-                <!-- Lux 異常區塊 (有 Box) -->
+                <!-- Lux 異常區塊 -->
                 <div id="lux-issue-group" class="issue-group">
-                    <div class="issue-title">請輸入異常位置：</div>
+                    <div class="issue-title">請輸入異常位置及數值：</div>
                     <div class="issue-row">
-                        <select id="lux-prefix" style="flex: 1;">
+                        <select id="lux-prefix" class="prefix">
                             <option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option>
                             <option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option>
                         </select>
-                        <input type="number" id="lux-num" placeholder="數字" style="flex: 1;">
-                        <select id="lux-box" style="flex: 1;">
-                            <option value="">無</option><option value="Box 1">Box 1</option><option value="Box 3">Box 3</option><option value="Box 6">Box 6</option>
+                        <input type="text" id="lux-table" placeholder="台號" class="table-num">
+                        <select id="lux-box" class="box">
+                            <option value="Box 1">Box 1</option>
+                            <option value="Box 3">Box 3</option>
+                            <option value="Box 6">Box 6</option>
                         </select>
+                        <input type="text" id="lux-value" placeholder="數值" class="value">
                     </div>
                 </div>
             </div>
@@ -101,15 +109,16 @@
                     <option value="正常 (22.5-24.5)" selected>正常 (22.5-24.5)</option>
                     <option value="偏高 (>24.5)">偏高 (&gt;24.5)</option>
                 </select>
-                <!-- 溫度 異常區塊 (無 Box) -->
+                <!-- 溫度 異常區塊 -->
                 <div id="temp-issue-group" class="issue-group">
-                    <div class="issue-title">請輸入異常位置：</div>
+                    <div class="issue-title">請輸入異常位置及數值：</div>
                     <div class="issue-row">
-                        <select id="temp-prefix" style="flex: 1;">
+                        <select id="temp-prefix" class="prefix">
                             <option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option>
                             <option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option>
                         </select>
-                        <input type="number" id="temp-num" placeholder="數字" style="flex: 1;">
+                        <input type="text" id="temp-table" placeholder="台號" class="table-num">
+                        <input type="text" id="temp-value" placeholder="數值" class="value">
                     </div>
                 </div>
             </div>
@@ -123,15 +132,16 @@
                     <option value="正常 (65-75)" selected>正常 (65-75)</option>
                     <option value="偏高 (>75)">偏高 (&gt;75)</option>
                 </select>
-                <!-- BGM 異常區塊 (無 Box) -->
+                <!-- BGM 異常區塊 -->
                 <div id="bgm-issue-group" class="issue-group">
-                    <div class="issue-title">請輸入異常位置：</div>
+                    <div class="issue-title">請輸入異常位置及數值：</div>
                     <div class="issue-row">
-                        <select id="bgm-prefix" style="flex: 1;">
+                        <select id="bgm-prefix" class="prefix">
                             <option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option>
                             <option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option>
                         </select>
-                        <input type="number" id="bgm-num" placeholder="數字" style="flex: 1;">
+                        <input type="text" id="bgm-table" placeholder="台號" class="table-num">
+                        <input type="text" id="bgm-value" placeholder="數值" class="value">
                     </div>
                 </div>
             </div>
@@ -203,29 +213,29 @@
             followerCheckboxes.forEach((cb) => followerArray.push(cb.value));
             let followerString = followerArray.length > 0 ? followerArray.join(', ') : '無';
 
-            // 組合 Lux 異常資料 (有 Box)
             let luxIssue = "";
             if (document.getElementById('lux-issue-group').style.display === 'block') {
                 let prefix = document.getElementById('lux-prefix').value;
-                let num = document.getElementById('lux-num').value;
+                let table = document.getElementById('lux-table').value;
                 let box = document.getElementById('lux-box').value;
-                if (num) luxIssue = `${prefix}${num} ${box !== '' ? ' ' + box : ''}`.trim();
+                let val = document.getElementById('lux-value').value;
+                if (table || val) { luxIssue = `${prefix}${table} ${box} (數值: ${val})`; }
             }
 
-            // 組合 溫度 異常資料 (無 Box)
             let tempIssue = "";
             if (document.getElementById('temp-issue-group').style.display === 'block') {
                 let prefix = document.getElementById('temp-prefix').value;
-                let num = document.getElementById('temp-num').value;
-                if (num) tempIssue = `${prefix}${num}`;
+                let table = document.getElementById('temp-table').value;
+                let val = document.getElementById('temp-value').value;
+                if (table || val) { tempIssue = `${prefix}${table} (數值: ${val})`; }
             }
 
-            // 組合 分貝 異常資料 (無 Box)
             let dbIssue = "";
             if (document.getElementById('bgm-issue-group').style.display === 'block') {
                 let prefix = document.getElementById('bgm-prefix').value;
-                let num = document.getElementById('bgm-num').value;
-                if (num) dbIssue = `${prefix}${num}`;
+                let table = document.getElementById('bgm-table').value;
+                let val = document.getElementById('bgm-value').value;
+                if (table || val) { dbIssue = `${prefix}${table} (數值: ${val})`; }
             }
 
             let data = {
@@ -259,12 +269,13 @@
                 document.querySelectorAll('.check-item').forEach(cb => cb.checked = false);
                 document.querySelectorAll('.follower-item').forEach(cb => cb.checked = false);
                 
-                // 重設異常輸入區
                 document.getElementById('lux').value = '450-650'; toggleIssue('lux');
                 document.getElementById('temp').value = '正常 (22.5-24.5)'; toggleIssue('temp');
                 document.getElementById('bgm').value = '正常 (65-75)'; toggleIssue('bgm');
-                document.getElementById('lux-num').value = ''; document.getElementById('temp-num').value = ''; document.getElementById('bgm-num').value = '';
-                document.getElementById('lux-box').value = ''; 
+                
+                document.getElementById('lux-table').value = ''; document.getElementById('lux-value').value = '';
+                document.getElementById('temp-table').value = ''; document.getElementById('temp-value').value = '';
+                document.getElementById('bgm-table').value = ''; document.getElementById('bgm-value').value = '';
 
                 displayRecords();
             })
