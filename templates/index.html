@@ -9,7 +9,7 @@
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
         h2 { text-align: center; color: #333; margin-top: 0; }
         label { display: block; margin-top: 15px; font-weight: bold; font-size: 14px; color: #444; }
-        input[type="text"], textarea, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; background-color: #fff;}
+        input[type="text"], input[type="number"], textarea, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; background-color: #fff;}
         .row { display: flex; gap: 10px; }
         .row > div { flex: 1; }
         
@@ -17,6 +17,12 @@
         .checkbox-group label { font-weight: normal; display: flex; align-items: center; margin-top: 8px; cursor: pointer; font-size: 13px;}
         .checkbox-group input { margin-right: 10px; width: 18px; height: 18px; }
         
+        /* 異常輸入區塊樣式 */
+        .issue-group { display: none; background: #fff3cd; padding: 10px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 5px; }
+        .issue-title { font-size: 12px; color: #856404; margin-bottom: 5px; font-weight: bold;}
+        .issue-row { display: flex; gap: 5px; }
+        .issue-row select, .issue-row input { padding: 8px; font-size: 13px; }
+
         button { width: 100%; padding: 14px; margin-top: 25px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold;}
         button:active { background: #1557b0; }
         
@@ -25,6 +31,7 @@
         .record-card { background: #fff; border-left: 5px solid #1a73e8; padding: 15px; margin-bottom: 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .record-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; font-size: 14px; border-bottom: 1px dashed #eee; padding-bottom: 8px;}
         .record-data { font-size: 13px; color: #555; margin-bottom: 8px; background: #f4f6f8; padding: 8px; border-radius: 4px;}
+        .issue-data { font-size: 13px; color: #d32f2f; margin-bottom: 8px; background: #ffebee; padding: 8px; border-radius: 4px;}
         .record-note { font-size: 14px; white-space: pre-wrap; line-height: 1.5; color: #222;}
         
         .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; color: white; white-space: nowrap;}
@@ -67,19 +74,66 @@
         <div class="row">
             <div>
                 <label>全場 Lux：</label>
-                <select id="lux">
+                <select id="lux" onchange="toggleIssue('lux')">
                     <option value="< 450">&lt; 450</option>
-                    <option value="450-650" selected>450 - 650</option>
+                    <option value="450-650" selected>450 - 650 (正常)</option>
                     <option value="> 650">&gt; 650</option>
                 </select>
+                <!-- Lux 異常區塊 (有 Box) -->
+                <div id="lux-issue-group" class="issue-group">
+                    <div class="issue-title">請輸入異常位置：</div>
+                    <div class="issue-row">
+                        <select id="lux-prefix" style="flex: 1;">
+                            <option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option>
+                            <option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option>
+                        </select>
+                        <input type="number" id="lux-num" placeholder="數字" style="flex: 1;">
+                        <select id="lux-box" style="flex: 1;">
+                            <option value="">無</option><option value="Box 1">Box 1</option><option value="Box 3">Box 3</option><option value="Box 6">Box 6</option>
+                        </select>
+                    </div>
+                </div>
             </div>
             <div>
-                <label>溫度/分貝：</label>
-                <select id="temp">
-                    <option value="正常" selected>正常</option>
-                    <option value="偏高">偏高</option>
-                    <option value="偏低">偏低</option>
+                <label>溫度：</label>
+                <select id="temp" onchange="toggleIssue('temp')">
+                    <option value="偏低 (<22.5)">偏低 (&lt;22.5)</option>
+                    <option value="正常 (22.5-24.5)" selected>正常 (22.5-24.5)</option>
+                    <option value="偏高 (>24.5)">偏高 (&gt;24.5)</option>
                 </select>
+                <!-- 溫度 異常區塊 (無 Box) -->
+                <div id="temp-issue-group" class="issue-group">
+                    <div class="issue-title">請輸入異常位置：</div>
+                    <div class="issue-row">
+                        <select id="temp-prefix" style="flex: 1;">
+                            <option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option>
+                            <option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option>
+                        </select>
+                        <input type="number" id="temp-num" placeholder="數字" style="flex: 1;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div>
+                <label>BGM 分貝：</label>
+                <select id="bgm" onchange="toggleIssue('bgm')">
+                    <option value="偏低 (<65)">偏低 (&lt;65)</option>
+                    <option value="正常 (65-75)" selected>正常 (65-75)</option>
+                    <option value="偏高 (>75)">偏高 (&gt;75)</option>
+                </select>
+                <!-- BGM 異常區塊 (無 Box) -->
+                <div id="bgm-issue-group" class="issue-group">
+                    <div class="issue-title">請輸入異常位置：</div>
+                    <div class="issue-row">
+                        <select id="bgm-prefix" style="flex: 1;">
+                            <option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option>
+                            <option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option>
+                        </select>
+                        <input type="number" id="bgm-num" placeholder="數字" style="flex: 1;">
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -107,7 +161,7 @@
         </div>
 
         <label>詳細交更事項：</label>
-        <textarea id="notes" rows="5" placeholder="請輸入詳細問題、位置及跟進情況..."></textarea>
+        <textarea id="notes" rows="4" placeholder="請輸入詳細問題、位置及跟進情況..."></textarea>
 
         <button onclick="submitForm()">提交交更</button>
         <div id="result"></div>
@@ -119,6 +173,25 @@
     </div>
 
     <script>
+        function toggleIssue(type) {
+            let selectEl = document.getElementById(type);
+            let groupEl = document.getElementById(type + '-issue-group');
+            
+            if (type === 'lux') {
+                if (selectEl.value === '< 450' || selectEl.value === '> 650') {
+                    groupEl.style.display = 'block';
+                } else {
+                    groupEl.style.display = 'none';
+                }
+            } else {
+                if (selectEl.value.includes('偏高') || selectEl.value.includes('偏低')) {
+                    groupEl.style.display = 'block';
+                } else {
+                    groupEl.style.display = 'none';
+                }
+            }
+        }
+
         function submitForm() {
             let checkboxes = document.querySelectorAll('.check-item:checked');
             let checklistArray = [];
@@ -130,25 +203,48 @@
             followerCheckboxes.forEach((cb) => followerArray.push(cb.value));
             let followerString = followerArray.length > 0 ? followerArray.join(', ') : '無';
 
+            // 組合 Lux 異常資料 (有 Box)
+            let luxIssue = "";
+            if (document.getElementById('lux-issue-group').style.display === 'block') {
+                let prefix = document.getElementById('lux-prefix').value;
+                let num = document.getElementById('lux-num').value;
+                let box = document.getElementById('lux-box').value;
+                if (num) luxIssue = `${prefix}${num} ${box !== '' ? ' ' + box : ''}`.trim();
+            }
+
+            // 組合 溫度 異常資料 (無 Box)
+            let tempIssue = "";
+            if (document.getElementById('temp-issue-group').style.display === 'block') {
+                let prefix = document.getElementById('temp-prefix').value;
+                let num = document.getElementById('temp-num').value;
+                if (num) tempIssue = `${prefix}${num}`;
+            }
+
+            // 組合 分貝 異常資料 (無 Box)
+            let dbIssue = "";
+            if (document.getElementById('bgm-issue-group').style.display === 'block') {
+                let prefix = document.getElementById('bgm-prefix').value;
+                let num = document.getElementById('bgm-num').value;
+                if (num) dbIssue = `${prefix}${num}`;
+            }
+
             let data = {
                 name: document.getElementById('staffName').value,
                 shift: document.getElementById('shiftType').value,
                 lux: document.getElementById('lux').value,
                 temp: document.getElementById('temp').value,
+                bgm: document.getElementById('bgm').value,
                 checklist: checklistString,
                 status: document.getElementById('status').value,
                 follower: followerString,
-                note: document.getElementById('notes').value
+                note: document.getElementById('notes').value,
+                lux_issue: luxIssue,
+                temp_issue: tempIssue,
+                db_issue: dbIssue
             };
 
-            if (!data.name) {
-                alert("請選擇交更人！");
-                return;
-            }
-            if (!data.note) {
-                alert("請填寫交更事項！");
-                return;
-            }
+            if (!data.name) { alert("請選擇交更人！"); return; }
+            if (!data.note) { alert("請填寫交更事項！"); return; }
 
             fetch('/api/submit', {
                 method: 'POST',
@@ -162,12 +258,17 @@
                 document.getElementById('notes').value = '';
                 document.querySelectorAll('.check-item').forEach(cb => cb.checked = false);
                 document.querySelectorAll('.follower-item').forEach(cb => cb.checked = false);
+                
+                // 重設異常輸入區
+                document.getElementById('lux').value = '450-650'; toggleIssue('lux');
+                document.getElementById('temp').value = '正常 (22.5-24.5)'; toggleIssue('temp');
+                document.getElementById('bgm').value = '正常 (65-75)'; toggleIssue('bgm');
+                document.getElementById('lux-num').value = ''; document.getElementById('temp-num').value = ''; document.getElementById('bgm-num').value = '';
+                document.getElementById('lux-box').value = ''; 
+
                 displayRecords();
             })
-            .catch(error => {
-                alert("連線失敗，請確認網絡或後端！");
-                console.error(error);
-            });
+            .catch(error => { alert("連線失敗！"); console.error(error); });
         }
 
         function displayRecords() {
@@ -186,13 +287,14 @@
                     if (r.status === "已處理") statusClass = "status-done";
                     else if (r.status === "跟進中") statusClass = "status-processing";
 
-                    let extraData = [];
-                    if (r.lux) extraData.push(`Lux: ${r.lux}`);
-                    if (r.temp) extraData.push(`溫度: ${r.temp}`);
-                    let extraHtml = extraData.length > 0 ? `<div class="record-data">📊 ${extraData.join(' | ')}</div>` : '';
+                    let dataHtml = `<div class="record-data">📊 Lux: ${r.lux} | 溫度: ${r.temp} | 分貝: ${r.bgm}</div>`;
                     
+                    let issuesHtml = "";
+                    if (r.lux_issue) issuesHtml += `<div class="issue-data">⚠️ Lux異常: ${r.lux_issue}</div>`;
+                    if (r.temp_issue) issuesHtml += `<div class="issue-data">⚠️ 溫度異常: ${r.temp_issue}</div>`;
+                    if (r.db_issue) issuesHtml += `<div class="issue-data">⚠️ 分貝異常: ${r.db_issue}</div>`;
+
                     let checklistHtml = r.checklist ? `<div class="record-data">✅ 檢查: ${r.checklist}</div>` : '';
-                    
                     let followerHtml = (r.follower && r.follower !== '無') ? `<div class="record-data" style="background:#fff3cd; color:#856404;">👤 跟進人: ${r.follower}</div>` : '';
 
                     let timeStr = "";
@@ -210,7 +312,8 @@
                                 </div>
                                 <span class="status-badge ${statusClass}">${r.status}</span>
                             </div>
-                            ${extraHtml}
+                            ${dataHtml}
+                            ${issuesHtml}
                             ${checklistHtml}
                             ${followerHtml}
                             <div class="record-note">${r.note}</div>
@@ -222,7 +325,10 @@
             .catch(error => console.error("讀取失敗:", error));
         }
 
-        window.onload = function() { displayRecords(); };
+        window.onload = function() { 
+            toggleIssue('lux'); toggleIssue('temp'); toggleIssue('bgm');
+            displayRecords(); 
+        };
     </script>
 </body>
 </html>
