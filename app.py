@@ -16,6 +16,7 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
     c = conn.cursor()
+    # 確保所有欄位都存在，同資料庫 100% 匹配
     c.execute('''CREATE TABLE IF NOT EXISTS records
                  (id SERIAL PRIMARY KEY,
                   name TEXT,
@@ -44,6 +45,7 @@ def submit():
     data = request.json
     conn = get_db_connection()
     c = conn.cursor()
+    # 寫入資料（對應 HTML 傳過嚟嘅 key）
     c.execute("""INSERT INTO records 
                  (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue) 
                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
@@ -58,6 +60,7 @@ def submit():
 def get_records():
     conn = get_db_connection()
     c = conn.cursor()
+    # 讀取資料（一定要同上面 insert 嘅欄位順序一致）
     c.execute("""SELECT name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, created_at 
                  FROM records ORDER BY id DESC""")
     rows = c.fetchall()
@@ -66,9 +69,18 @@ def get_records():
     records = []
     for row in rows:
         records.append({
-            "name": row[0], "shift": row[1], "lux": row[2], "temp": row[3], "bgm": row[4],
-            "checklist": row[5], "status": row[6], "follower": row[7], "note": row[8],
-            "lux_issue": row[9], "temp_issue": row[10], "db_issue": row[11],
+            "name": row[0], 
+            "shift": row[1], 
+            "lux": row[2], 
+            "temp": row[3], 
+            "bgm": row[4],
+            "checklist": row[5], 
+            "status": row[6], 
+            "follower": row[7], 
+            "note": row[8],
+            "lux_issue": row[9], 
+            "temp_issue": row[10], 
+            "db_issue": row[11],
             "created_at": str(row[12]) if row[12] else None
         })
     return jsonify(records)
