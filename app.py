@@ -54,7 +54,6 @@ def submit():
     conn.close()
     return jsonify({"message": "交更成功！", "status": "success"})
 
-# 獲取所有紀錄
 @app.route('/api/records', methods=['GET'])
 def get_records():
     conn = get_db_connection()
@@ -74,16 +73,16 @@ def get_records():
         })
     return jsonify(records)
 
-# 新增：獲取未處理嘅問題 (用嚟自動帶落下一次)
 @app.route('/api/pending_issues', methods=['GET'])
 def get_pending_issues():
     conn = get_db_connection()
     c = conn.cursor()
+    # 已經移除 LIMIT 5，會無限制攞出所有未處理嘅項目
     c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note 
                  FROM records 
                  WHERE status NOT IN ('已處理', '已 Send mail') 
                  AND (lux_issue != '' OR temp_issue != '' OR db_issue != '' OR note LIKE '%【場面問題】%')
-                 ORDER BY id DESC LIMIT 5""")
+                 ORDER BY id DESC""")
     rows = c.fetchall()
     conn.close()
     
@@ -94,7 +93,6 @@ def get_pending_issues():
         })
     return jsonify(pending)
 
-# 新增：更新紀錄狀態嘅 API
 @app.route('/api/update_status', methods=['POST'])
 def update_status():
     data = request.json
