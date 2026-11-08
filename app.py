@@ -16,7 +16,6 @@ def get_db_connection():
 def init_db():
     conn = get_db_connection()
     c = conn.cursor()
-    # 確保所有欄位都存在，同資料庫 100% 匹配
     c.execute('''CREATE TABLE IF NOT EXISTS records
                  (id SERIAL PRIMARY KEY,
                   name TEXT,
@@ -45,7 +44,6 @@ def submit():
     data = request.json
     conn = get_db_connection()
     c = conn.cursor()
-    # 寫入資料（對應 HTML 傳過嚟嘅 key）
     c.execute("""INSERT INTO records 
                  (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue) 
                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
@@ -56,12 +54,12 @@ def submit():
     conn.close()
     return jsonify({"message": "交更成功！", "status": "success"})
 
+# 獲取所有紀錄
 @app.route('/api/records', methods=['GET'])
 def get_records():
     conn = get_db_connection()
     c = conn.cursor()
-    # 讀取資料（一定要同上面 insert 嘅欄位順序一致）
-    c.execute("""SELECT name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, created_at 
+    c.execute("""SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, created_at 
                  FROM records ORDER BY id DESC""")
     rows = c.fetchall()
     conn.close()
@@ -69,21 +67,46 @@ def get_records():
     records = []
     for row in rows:
         records.append({
-            "name": row[0], 
-            "shift": row[1], 
-            "lux": row[2], 
-            "temp": row[3], 
-            "bgm": row[4],
-            "checklist": row[5], 
-            "status": row[6], 
-            "follower": row[7], 
-            "note": row[8],
-            "lux_issue": row[9], 
-            "temp_issue": row[10], 
-            "db_issue": row[11],
-            "created_at": str(row[12]) if row[12] else None
+            "id": row[0], "name": row[1], "shift": row[2], "lux": row[3], "temp": row[4], "bgm": row[5],
+            "checklist": row[6], "status": row[7], "follower": row[8], "note": row[9],
+            "lux_issue": row[10], "temp_issue": row[11], "db_issue": row[12],
+            "created_at": str(row[13]) if row[13] else None
         })
     return jsonify(records)
+
+# 新增：獲取未處理嘅問題 (用嚟自動帶落下一次)
+@app.route('/api/pending_issues', methods=['GET'])
+def get_pending_issues():
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note 
+                 FROM records 
+                 WHERE status NOT IN ('已處理', '已 Send mail') 
+                 AND (lux_issue != '' OR temp_issue != '' OR db_issue != '' OR note LIKE '%【場面問題】%')
+                 ORDER BY id DESC LIMIT 5""")
+    rows = c.fetchall()
+    conn.close()
+    
+    pending = []
+    for row in rows:
+        pending.append({
+            "id": row[0], "name": row[1], "lux_issue": row[2], "temp_issue": row[3], "db_issue": row[4], "note": row[5]
+        })
+    return jsonify(pending)
+
+# 新增：更新紀錄狀態嘅 API
+@app.route('/api/update_status', methods=['POST'])
+def update_status():
+    data = request.json
+    record_id = data.get('id')
+    new_status = data.get('status')
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("UPDATE records SET status = %s WHERE id = %s", (new_status, record_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"message": "狀態已更新", "status": "success"})
 
 @app.route('/')
 def index():
