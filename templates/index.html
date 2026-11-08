@@ -60,11 +60,6 @@
         <h2>📝 BS交更內容</h2>
         <button type="button" class="btn-add" style="background-color: #e67c73; width: 100%; margin-bottom: 15px; padding: 10px; font-size: 14px;" onclick="showList()">❌ 取消並返回紀錄</button>
         
-        <div id="pending-container" style="display: none; background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 15px;">
-            <h3 style="margin-top: 0; font-size: 15px; color: #856404;">⚠️ 未完成跟進項目</h3>
-            <div id="pending-list"></div>
-        </div>
-
         <div class="row">
             <div>
                 <label>交更人：</label>
@@ -228,9 +223,7 @@
         <div id="venue-container">
             <div class="issue-item venue-item" style="border-bottom-color: #90caf9;">
                 <div class="issue-row">
-                    <select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;">
-                        <!-- 大類選項由 JS 自動生成 -->
-                    </select>
+                    <select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select>
                     <select class="prefix venue-problem" style="flex: 1.5;"></select>
                     <input type="text" class="table-num venue-location" placeholder="位置/台號">
                 </div>
@@ -253,6 +246,21 @@
 
     <label>詳細交更事項：</label>
     <textarea id="notes" rows="4" placeholder="請輸入詳細問題、位置及跟進情況..."></textarea>
+
+    <!-- 未完成跟進項目 (搬到最底並預設收起) -->
+    <div id="pending-container" style="display: none; background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 30px; margin-bottom: 20px;">
+        <div onclick="togglePending()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+            <h3 id="pending-title" style="margin: 0; font-size: 15px; color: #856404;">⚠️ 未完成跟進項目</h3>
+            <span id="pending-arrow" style="color: #856404; font-weight: bold;">▼ 展開</span>
+        </div>
+        <div id="pending-list" style="display: none; margin-top: 15px; border-top: 1px dashed #e0c97e; padding-top: 15px;"></div>
+        <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #ffeeba; font-size: 13px; color: #856404;">
+            <label style="display: flex; align-items: flex-start; cursor: pointer; margin: 0;">
+                <input type="checkbox" id="confirm-pending" style="margin-right: 8px; margin-top: 2px; width: 16px; height: 16px;">
+                <span>我確定早前發現的所有問題尚未處理？</span>
+            </label>
+        </div>
+    </div>
 
     <button class="submit-btn" onclick="submitForm()">提交交更</button>
     <div id="result"></div>
@@ -312,6 +320,19 @@
         document.getElementById('list-container').style.display = 'block';
         displayRecords(); 
         window.scrollTo(0, 0);
+    }
+
+    // 切換展開/收起未完成項目
+    function togglePending() {
+        let list = document.getElementById('pending-list');
+        let arrow = document.getElementById('pending-arrow');
+        if (list.style.display === 'none') {
+            list.style.display = 'block';
+            arrow.innerHTML = '▲ 收起';
+        } else {
+            list.style.display = 'none';
+            arrow.innerHTML = '▼ 展開';
+        }
     }
 
     function toggleIssue(type) {
@@ -449,6 +470,15 @@ function submitForm() {
     if (!data.name) { alert("請選擇交更人！"); return; }
     if (!data.note || data.note.trim() === '【場面問題】') { alert("請填寫交更事項或場面問題！"); return; }
 
+    let pendingContainer = document.getElementById('pending-container');
+    if (pendingContainer.style.display !== 'none') {
+        let isConfirmed = document.getElementById('confirm-pending').checked;
+        if (!isConfirmed) {
+            alert("⚠️ 請注意：仲有未完成嘅跟進項目！\n\n如果你確定呢啲問題仍然未處理，請喺最底撳『我確定早前發現的所有問題尚未處理？』個格仔，然後再提交。");
+            return;
+        }
+    }
+
     fetch('/api/submit', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
     })
@@ -476,16 +506,20 @@ function submitForm() {
     })
     .catch(error => { alert("連線失敗！"); console.error(error); });
 }
-        // 載入未完成項目
         function loadPendingIssues() {
             fetch('/api/pending_issues').then(res => res.json()).then(issues => {
                 let container = document.getElementById('pending-container');
                 let listDiv = document.getElementById('pending-list');
+                let title = document.getElementById('pending-title');
+                
                 if (issues.length === 0) {
                     container.style.display = 'none';
                     return;
                 }
+                
                 container.style.display = 'block';
+                title.innerHTML = `⚠️ 有 ${issues.length} 項未完成跟進項目`;
+                
                 let html = "";
                 issues.forEach(issue => {
                     html += `<div class="pending-card" id="pending-${issue.id}">
@@ -497,10 +531,10 @@ function submitForm() {
                         <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px;">
                             <span>請更新狀態：</span>
                             <select class="issue-status" id="status-${issue.id}" style="flex: 1; padding: 4px; font-size: 12px;">
-                                <option value="已處理">已處理</option>
+                                <option value="待處理" selected>待處理</option>
                                 <option value="已 Send mail">已 Send mail</option>
                                 <option value="已通知相關部門跟進">已通知相關部門跟進</option>
-                                <option value="待處理">待處理</option>
+                                <option value="已處理">已處理</option>
                             </select>
                             <button type="button" class="btn-add" style="margin-top: 0; background: #2ecc71;" onclick="updatePendingStatus(${issue.id})">更新</button>
                         </div>
