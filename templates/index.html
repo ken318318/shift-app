@@ -583,20 +583,20 @@ function submitForm() {
                     let htmlContent = "";
                     if (issue.lux_issue) {
                         let h = formatIssueText(issue.lux_issue, 'Lux -');
-                        if (!issue.lux_issue.includes('[狀態:已處理]') && !issue.lux_issue.includes('[狀態:已 Send mail]')) htmlContent += h;
+                        if (!issue.lux_issue.includes('[狀態:已處理]')) htmlContent += h;
                     }
                     if (issue.temp_issue) {
                         let h = formatIssueText(issue.temp_issue, '溫度 -');
-                        if (!issue.temp_issue.includes('[狀態:已處理]') && !issue.temp_issue.includes('[狀態:已 Send mail]')) htmlContent += h;
+                        if (!issue.temp_issue.includes('[狀態:已處理]')) htmlContent += h;
                     }
                     if (issue.db_issue) {
                         let h = formatIssueText(issue.db_issue, '分貝 -');
-                        if (!issue.db_issue.includes('[狀態:已處理]') && !issue.db_issue.includes('[狀態:已 Send mail]')) htmlContent += h;
+                        if (!issue.db_issue.includes('[狀態:已處理]')) htmlContent += h;
                     }
                     if (issue.note && issue.note.includes('【場面問題】')) {
                         let venueStr = issue.note.split('【場面問題】')[1].trim();
                         venueStr.split('\n').forEach(line => {
-                            if (line.trim() && !line.includes('[狀態:已處理]') && !line.includes('[狀態:已 Send mail]')) {
+                            if (line.trim() && !line.includes('[狀態:已處理]')) {
                                 htmlContent += formatIssueText(line.trim(), '場面 -');
                             }
                         });
@@ -638,25 +638,22 @@ function submitForm() {
             .catch(err => alert("更新失敗"));
         }
 
-        function formatIssueText(text, defaultPrefix) {
+        function formatIssueText(text, defaultPrefix, statusStr) {
             if (!text) return "";
-            let match = text.match(/\[狀態:(.*?)\]/);
-            let status = match ? match[1] : '已處理';
-            let cleanText = text.replace(/\[狀態:.*?\]/g, '').trim();
+            let rawStatus = statusStr || '待處理';
             
-            let isDone = (status === '已處理' || status === '已 Send mail');
+            // 🌟 嚴格判斷：只有「已處理」先當做完，其他一律當「未處理」
+            let isDone = (rawStatus === '已處理');
+            
+            let displayStatus = isDone ? '已處理' : '未處理';
             let bgColor = isDone ? '#e8f5e9' : '#ffebee';
             let textColor = isDone ? '#2e7d32' : '#d32f2f';
             let prefixIcon = isDone ? '✅ ' : '⚠️ ';
             let displayPrefix = prefixIcon + defaultPrefix;
 
-            let badgeClass = '';
-            if (status === '已處理') badgeClass = 'status-done';
-            else if (status === '已 Send mail') badgeClass = 'status-mail';
-            else if (status === '已通知相關部門跟進') badgeClass = 'status-processing';
-            else badgeClass = 'status-pending';
+            let badgeClass = isDone ? 'status-done' : 'status-pending';
 
-            return `<div class="issue-data" style="background:${bgColor}; color:${textColor};"><span><strong>${displayPrefix}</strong> ${cleanText}</span><span class="status-badge ${badgeClass}">${status}</span></div>`;
+            return `<div class="issue-data" style="background:${bgColor}; color:${textColor};"><span><strong>${displayPrefix}</strong> ${text}</span><span class="status-badge ${badgeClass}">${displayStatus}</span></div>`;
         }
 
         function displayRecords() {
@@ -665,40 +662,40 @@ function submitForm() {
                 if (records.length === 0) { listDiv.innerHTML = "<p style='color: #888; text-align: center;'>暫時未有紀錄。</p >"; return; }
                 let html = "";
                 records.forEach((r, index) => {
-                    let doneIssuesHtml = "";
-                    let pendingIssuesHtml = "";
+                    let doneIssuesList = [];
+                    let pendingIssuesList = [];
 
-                    if (r.lux_issue) {
-                        let h = formatIssueText(r.lux_issue, 'Lux -');
-                        if (r.lux_issue.includes('[狀態:已處理]') || r.lux_issue.includes('[狀態:已 Send mail]')) doneIssuesHtml += h; else pendingIssuesHtml += h;
-                    }
-                    if (r.temp_issue) {
-                        let h = formatIssueText(r.temp_issue, '溫度 -');
-                        if (r.temp_issue.includes('[狀態:已處理]') || r.temp_issue.includes('[狀態:已 Send mail]')) doneIssuesHtml += h; else pendingIssuesHtml += h;
-                    }
-                    if (r.db_issue) {
-                        let h = formatIssueText(r.db_issue, '分貝 -');
-                        if (r.db_issue.includes('[狀態:已處理]') || r.db_issue.includes('[狀態:已 Send mail]')) doneIssuesHtml += h; else pendingIssuesHtml += h;
-                    }
+                    let processIssue = (text, defaultPrefix) => {
+                        if (!text) return;
+                        let match = text.match(/\[狀態:(.*?)\]/);
+                        let status = match ? match[1] : '待處理';
+                        let cleanText = text.replace(/\[狀態:.*?\]/g, '').trim();
+                        
+                        // 🌟 只有真係「已處理」先入 doneList，其他入 pendingList
+                        if (status === '已處理') {
+                            doneIssuesList.push(formatIssueText(cleanText, defaultPrefix, status));
+                        } else {
+                            pendingIssuesList.push(formatIssueText(cleanText, defaultPrefix, status));
+                        }
+                    };
+
+                    if (r.lux_issue) processIssue(r.lux_issue, 'Lux -');
+                    if (r.temp_issue) processIssue(r.temp_issue, '溫度 -');
+                    if (r.db_issue) processIssue(r.db_issue, '分貝 -');
                     
                     let checkItemsHtml = '';
                     if (r.checklist) {
                         let items = r.checklist.split(' | ');
                         let normalItems = [];
-                        let issueItems = [];
                         items.forEach(item => {
                             if (item.includes('異常')) {
                                 let text = item.replace('NFC異常: ', '');
-                                issueItems.push(text.trim());
+                                processIssue(text.trim(), 'NFC -');
                             } else {
                                 let text = item.replace('NFC正常: ', 'NFC (');
                                 if(item.includes('NFC正常')) text += ')';
                                 normalItems.push(text);
                             }
-                        });
-                        issueItems.forEach(item => { 
-                            let h = formatIssueText(item, 'NFC -');
-                            if (item.includes('[狀態:已處理]') || item.includes('[狀態:已 Send mail]')) doneIssuesHtml += h; else pendingIssuesHtml += h;
                         });
                         if (normalItems.length > 0) { checkItemsHtml = `<div class="record-data">✅ 正常: ${normalItems.join(' | ')}</div>`; }
                     }
@@ -708,12 +705,8 @@ function submitForm() {
                         let parts = mainNote.split('【場面問題】');
                         mainNote = parts[0].trim();
                         let venueStr = parts[1].trim();
-                        let lines = venueStr.split('\n');
-                        lines.forEach(line => {
-                            if (line.trim() !== '') {
-                                let h = formatIssueText(line.trim(), '場面 -');
-                                if (line.includes('[狀態:已處理]') || line.includes('[狀態:已 Send mail]')) doneIssuesHtml += h; else pendingIssuesHtml += h;
-                            }
+                        venueStr.split('\n').forEach(line => {
+                            if (line.trim() !== '') processIssue(line.trim(), '場面 -');
                         });
                     }
 
@@ -722,9 +715,20 @@ function submitForm() {
                         let parts = mainNote.split('【早前未完成跟進】');
                         mainNote = parts[0].trim();
                         let oldStr = parts[1].trim();
+                        
+                        let oldItemsHtml = "";
+                        oldStr.split('\n').forEach(line => {
+                            if(line.trim() !== '') {
+                                let cleanLine = line.replace(/\[狀態:.*?\]/g, '').replace(/已處理/g, '').replace(/跟進中/g, '').trim();
+                                if(cleanLine) {
+                                    oldItemsHtml += formatIssueText(cleanLine, '', '待處理');
+                                }
+                            }
+                        });
+
                         pendingOldHtml = `<div style="background: #fff3cd; border: 2px dashed #ffa000; padding: 12px; border-radius: 8px; margin-top: 15px;">
                             <div style="font-weight: bold; color: #d84315; margin-bottom: 8px;">📌 早前未完成跟進項目：</div>
-                            <div style="font-size: 13px; color: #555; white-space: pre-wrap;">${oldStr}</div>
+                            <div>${oldItemsHtml}</div>
                         </div>`;
                     }
 
@@ -750,6 +754,7 @@ function submitForm() {
 
                     let divider = index > 0 ? `<hr style="border: 0; height: 8px; background: #d1d5db; margin: 30px 0; border-radius: 4px;">` : "";
                     
+                    // 🌟 核心：已處理(排上) -> 未處理(排下)
                     html += `
                         ${divider}
                         <div class="record-card">
@@ -761,8 +766,8 @@ function submitForm() {
                             </div>
                             ${dataHtml}
                             ${checkItemsHtml}
-                            ${doneIssuesHtml}
-                            ${pendingIssuesHtml}
+                            ${doneIssuesList.join('')}
+                            ${pendingIssuesList.join('')}
                             ${followerHtml}
                             <div class="record-note" style="margin-top: 10px;">${mainNote}</div>
                             ${pendingOldHtml}
