@@ -632,11 +632,24 @@ function submitForm() {
                 if (records.length === 0) { listDiv.innerHTML = "<p style='color: #888; text-align: center;'>暫時未有紀錄。</p >"; return; }
                 let html = "";
                 records.forEach(r => {
-                    let issuesHtml = "";
-                    if (r.lux_issue) issuesHtml += formatIssueText(r.lux_issue, '⚠️ 異常: Lux -');
-                    if (r.temp_issue) issuesHtml += formatIssueText(r.temp_issue, '⚠️ 異常: 溫度 -');
-                    if (r.db_issue) issuesHtml += formatIssueText(r.db_issue, '⚠️ 異常: 分貝 -');
+                    let doneIssuesHtml = "";
+                    let pendingIssuesHtml = "";
+
+                    // 1. 處理 Lux, 溫度, 分貝
+                    if (r.lux_issue) {
+                        let h = formatIssueText(r.lux_issue, '⚠️ 異常: Lux -');
+                        if (r.lux_issue.includes('[狀態:已處理]') || r.lux_issue.includes('[狀態:已 Send mail]')) doneIssuesHtml += h; else pendingIssuesHtml += h;
+                    }
+                    if (r.temp_issue) {
+                        let h = formatIssueText(r.temp_issue, '⚠️ 異常: 溫度 -');
+                        if (r.temp_issue.includes('[狀態:已處理]') || r.temp_issue.includes('[狀態:已 Send mail]')) doneIssuesHtml += h; else pendingIssuesHtml += h;
+                    }
+                    if (r.db_issue) {
+                        let h = formatIssueText(r.db_issue, '⚠️ 異常: 分貝 -');
+                        if (r.db_issue.includes('[狀態:已處理]') || r.db_issue.includes('[狀態:已 Send mail]')) doneIssuesHtml += h; else pendingIssuesHtml += h;
+                    }
                     
+                    // 2. 處理 NFC
                     let checkItemsHtml = '';
                     if (r.checklist) {
                         let items = r.checklist.split(' | ');
@@ -652,8 +665,26 @@ function submitForm() {
                                 normalItems.push(text);
                             }
                         });
-                        issueItems.forEach(item => { issuesHtml += formatIssueText(item, '⚠️ 異常: NFC -'); });
+                        issueItems.forEach(item => { 
+                            let h = formatIssueText(item, '⚠️ 異常: NFC -');
+                            if (item.includes('[狀態:已處理]') || item.includes('[狀態:已 Send mail]')) doneIssuesHtml += h; else pendingIssuesHtml += h;
+                        });
                         if (normalItems.length > 0) { checkItemsHtml = `<div class="record-data">✅ 正常: ${normalItems.join(' | ')}</div>`; }
+                    }
+
+                    // 3. 處理場面問題 (統一格式，並自動分類)
+                    let mainNote = r.note || "";
+                    if (mainNote.includes('【場面問題】')) {
+                        let parts = mainNote.split('【場面問題】');
+                        mainNote = parts[0].trim();
+                        let venueStr = parts[1].trim();
+                        let lines = venueStr.split('\n');
+                        lines.forEach(line => {
+                            if (line.trim() !== '') {
+                                let h = formatIssueText(line.trim(), '⚠️ 異常: 場面 -');
+                                if (line.includes('[狀態:已處理]') || line.includes('[狀態:已 Send mail]')) doneIssuesHtml += h; else pendingIssuesHtml += h;
+                            }
+                        });
                     }
 
                     let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : 'Lux數值大致在於450-650之間';
@@ -676,6 +707,7 @@ function submitForm() {
                         followerHtml = `<div class="record-data" style="background:#fff3cd; color:#856404; display:flex; align-items:center;">👤 跟進人: <div style="margin-left:5px;">${iconsHtml}</div></div>`;
                     }
                     
+                    // 合併顯示：已處理 (上) -> 未處理 (下) -> 跟進人 -> 備註
                     html += `
                         <div class="record-card">
                             <div class="record-header">
@@ -683,9 +715,10 @@ function submitForm() {
                             </div>
                             ${dataHtml}
                             ${checkItemsHtml}
-                            ${issuesHtml}
+                            ${doneIssuesHtml}
+                            ${pendingIssuesHtml}
                             ${followerHtml}
-                            <div class="record-note" style="white-space: pre-wrap;">${r.note}</div>
+                            <div class="record-note" style="margin-top: 10px;">${mainNote}</div>
                         </div>
                     `;
                 });
