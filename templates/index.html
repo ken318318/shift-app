@@ -21,7 +21,7 @@
         .issue-title { font-size: 12px; color: #856404; margin-bottom: 5px; font-weight: bold;}
         .issue-item { border-bottom: 1px dashed #e0c97e; padding-bottom: 8px; margin-bottom: 8px; }
         .issue-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-        .issue-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px;}
+        .issue-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px; align-items: center;}
         .issue-row select, .issue-row input { padding: 8px; font-size: 13px; }
         .issue-row .prefix { flex: 1; min-width: 60px; }
         .issue-row .table-num { flex: 1.5; min-width: 70px; }
@@ -37,12 +37,13 @@
         .record-card { background: #fff; border-left: 5px solid #1a73e8; padding: 15px; margin-bottom: 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .record-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; font-size: 14px; border-bottom: 1px dashed #eee; padding-bottom: 8px;}
         .record-data { font-size: 13px; color: #555; margin-bottom: 8px; background: #f4f6f8; padding: 8px; border-radius: 4px;}
-        .issue-data { font-size: 13px; color: #d32f2f; margin-bottom: 8px; background: #ffebee; padding: 8px; border-radius: 4px; line-height: 1.5;}
+        .issue-data { font-size: 13px; color: #d32f2f; margin-bottom: 8px; background: #ffebee; padding: 8px; border-radius: 4px; line-height: 1.5; display: flex; justify-content: space-between; align-items: center;}
         .record-note { font-size: 14px; white-space: pre-wrap; line-height: 1.5; color: #222;}
-        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; color: white; white-space: nowrap;}
+        .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; color: white; white-space: nowrap;}
         .status-pending { background: #e67c73; }
         .status-processing { background: #f5b041; }
         .status-done { background: #2ecc71; }
+        .issue-status { padding: 6px; font-size: 12px; border-radius: 6px; border: 1px solid #ccc; background: #fff; color: #d32f2f; font-weight: bold;}
     </style>
 </head>
 <body>
@@ -105,6 +106,10 @@
                                 <div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div>
                                 <div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div>
                             </div>
+                            <div class="issue-row" style="margin-top: 8px;">
+                                <span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span>
+                                <select class="issue-status"><option value="待處理">待處理</option><option value="跟進中">跟進中</option><option value="已處理">已處理</option></select>
+                            </div>
                         </div>
                     </div>
                     <button type="button" class="btn-add" onclick="addLuxRow()">+ 新增位置</button>
@@ -125,6 +130,10 @@
                                 <select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select>
                                 <input type="text" class="table-num temp-table" placeholder="台號">
                                 <input type="text" class="value temp-value" placeholder="數值">
+                            </div>
+                            <div class="issue-row" style="margin-top: 8px;">
+                                <span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span>
+                                <select class="issue-status"><option value="待處理">待處理</option><option value="跟進中">跟進中</option><option value="已處理">已處理</option></select>
                             </div>
                         </div>
                     </div>
@@ -148,6 +157,10 @@
                             <select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select>
                             <input type="text" class="table-num bgm-table" placeholder="台號">
                             <input type="text" class="value bgm-value" placeholder="數值">
+                        </div>
+                        <div class="issue-row" style="margin-top: 8px;">
+                            <span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span>
+                            <select class="issue-status"><option value="待處理">待處理</option><option value="跟進中">跟進中</option><option value="已處理">已處理</option></select>
                         </div>
                     </div>
                 </div>
@@ -187,20 +200,35 @@
                     <label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label>
                     <label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label>
                 </div>
+                <div class="issue-row" style="margin-top: 8px;">
+                    <span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span>
+                    <select class="issue-status"><option value="待處理">待處理</option><option value="跟進中">跟進中</option><option value="已處理">已處理</option></select>
+                </div>
             </div>
         </div>
         <button type="button" class="btn-add" onclick="addNfcRow()">+ 新增位置</button>
     </div>
 
-    <!-- 新增：場面問題項目輸入 -->
     <label>場面問題項目輸入：</label>
     <div class="issue-group" style="background: #e3f2fd; border-color: #90caf9;">
         <div class="issue-title" style="color: #1565c0;">如有設施問題，請選擇並輸入位置：</div>
         <div id="venue-container">
             <div class="issue-item venue-item" style="border-bottom-color: #90caf9;">
                 <div class="issue-row">
-                    <select class="prefix venue-category" onchange="updateVenueItems(this)">
-                        <option value="賭檯">賭檯</option>
+                    <select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;">
+                        <option value="賭檯 - Display(大Mon)">賭檯 - Display(大Mon)</option>
+                        <option value="賭檯 - Display(細Mon)">賭檯 - Display(細Mon)</option>
+                        <option value="賭檯 - Layout">賭檯 - Layout</option>
+                        <option value="賭檯 - Surround">賭檯 - Surround</option>
+                        <option value="賭檯 - Sound Bar">賭檯 - Sound Bar</option>
+                        <option value="賭檯 - 地腳燈">賭檯 - 地腳燈</option>
+                        <option value="賭檯 - 銀紙機">賭檯 - 銀紙機</option>
+                        <option value="賭檯 - 掃描槍">賭檯 - 掃描槍</option>
+                        <option value="賭檯 - 台號牌">賭檯 - 台號牌</option>
+                        <option value="賭檯 - 廢牌桶">賭檯 - 廢牌桶</option>
+                        <option value="賭檯 - 備用牌箱">賭檯 - 備用牌箱</option>
+                        <option value="賭檯 - 賭檯木紋">賭檯 - 賭檯木紋</option>
+                        <option value="賭檯 - 櫃門">賭檯 - 櫃門</option>
                         <option value="地墊">地墊</option>
                         <option value="地磚">地磚</option>
                         <option value="牆磚">牆磚</option>
@@ -216,22 +244,17 @@
                         <option value="消防設備">消防設備</option>
                         <option value="供電用品">供電用品</option>
                     </select>
-                    <select class="prefix venue-problem">
-                        <option value="Display">Display</option><option value="Layout">Layout</option><option value="Surround">Surround</option><option value="Sound Bar">Sound Bar</option><option value="地腳燈">地腳燈</option><option value="銀紙機">銀紙機</option><option value="掃描槍">掃描槍</option><option value="台號牌">台號牌</option><option value="廢牌桶">廢牌桶</option><option value="備用牌箱">備用牌箱</option><option value="賭檯木紋">賭檯木紋</option><option value="櫃門">櫃門</option>
-                    </select>
+                    <select class="prefix venue-problem" style="flex: 1.5;"></select>
                     <input type="text" class="table-num venue-location" placeholder="位置/台號">
+                </div>
+                <div class="issue-row" style="margin-top: 8px;">
+                    <span style="font-size:12px; color:#1565c0; font-weight:bold;">跟進狀態：</span>
+                    <select class="issue-status" style="color: #1565c0;"><option value="待處理">待處理</option><option value="跟進中">跟進中</option><option value="已處理">已處理</option></select>
                 </div>
             </div>
         </div>
         <button type="button" class="btn-add" style="background: #1976d2;" onclick="addVenueRow()">+ 新增場面問題</button>
     </div>
-
-    <label>跟進狀態：</label>
-    <select id="status">
-        <option value="待處理">待處理 (需通知相關部門)</option>
-        <option value="跟進中">跟進中 (已Send Email/待零件)</option>
-        <option value="已處理">已處理 (已維修/已修復)</option>
-    </select>
     
     <label>負責跟進人 (可多選)：</label>
     <div class="checkbox-group" style="display:block;">
@@ -248,9 +271,20 @@
     <div id="result"></div>
 </div>
 <script>
-    // 場面問題資料庫 (用嚟做聯動)
-    const venueData = {
-        "賭檯": ["Display", "Layout", "Surround", "Sound Bar", "地腳燈", "銀紙機", "掃描槍", "台號牌", "廢牌桶", "備用牌箱", "賭檯木紋", "櫃門"],
+    const venueCategories = {
+        "賭檯 - Display(大Mon)": ["黑屏", "主機異響", "主機自動關閉", "大細mon畫面調轉", "屏幕彈出小鍵盤", "觸屏鍵盤無法使用", "LED熄滅", "LED燈光異常", "屏幕裂縫"],
+        "賭檯 - Display(細Mon)": ["黑屏", "LED熄滅", "LED燈光異常", "屏幕裂縫"],
+        "賭檯 - Layout": ["損壞", "污跡"],
+        "賭檯 - Surround": ["損壞", "無聲"],
+        "賭檯 - Sound Bar": ["無聲", "損壞"],
+        "賭檯 - 地腳燈": ["熄滅", "損壞"],
+        "賭檯 - 銀紙機": ["卡紙", "損壞"],
+        "賭檯 - 掃描槍": ["無法掃描", "損壞"],
+        "賭檯 - 台號牌": ["損壞", "污跡"],
+        "賭檯 - 廢牌桶": ["損壞", "滿溢"],
+        "賭檯 - 備用牌箱": ["損壞", "卡住"],
+        "賭檯 - 賭檯木紋": ["破損", "污跡"],
+        "賭檯 - 櫃門": ["損壞", "無法關閉"],
         "地墊": ["翹起", "破損", "污跡", "移位"],
         "地磚": ["破損", "裂縫", "污跡"],
         "牆磚": ["破損", "裂縫", "污跡"],
@@ -279,116 +313,141 @@
         window.scrollTo(0, 0);
     }
 
-    // 更新場面問題嘅選項
-    function updateVenueItems(selectEl) {
-        let category = selectEl.value;
-        let problemSelect = selectEl.nextElementSibling;
-        let items = venueData[category] || ["其他問題"];
-        problemSelect.innerHTML = items.map(item => `<option value="${item}">${item}</option>`).join('');
+    // 聯動邏輯：更新具體問題
+    function updateVenueProblem(selectEl) {
+        let cat = selectEl.value;
+        let probSelect = selectEl.nextElementSibling;
+        let items = venueCategories[cat] || ["其他問題"];
+        probSelect.innerHTML = items.map(item => `<option value="${item}">${item}</option>`).join('');
     }
 
     function addVenueRow() {
-        document.getElementById('venue-container').insertAdjacentHTML('beforeend', `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="prefix venue-category" onchange="updateVenueItems(this)"><option value="賭檯">賭檯</option><option value="地墊">地墊</option><option value="地磚">地磚</option><option value="牆磚">牆磚</option><option value="燈">燈</option><option value="櫈">櫈</option><option value="窗簾">窗簾</option><option value="垃圾桶">垃圾桶</option><option value="充電宝">充電宝</option><option value="電視機">電視機</option><option value="植物">植物</option><option value="天花板">天花板</option><option value="冷氣槽">冷氣槽</option><option value="消防設備">消防設備</option><option value="供電用品">供電用品</option></select><select class="prefix venue-problem"><option value="Display">Display</option><option value="Layout">Layout</option><option value="Surround">Surround</option><option value="Sound Bar">Sound Bar</option><option value="地腳燈">地腳燈</option><option value="銀紙機">銀紙機</option><option value="掃描槍">掃描槍</option><option value="台號牌">台號牌</option><option value="廢牌桶">廢牌桶</option><option value="備用牌箱">備用牌箱</option><option value="賭檯木紋">賭檯木紋</option><option value="櫃門">櫃門</option></select><input type="text" class="table-num venue-location" placeholder="位置/台號"></div></div>`);
+        document.getElementById('venue-container').insertAdjacentHTML('beforeend', `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"><option value="賭檯 - Display(大Mon)">賭檯 - Display(大Mon)</option><option value="賭檯 - Display(細Mon)">賭檯 - Display(細Mon)</option><option value="賭檯 - Layout">賭檯 - Layout</option><option value="賭檯 - Surround">賭檯 - Surround</option><option value="賭檯 - Sound Bar">賭檯 - Sound Bar</option><option value="賭檯 - 地腳燈">賭檯 - 地腳燈</option><option value="賭檯 - 銀紙機">賭檯 - 銀紙機</option><option value="賭檯 - 掃描槍">賭檯 - 掃描槍</option><option value="賭檯 - 台號牌">賭檯 - 台號牌</option><option value="賭檯 - 廢牌桶">賭檯 - 廢牌桶</option><option value="賭檯 - 備用牌箱">賭檯 - 備用牌箱</option><option value="賭檯 - 賭檯木紋">賭檯 - 賭檯木紋</option><option value="賭檯 - 櫃門">賭檯 - 櫃門</option><option value="地墊">地墊</option><option value="地磚">地磚</option><option value="牆磚">牆磚</option><option value="燈">燈</option><option value="櫈">櫈</option><option value="窗簾">窗簾</option><option value="垃圾桶">垃圾桶</option><option value="充電宝">充電宝</option><option value="電視機">電視機</option><option value="植物">植物</option><option value="天花板">天花板</option><option value="冷氣槽">冷氣槽</option><option value="消防設備">消防設備</option><option value="供電用品">供電用品</option></select><select class="prefix venue-problem" style="flex: 1.5;"></select><input type="text" class="table-num venue-location" placeholder="位置/台號"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#1565c0; font-weight:bold;">跟進狀態：</span><select class="issue-status" style="color: #1565c0;"><option value="待處理">待處理</option><option value="跟進中">跟進中</option><option value="已處理">已處理</option></select></div></div>`);
+        // 初始化新加入嘅下拉選單
+        let newSelect = document.querySelector('.venue-item:last-child .venue-category');
+        updateVenueProblem(newSelect);
     }
 
     function addLuxRow() {
-        document.getElementById('lux-container').insertAdjacentHTML('beforeend', `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div></div>`);
+        document.getElementById('lux-container').insertAdjacentHTML('beforeend', `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="待處理">待處理</option><option value="跟進中">跟進中</option><option value="已處理">已處理</option></select></div></div>`);
     }
     function addTempRow() {
-        document.getElementById('temp-container').insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div></div>`);
+        document.getElementById('temp-container').insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="待處理">待處理</option><option value="跟進中">跟進中</option><option value="已處理">已處理</option></select></div></div>`);
     }
     function addBgmRow() {
-        document.getElementById('bgm-container').insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div></div>`);
+        document.getElementById('bgm-container').insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="待處理">待處理</option><option value="跟進中">跟進中</option><option value="已處理">已處理</option></select></div></div>`);
     }
     function addNfcRow() {
-        document.getElementById('nfc-container').insertAdjacentHTML('beforeend', `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div></div>`);
+        document.getElementById('nfc-container').insertAdjacentHTML('beforeend', `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="待處理">待處理</option><option value="跟進中">跟進中</option><option value="已處理">已處理</option></select></div></div>`);
     }
-        function submitForm() {
-            let selectedHall = document.getElementById('nfc-hall-select').value;
-            let nfcDetails = [];
-            document.querySelectorAll('.nfc-item').forEach(item => {
-                let nfcPrefix = item.querySelector('.nfc-prefix').value;
-                let nfcTable = item.querySelector('.nfc-table').value;
-                let boxArray = [];
-                item.querySelectorAll('.nfc-box:checked').forEach(cb => boxArray.push(cb.value));
-                if (nfcTable || boxArray.length > 0) {
-                    let boxStr = boxArray.length > 0 ? `Box: ${boxArray.join(', ')}` : '未選Box';
-                    nfcDetails.push(`${nfcPrefix}${nfcTable} (${boxStr})`);
-                }
-            });
-            
-            let nfcNormalStr = `NFC正常: ${selectedHall}`;
-            let nfcIssueStr = nfcDetails.length > 0 ? `NFC異常: ${nfcDetails.join(', ')}` : '';
-            
-            let nfcChecklistArray = [nfcNormalStr];
-            if (nfcIssueStr) nfcChecklistArray.push(nfcIssueStr);
+    
+    // 初始化第一個場面問題的下拉
+    document.addEventListener("DOMContentLoaded", function() {
+        let firstVenue = document.querySelector('.venue-category');
+        if(firstVenue) updateVenueProblem(firstVenue);
+    });
+function submitForm() {
+    let selectedHall = document.getElementById('nfc-hall-select').value;
+    let nfcDetails = [];
+    document.querySelectorAll('.nfc-item').forEach(item => {
+        let nfcPrefix = item.querySelector('.nfc-prefix').value;
+        let nfcTable = item.querySelector('.nfc-table').value;
+        let boxArray = [];
+        item.querySelectorAll('.nfc-box:checked').forEach(cb => boxArray.push(cb.value));
+        if (nfcTable || boxArray.length > 0) {
+            let boxStr = boxArray.length > 0 ? `Box: ${boxArray.join(', ')}` : '未選Box';
+            let status = item.querySelector('.issue-status').value;
+            nfcDetails.push(`${nfcPrefix}${nfcTable} (${boxStr}) [狀態:${status}]`);
+        }
+    });
+    
+    let nfcNormalStr = `NFC正常: ${selectedHall}`;
+    let nfcIssueStr = nfcDetails.length > 0 ? `NFC異常: ${nfcDetails.join(', ')}` : '';
+    
+    let nfcChecklistArray = [nfcNormalStr];
+    if (nfcIssueStr) nfcChecklistArray.push(nfcIssueStr);
+    let checklistString = nfcChecklistArray.join(' | ');
 
-            let checklistString = nfcChecklistArray.join(' | '); // 取消其他日常檢查項目後，只剩 NFC
+    let followerString = Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無';
 
-            let followerString = Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無';
+    let venueIssues = [];
+    document.querySelectorAll('.venue-item').forEach(item => {
+        let cat = item.querySelector('.venue-category').value;
+        let prob = item.querySelector('.venue-problem').value;
+        let loc = item.querySelector('.venue-location').value;
+        let status = item.querySelector('.issue-status').value;
+        if (loc) {
+            venueIssues.push(`[${cat} - ${prob}] 位置: ${loc} [狀態:${status}]`);
+        }
+    });
+    let venueStr = venueIssues.length > 0 ? `\n\n【場面問題】\n` + venueIssues.join('\n') : '';
+    let finalNote = document.getElementById('notes').value + venueStr;
 
-            // 收集場面問題
-            let venueIssues = [];
-            document.querySelectorAll('.venue-item').forEach(item => {
-                let cat = item.querySelector('.venue-category').value;
-                let prob = item.querySelector('.venue-problem').value;
-                let loc = item.querySelector('.venue-location').value;
-                if (loc) {
-                    venueIssues.push(`[${cat} - ${prob}] 位置: ${loc}`);
-                }
-            });
-            let venueStr = venueIssues.length > 0 ? `\n\n【場面問題】\n` + venueIssues.join('\n') : '';
-            
-            let finalNote = document.getElementById('notes').value + venueStr;
+    let luxIssue = Array.from(document.querySelectorAll('.lux-item')).map(item => {
+        let status = item.querySelector('.issue-status').value;
+        let bStr = [];
+        if(item.querySelector('.lux-box1').value) bStr.push(`Box 1: ${item.querySelector('.lux-box1').value}`);
+        if(item.querySelector('.lux-box3').value) bStr.push(`Box 3: ${item.querySelector('.lux-box3').value}`);
+        if(item.querySelector('.lux-box6').value) bStr.push(`Box 6: ${item.querySelector('.lux-box6').value}`);
+        return (item.querySelector('.lux-table').value || bStr.length > 0) ? `${item.querySelector('.lux-prefix').value}${item.querySelector('.lux-table').value} (${bStr.join(', ')}) [狀態:${status}]` : "";
+    }).filter(Boolean).join(' | ');
 
-            let luxIssue = Array.from(document.querySelectorAll('.lux-item')).map(item => {
-                let bStr = [];
-                if(item.querySelector('.lux-box1').value) bStr.push(`Box 1: ${item.querySelector('.lux-box1').value}`);
-                if(item.querySelector('.lux-box3').value) bStr.push(`Box 3: ${item.querySelector('.lux-box3').value}`);
-                if(item.querySelector('.lux-box6').value) bStr.push(`Box 6: ${item.querySelector('.lux-box6').value}`);
-                return (item.querySelector('.lux-table').value || bStr.length > 0) ? `${item.querySelector('.lux-prefix').value}${item.querySelector('.lux-table').value} (${bStr.join(', ')})` : "";
-            }).filter(Boolean).join(' | ');
+    let tempIssue = Array.from(document.querySelectorAll('.temp-item')).map(item => {
+        let status = item.querySelector('.issue-status').value;
+        return (item.querySelector('.temp-table').value || item.querySelector('.temp-value').value) ? `${item.querySelector('.temp-prefix').value}${item.querySelector('.temp-table').value} (數值: ${item.querySelector('.temp-value').value}) [狀態:${status}]` : "";
+    }).filter(Boolean).join(' | ');
 
-            let tempIssue = Array.from(document.querySelectorAll('.temp-item')).map(item => {
-                return (item.querySelector('.temp-table').value || item.querySelector('.temp-value').value) ? `${item.querySelector('.temp-prefix').value}${item.querySelector('.temp-table').value} (數值: ${item.querySelector('.temp-value').value})` : "";
-            }).filter(Boolean).join(' | ');
+    let dbIssue = Array.from(document.querySelectorAll('.bgm-item')).map(item => {
+        let status = item.querySelector('.issue-status').value;
+        return (item.querySelector('.bgm-table').value || item.querySelector('.bgm-value').value) ? `${item.querySelector('.bgm-prefix').value}${item.querySelector('.bgm-table').value} (數值: ${item.querySelector('.bgm-value').value}) [狀態:${status}]` : "";
+    }).filter(Boolean).join(' | ');
 
-            let dbIssue = Array.from(document.querySelectorAll('.bgm-item')).map(item => {
-                return (item.querySelector('.bgm-table').value || item.querySelector('.bgm-value').value) ? `${item.querySelector('.bgm-prefix').value}${item.querySelector('.bgm-table').value} (數值: ${item.querySelector('.bgm-value').value})` : "";
-            }).filter(Boolean).join(' | ');
+    let overallStatus = "已處理";
+    document.querySelectorAll('.issue-status').forEach(sel => { if(sel.value === "待處理") overallStatus = "待處理"; });
+    if(overallStatus === "已處理") document.querySelectorAll('.issue-status').forEach(sel => { if(sel.value === "跟進中") overallStatus = "跟進中"; });
 
-            let data = {
-                name: document.getElementById('staffName').value, shift: document.getElementById('shiftType').value,
-                lux: document.getElementById('lux').value, temp: document.getElementById('temp').value, bgm: document.getElementById('bgm').value,
-                checklist: checklistString, status: document.getElementById('status').value, follower: followerString,
-                note: finalNote, lux_issue: luxIssue, temp_issue: tempIssue, db_issue: dbIssue
-            };
+    let data = {
+        name: document.getElementById('staffName').value, shift: document.getElementById('shiftType').value,
+        lux: document.getElementById('lux').value, temp: document.getElementById('temp').value, bgm: document.getElementById('bgm').value,
+        checklist: checklistString, status: overallStatus, follower: followerString,
+        note: finalNote, lux_issue: luxIssue, temp_issue: tempIssue, db_issue: dbIssue
+    };
+    if (!data.name) { alert("請選擇交更人！"); return; }
+    if (!data.note || data.note.trim() === '【場面問題】') { alert("請填寫交更事項或場面問題！"); return; }
 
-            if (!data.name) { alert("請選擇交更人！"); return; }
-            if (!data.note || data.note.trim() === '【場面問題】') { alert("請填寫交更事項或場面問題！"); return; }
+    fetch('/api/submit', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(res => {
+        alert("✅ " + data.name + " 交更成功！");
+        document.getElementById('staffName').value = ''; document.getElementById('notes').value = '';
+        document.querySelectorAll('.follower-item').forEach(cb => cb.checked = false);
+        
+        document.getElementById('lux').value = '450-650';
+        document.getElementById('temp').value = '正常 (22.5-24.5)';
+        document.getElementById('bgm').value = '正常 (65-75)';
+        
+        document.getElementById('lux-container').innerHTML = `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="待處理">待處理</option><option value="跟進中">跟進中</option><option value="已處理">已處理</option></select></div></div>`;
+        document.getElementById('temp-container').innerHTML = `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="待處理">待處理</option><option value="跟進中">跟進中</option><option value="已處理">已處理</option></select></div></div>`;
+        document.getElementById('bgm-container').innerHTML = `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="待處理">待處理</option><option value="跟進中">跟進中</option><option value="已處理">已處理</option></select></div></div>`;
+        document.getElementById('nfc-container').innerHTML = `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="待處理">待處理</option><option value="跟進中">跟進中</option><option value="已處理">已處理</option></select></div></div>`;
+        document.getElementById('venue-container').innerHTML = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"><option value="賭檯 - Display(大Mon)">賭檯 - Display(大Mon)</option><option value="賭檯 - Display(細Mon)">賭檯 - Display(細Mon)</option><option value="賭檯 - Layout">賭檯 - Layout</option><option value="賭檯 - Surround">賭檯 - Surround</option><option value="賭檯 - Sound Bar">賭檯 - Sound Bar</option><option value="賭檯 - 地腳燈">賭檯 - 地腳燈</option><option value="賭檯 - 銀紙機">賭檯 - 銀紙機</option><option value="賭檯 - 掃描槍">賭檯 - 掃描槍</option><option value="賭檯 - 台號牌">賭檯 - 台號牌</option><option value="賭檯 - 廢牌桶">賭檯 - 廢牌桶</option><option value="賭檯 - 備用牌箱">賭檯 - 備用牌箱</option><option value="賭檯 - 賭檯木紋">賭檯 - 賭檯木紋</option><option value="賭檯 - 櫃門">賭檯 - 櫃門</option><option value="地墊">地墊</option><option value="地磚">地磚</option><option value="牆磚">牆磚</option><option value="燈">燈</option><option value="櫈">櫈</option><option value="窗簾">窗簾</option><option value="垃圾桶">垃圾桶</option><option value="充電宝">充電宝</option><option value="電視機">電視機</option><option value="植物">植物</option><option value="天花板">天花板</option><option value="冷氣槽">冷氣槽</option><option value="消防設備">消防設備</option><option value="供電用品">供電用品</option></select><select class="prefix venue-problem" style="flex: 1.5;"></select><input type="text" class="table-num venue-location" placeholder="位置/台號"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#1565c0; font-weight:bold;">跟進狀態：</span><select class="issue-status" style="color: #1565c0;"><option value="待處理">待處理</option><option value="跟進中">跟進中</option><option value="已處理">已處理</option></select></div></div>`;
+        
+        let firstVenue = document.querySelector('.venue-category');
+        if(firstVenue) updateVenueProblem(firstVenue);
 
-            fetch('/api/submit', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
-            })
-            .then(response => response.json())
-            .then(res => {
-                alert("✅ " + data.name + " 交更成功！");
-                document.getElementById('staffName').value = ''; document.getElementById('notes').value = '';
-                document.querySelectorAll('.follower-item').forEach(cb => cb.checked = false);
-                
-                document.getElementById('lux').value = '450-650';
-                document.getElementById('temp').value = '正常 (22.5-24.5)';
-                document.getElementById('bgm').value = '正常 (65-75)';
-                
-                document.getElementById('lux-container').innerHTML = `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div></div>`;
-                document.getElementById('temp-container').innerHTML = `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div></div>`;
-                document.getElementById('bgm-container').innerHTML = `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div></div>`;
-                document.getElementById('nfc-container').innerHTML = `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div></div>`;
-                document.getElementById('venue-container').innerHTML = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="prefix venue-category" onchange="updateVenueItems(this)"><option value="賭檯">賭檯</option><option value="地墊">地墊</option><option value="地磚">地磚</option><option value="牆磚">牆磚</option><option value="燈">燈</option><option value="櫈">櫈</option><option value="窗簾">窗簾</option><option value="垃圾桶">垃圾桶</option><option value="充電宝">充電宝</option><option value="電視機">電視機</option><option value="植物">植物</option><option value="天花板">天花板</option><option value="冷氣槽">冷氣槽</option><option value="消防設備">消防設備</option><option value="供電用品">供電用品</option></select><select class="prefix venue-problem"><option value="Display">Display</option><option value="Layout">Layout</option><option value="Surround">Surround</option><option value="Sound Bar">Sound Bar</option><option value="地腳燈">地腳燈</option><option value="銀紙機">銀紙機</option><option value="掃描槍">掃描槍</option><option value="台號牌">台號牌</option><option value="廢牌桶">廢牌桶</option><option value="備用牌箱">備用牌箱</option><option value="賭檯木紋">賭檯木紋</option><option value="櫃門">櫃門</option></select><input type="text" class="table-num venue-location" placeholder="位置/台號"></div></div>`;
-                
-                showList();
-            })
-            .catch(error => { alert("連線失敗！"); console.error(error); });
+        showList();
+    })
+    .catch(error => { alert("連線失敗！"); console.error(error); });
+}
+        function formatIssueText(text, defaultPrefix) {
+            if (!text) return "";
+            let match = text.match(/\[狀態:(.*?)\]/);
+            let status = match ? match[1] : '待處理';
+            let cleanText = text.replace(/\[狀態:.*?\]/, '').trim();
+            let badgeClass = status === '已處理' ? 'status-done' : (status === '跟進中' ? 'status-processing' : 'status-pending');
+            return `<div class="issue-data"><span>${defaultPrefix} ${cleanText}</span><span class="status-badge ${badgeClass}">${status}</span></div>`;
         }
 
         function displayRecords() {
@@ -399,7 +458,10 @@
                 records.forEach(r => {
                     let statusClass = r.status === "已處理" ? "status-done" : (r.status === "跟進中" ? "status-processing" : "status-pending");
                     
-                    let issuesHtml = (r.lux_issue ? `<div class="issue-data">⚠️ 異常: Lux - ${r.lux_issue}</div>` : '') + (r.temp_issue ? `<div class="issue-data">⚠️ 異常: 溫度 - ${r.temp_issue}</div>` : '') + (r.db_issue ? `<div class="issue-data">⚠️ 異常: 分貝 - ${r.db_issue}</div>` : '');
+                    let issuesHtml = "";
+                    if (r.lux_issue) issuesHtml += formatIssueText(r.lux_issue, '⚠️ 異常: Lux -');
+                    if (r.temp_issue) issuesHtml += formatIssueText(r.temp_issue, '⚠️ 異常: 溫度 -');
+                    if (r.db_issue) issuesHtml += formatIssueText(r.db_issue, '⚠️ 異常: 分貝 -');
                     
                     let checkItemsHtml = '';
                     if (r.checklist) {
@@ -407,8 +469,8 @@
                         let normalItems = [];
                         let issueItems = [];
                         items.forEach(item => {
-                            if (item.includes('異常') || item.includes('⚠️')) {
-                                let text = item.replace('NFC異常: ', '').replace(/異常/g, '');
+                            if (item.includes('異常')) {
+                                let text = item.replace('NFC異常: ', '');
                                 issueItems.push(text.trim());
                             } else {
                                 let text = item.replace('NFC正常: ', 'NFC (');
@@ -416,21 +478,14 @@
                                 normalItems.push(text);
                             }
                         });
-                        
-                        issueItems.forEach(item => {
-                            issuesHtml += `<div class="issue-data">⚠️ 異常: NFC - ${item}</div>`;
-                        });
-                        
-                        if (normalItems.length > 0) {
-                            checkItemsHtml = `<div class="record-data">✅ 正常: ${normalItems.join(' | ')}</div>`;
-                        }
+                        issueItems.forEach(item => { issuesHtml += formatIssueText(item, '⚠️ 異常: NFC -'); });
+                        if (normalItems.length > 0) { checkItemsHtml = `<div class="record-data">✅ 正常: ${normalItems.join(' | ')}</div>`; }
                     }
 
                     let luxStr = r.lux === '450-650' ? 'Lux數值大致在於450-650之間' : `Lux: ${r.lux}`;
                     let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常') ? '溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
                     let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常') ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
                     let dataHtml = `<div class="record-data">📊 ${luxStr} | ${tempStr} | ${bgmStr}</div>`;
-
                     let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${new Date(r.created_at).toLocaleString('zh-HK')}</div>` : "";
                     
                     let followerHtml = '';
