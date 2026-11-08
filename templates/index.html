@@ -192,11 +192,38 @@
         <button type="button" class="btn-add" onclick="addNfcRow()">+ 新增位置</button>
     </div>
 
-    <label>其他日常檢查項目：</label>
-    <div class="checkbox-group" style="display:block;">
-        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Display 屏幕正常" class="check-item"> Display 屏幕正常</label>
-        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="掃描槍運作正常" class="check-item"> 掃描槍運作正常</label>
-        <label style="width:100%; margin-top:8px;"><input type="checkbox" value="賭檯木紋/地墊無明顯破損" class="check-item"> 賭檯木紋/地墊無明顯破損</label>
+    <!-- 新增：場面問題項目輸入 -->
+    <label>場面問題項目輸入：</label>
+    <div class="issue-group" style="background: #e3f2fd; border-color: #90caf9;">
+        <div class="issue-title" style="color: #1565c0;">如有設施問題，請選擇並輸入位置：</div>
+        <div id="venue-container">
+            <div class="issue-item venue-item" style="border-bottom-color: #90caf9;">
+                <div class="issue-row">
+                    <select class="prefix venue-category" onchange="updateVenueItems(this)">
+                        <option value="賭檯">賭檯</option>
+                        <option value="地墊">地墊</option>
+                        <option value="地磚">地磚</option>
+                        <option value="牆磚">牆磚</option>
+                        <option value="燈">燈</option>
+                        <option value="櫈">櫈</option>
+                        <option value="窗簾">窗簾</option>
+                        <option value="垃圾桶">垃圾桶</option>
+                        <option value="充電宝">充電宝</option>
+                        <option value="電視機">電視機</option>
+                        <option value="植物">植物</option>
+                        <option value="天花板">天花板</option>
+                        <option value="冷氣槽">冷氣槽</option>
+                        <option value="消防設備">消防設備</option>
+                        <option value="供電用品">供電用品</option>
+                    </select>
+                    <select class="prefix venue-problem">
+                        <option value="Display">Display</option><option value="Layout">Layout</option><option value="Surround">Surround</option><option value="Sound Bar">Sound Bar</option><option value="地腳燈">地腳燈</option><option value="銀紙機">銀紙機</option><option value="掃描槍">掃描槍</option><option value="台號牌">台號牌</option><option value="廢牌桶">廢牌桶</option><option value="備用牌箱">備用牌箱</option><option value="賭檯木紋">賭檯木紋</option><option value="櫃門">櫃門</option>
+                    </select>
+                    <input type="text" class="table-num venue-location" placeholder="位置/台號">
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn-add" style="background: #1976d2;" onclick="addVenueRow()">+ 新增場面問題</button>
     </div>
 
     <label>跟進狀態：</label>
@@ -221,6 +248,25 @@
     <div id="result"></div>
 </div>
 <script>
+    // 場面問題資料庫 (用嚟做聯動)
+    const venueData = {
+        "賭檯": ["Display", "Layout", "Surround", "Sound Bar", "地腳燈", "銀紙機", "掃描槍", "台號牌", "廢牌桶", "備用牌箱", "賭檯木紋", "櫃門"],
+        "地墊": ["翹起", "破損", "污跡", "移位"],
+        "地磚": ["破損", "裂縫", "污跡"],
+        "牆磚": ["破損", "裂縫", "污跡"],
+        "燈": ["熄滅", "閃爍", "光線不足", "損壞"],
+        "櫈": ["破損", "污跡", "搖晃"],
+        "窗簾": ["破損", "污跡", "脫軌"],
+        "垃圾桶": ["滿溢", "破損", "污跡"],
+        "充電宝": ["無法充電", "損壞", "機座空"],
+        "電視機": ["黑屏", "花屏", "無聲", "損壞"],
+        "植物": ["枯萎", "缺水", "盆爛"],
+        "天花板": ["漏水", "污跡", "破損", "掉漆"],
+        "冷氣槽": ["滴水", "污跡", "聲響"],
+        "消防設備": ["阻擋", "過期", "損壞"],
+        "供電用品": ["跳掣", "插座鬆脫", "損壞"]
+    };
+
     function showForm() {
         document.getElementById('list-container').style.display = 'none';
         document.getElementById('form-container').style.display = 'block';
@@ -231,6 +277,18 @@
         document.getElementById('list-container').style.display = 'block';
         displayRecords(); 
         window.scrollTo(0, 0);
+    }
+
+    // 更新場面問題嘅選項
+    function updateVenueItems(selectEl) {
+        let category = selectEl.value;
+        let problemSelect = selectEl.nextElementSibling;
+        let items = venueData[category] || ["其他問題"];
+        problemSelect.innerHTML = items.map(item => `<option value="${item}">${item}</option>`).join('');
+    }
+
+    function addVenueRow() {
+        document.getElementById('venue-container').insertAdjacentHTML('beforeend', `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="prefix venue-category" onchange="updateVenueItems(this)"><option value="賭檯">賭檯</option><option value="地墊">地墊</option><option value="地磚">地磚</option><option value="牆磚">牆磚</option><option value="燈">燈</option><option value="櫈">櫈</option><option value="窗簾">窗簾</option><option value="垃圾桶">垃圾桶</option><option value="充電宝">充電宝</option><option value="電視機">電視機</option><option value="植物">植物</option><option value="天花板">天花板</option><option value="冷氣槽">冷氣槽</option><option value="消防設備">消防設備</option><option value="供電用品">供電用品</option></select><select class="prefix venue-problem"><option value="Display">Display</option><option value="Layout">Layout</option><option value="Surround">Surround</option><option value="Sound Bar">Sound Bar</option><option value="地腳燈">地腳燈</option><option value="銀紙機">銀紙機</option><option value="掃描槍">掃描槍</option><option value="台號牌">台號牌</option><option value="廢牌桶">廢牌桶</option><option value="備用牌箱">備用牌箱</option><option value="賭檯木紋">賭檯木紋</option><option value="櫃門">櫃門</option></select><input type="text" class="table-num venue-location" placeholder="位置/台號"></div></div>`);
     }
 
     function addLuxRow() {
@@ -265,8 +323,23 @@
             let nfcChecklistArray = [nfcNormalStr];
             if (nfcIssueStr) nfcChecklistArray.push(nfcIssueStr);
 
-            let checklistString = nfcChecklistArray.concat(Array.from(document.querySelectorAll('.check-item:checked')).map(cb => cb.value)).join(' | ');
+            let checklistString = nfcChecklistArray.join(' | '); // 取消其他日常檢查項目後，只剩 NFC
+
             let followerString = Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無';
+
+            // 收集場面問題
+            let venueIssues = [];
+            document.querySelectorAll('.venue-item').forEach(item => {
+                let cat = item.querySelector('.venue-category').value;
+                let prob = item.querySelector('.venue-problem').value;
+                let loc = item.querySelector('.venue-location').value;
+                if (loc) {
+                    venueIssues.push(`[${cat} - ${prob}] 位置: ${loc}`);
+                }
+            });
+            let venueStr = venueIssues.length > 0 ? `\n\n【場面問題】\n` + venueIssues.join('\n') : '';
+            
+            let finalNote = document.getElementById('notes').value + venueStr;
 
             let luxIssue = Array.from(document.querySelectorAll('.lux-item')).map(item => {
                 let bStr = [];
@@ -288,11 +361,11 @@
                 name: document.getElementById('staffName').value, shift: document.getElementById('shiftType').value,
                 lux: document.getElementById('lux').value, temp: document.getElementById('temp').value, bgm: document.getElementById('bgm').value,
                 checklist: checklistString, status: document.getElementById('status').value, follower: followerString,
-                note: document.getElementById('notes').value, lux_issue: luxIssue, temp_issue: tempIssue, db_issue: dbIssue
+                note: finalNote, lux_issue: luxIssue, temp_issue: tempIssue, db_issue: dbIssue
             };
 
             if (!data.name) { alert("請選擇交更人！"); return; }
-            if (!data.note) { alert("請填寫交更事項！"); return; }
+            if (!data.note || data.note.trim() === '【場面問題】') { alert("請填寫交更事項或場面問題！"); return; }
 
             fetch('/api/submit', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
@@ -301,7 +374,7 @@
             .then(res => {
                 alert("✅ " + data.name + " 交更成功！");
                 document.getElementById('staffName').value = ''; document.getElementById('notes').value = '';
-                document.querySelectorAll('.check-item, .follower-item').forEach(cb => cb.checked = false);
+                document.querySelectorAll('.follower-item').forEach(cb => cb.checked = false);
                 
                 document.getElementById('lux').value = '450-650';
                 document.getElementById('temp').value = '正常 (22.5-24.5)';
@@ -311,6 +384,7 @@
                 document.getElementById('temp-container').innerHTML = `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div></div>`;
                 document.getElementById('bgm-container').innerHTML = `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div></div>`;
                 document.getElementById('nfc-container').innerHTML = `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div></div>`;
+                document.getElementById('venue-container').innerHTML = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="prefix venue-category" onchange="updateVenueItems(this)"><option value="賭檯">賭檯</option><option value="地墊">地墊</option><option value="地磚">地磚</option><option value="牆磚">牆磚</option><option value="燈">燈</option><option value="櫈">櫈</option><option value="窗簾">窗簾</option><option value="垃圾桶">垃圾桶</option><option value="充電宝">充電宝</option><option value="電視機">電視機</option><option value="植物">植物</option><option value="天花板">天花板</option><option value="冷氣槽">冷氣槽</option><option value="消防設備">消防設備</option><option value="供電用品">供電用品</option></select><select class="prefix venue-problem"><option value="Display">Display</option><option value="Layout">Layout</option><option value="Surround">Surround</option><option value="Sound Bar">Sound Bar</option><option value="地腳燈">地腳燈</option><option value="銀紙機">銀紙機</option><option value="掃描槍">掃描槍</option><option value="台號牌">台號牌</option><option value="廢牌桶">廢牌桶</option><option value="備用牌箱">備用牌箱</option><option value="賭檯木紋">賭檯木紋</option><option value="櫃門">櫃門</option></select><input type="text" class="table-num venue-location" placeholder="位置/台號"></div></div>`;
                 
                 showList();
             })
@@ -325,10 +399,8 @@
                 records.forEach(r => {
                     let statusClass = r.status === "已處理" ? "status-done" : (r.status === "跟進中" ? "status-processing" : "status-pending");
                     
-                    // 1. 處理異常數據 (改做「⚠️ 異常:」)
                     let issuesHtml = (r.lux_issue ? `<div class="issue-data">⚠️ 異常: Lux - ${r.lux_issue}</div>` : '') + (r.temp_issue ? `<div class="issue-data">⚠️ 異常: 溫度 - ${r.temp_issue}</div>` : '') + (r.db_issue ? `<div class="issue-data">⚠️ 異常: 分貝 - ${r.db_issue}</div>` : '');
                     
-                    // 2. 處理 Checklist (分開正常與異常)
                     let checkItemsHtml = '';
                     if (r.checklist) {
                         let items = r.checklist.split(' | ');
@@ -336,7 +408,7 @@
                         let issueItems = [];
                         items.forEach(item => {
                             if (item.includes('異常') || item.includes('⚠️')) {
-                                let text = item.replace('✅ 檢查: ', '').replace('NFC異常: ', '').replace(/異常/g, '');
+                                let text = item.replace('NFC異常: ', '').replace(/異常/g, '');
                                 issueItems.push(text.trim());
                             } else {
                                 let text = item.replace('NFC正常: ', 'NFC (');
@@ -354,7 +426,6 @@
                         }
                     }
 
-                    // 3. 基本數值 (Lux 依然排最頂)
                     let luxStr = r.lux === '450-650' ? 'Lux數值大致在於450-650之間' : `Lux: ${r.lux}`;
                     let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常') ? '溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
                     let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常') ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
@@ -362,7 +433,6 @@
 
                     let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${new Date(r.created_at).toLocaleString('zh-HK')}</div>` : "";
                     
-                    // 4. 跟進人 (男女顏色)
                     let followerHtml = '';
                     if (r.follower && r.follower !== '無') {
                         let names = r.follower.split(', ');
@@ -376,7 +446,6 @@
                         followerHtml = `<div class="record-data" style="background:#fff3cd; color:#856404; display:flex; align-items:center;">👤 跟進人: <div style="margin-left:5px;">${iconsHtml}</div></div>`;
                     }
                     
-                    // 🌟 修改顯示順序：基本數據 -> 正常檢查 (綠) -> 異常警告 (紅) -> 跟進人 -> 備註
                     html += `
                         <div class="record-card">
                             <div class="record-header">
@@ -387,7 +456,7 @@
                             ${checkItemsHtml}
                             ${issuesHtml}
                             ${followerHtml}
-                            <div class="record-note">${r.note}</div>
+                            <div class="record-note" style="white-space: pre-wrap;">${r.note}</div>
                         </div>
                     `;
                 });
