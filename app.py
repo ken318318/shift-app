@@ -77,8 +77,7 @@ def get_records():
 def get_pending_issues():
     conn = get_db_connection()
     c = conn.cursor()
-    # 已經移除 LIMIT 5，會無限制攞出所有未處理嘅項目
-    c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note 
+    c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status 
                  FROM records 
                  WHERE status NOT IN ('已處理', '已 Send mail') 
                  AND (lux_issue != '' OR temp_issue != '' OR db_issue != '' OR note LIKE '%【場面問題】%')
@@ -89,7 +88,8 @@ def get_pending_issues():
     pending = []
     for row in rows:
         pending.append({
-            "id": row[0], "name": row[1], "lux_issue": row[2], "temp_issue": row[3], "db_issue": row[4], "note": row[5]
+            "id": row[0], "name": row[1], "lux_issue": row[2], "temp_issue": row[3], 
+            "db_issue": row[4], "note": row[5], "overall_status": row[6]
         })
     return jsonify(pending)
 
