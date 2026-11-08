@@ -37,13 +37,15 @@
         .record-card { background: #fff; border-left: 5px solid #1a73e8; padding: 15px; margin-bottom: 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .record-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; font-size: 14px; border-bottom: 1px dashed #eee; padding-bottom: 8px;}
         .record-data { font-size: 13px; color: #555; margin-bottom: 8px; background: #f4f6f8; padding: 8px; border-radius: 4px;}
-        .issue-data { font-size: 13px; color: #d32f2f; margin-bottom: 8px; background: #ffebee; padding: 8px; border-radius: 4px; line-height: 1.5; display: flex; justify-content: space-between; align-items: center;}
+        .issue-data { font-size: 13px; margin-bottom: 8px; padding: 8px; border-radius: 4px; line-height: 1.5; display: flex; justify-content: space-between; align-items: center;}
         .record-note { font-size: 14px; white-space: pre-wrap; line-height: 1.5; color: #222;}
         .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; color: white; white-space: nowrap;}
         .status-pending { background: #e67c73; }
         .status-processing { background: #f5b041; }
         .status-done { background: #2ecc71; }
+        .status-mail { background: #9c27b0; }
         .issue-status { padding: 6px; font-size: 12px; border-radius: 6px; border: 1px solid #ccc; background: #fff; color: #d32f2f; font-weight: bold;}
+        .pending-card { background: #fff8e1; border-left: 4px solid #ffa000; padding: 10px; margin-bottom: 10px; border-radius: 4px; font-size: 13px;}
     </style>
 </head>
 <body>
@@ -58,6 +60,11 @@
         <h2>📝 BS交更內容</h2>
         <button type="button" class="btn-add" style="background-color: #e67c73; width: 100%; margin-bottom: 15px; padding: 10px; font-size: 14px;" onclick="showList()">❌ 取消並返回紀錄</button>
         
+        <div id="pending-container" style="display: none; background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 15px;">
+            <h3 style="margin-top: 0; font-size: 15px; color: #856404;">⚠️ 未完成跟進項目</h3>
+            <div id="pending-list"></div>
+        </div>
+
         <div class="row">
             <div>
                 <label>交更人：</label>
@@ -108,7 +115,7 @@
                             </div>
                             <div class="issue-row" style="margin-top: 8px;">
                                 <span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span>
-                                <select class="issue-status"><option value="已處理" selected>已處理</option><option value="跟進中">跟進中</option><option value="待處理">待處理</option></select>
+                                <select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
                             </div>
                         </div>
                     </div>
@@ -133,7 +140,7 @@
                             </div>
                             <div class="issue-row" style="margin-top: 8px;">
                                 <span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span>
-                                <select class="issue-status"><option value="已處理" selected>已處理</option><option value="跟進中">跟進中</option><option value="待處理">待處理</option></select>
+                                <select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
                             </div>
                         </div>
                     </div>
@@ -160,7 +167,7 @@
                         </div>
                         <div class="issue-row" style="margin-top: 8px;">
                             <span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span>
-                            <select class="issue-status"><option value="已處理" selected>已處理</option><option value="跟進中">跟進中</option><option value="待處理">待處理</option></select>
+                            <select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
                         </div>
                     </div>
                 </div>
@@ -209,7 +216,7 @@
                 </div>
                 <div class="issue-row" style="margin-top: 8px;">
                     <span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span>
-                    <select class="issue-status"><option value="已處理" selected>已處理</option><option value="跟進中">跟進中</option><option value="待處理">待處理</option></select>
+                    <select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
                 </div>
             </div>
         </div>
@@ -222,41 +229,14 @@
             <div class="issue-item venue-item" style="border-bottom-color: #90caf9;">
                 <div class="issue-row">
                     <select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;">
-                        <option value="賭檯 - Display(大Mon)">賭檯 - Display(大Mon)</option>
-                        <option value="賭檯 - Display(細Mon)">賭檯 - Display(細Mon)</option>
-                        <option value="賭檯 - Layout">賭檯 - Layout</option>
-                        <option value="賭檯 - Surround">賭檯 - Surround</option>
-                        <option value="賭檯 - Sound Bar">賭檯 - Sound Bar</option>
-                        <option value="賭檯 - 地腳燈">賭檯 - 地腳燈</option>
-                        <option value="賭檯 - 銀紙機">賭檯 - 銀紙機</option>
-                        <option value="賭檯 - 掃描槍">賭檯 - 掃描槍</option>
-                        <option value="賭檯 - 台號牌">賭檯 - 台號牌</option>
-                        <option value="賭檯 - 廢牌桶">賭檯 - 廢牌桶</option>
-                        <option value="賭檯 - 備用牌箱">賭檯 - 備用牌箱</option>
-                        <option value="賭檯 - 賭檯木紋">賭檯 - 賭檯木紋</option>
-                        <option value="賭檯 - 櫃門">賭檯 - 櫃門</option>
-                        <option value="地墊">地墊</option>
-                        <option value="地磚">地磚</option>
-                        <option value="牆磚">牆磚</option>
-                        <option value="燈">燈</option>
-                        <option value="櫈 - DLR櫈">櫈 - DLR櫈</option>
-                        <option value="櫈 - 客櫈">櫈 - 客櫈</option>
-                        <option value="窗簾">窗簾</option>
-                        <option value="垃圾桶">垃圾桶</option>
-                        <option value="充電宝">充電宝</option>
-                        <option value="電視機">電視機</option>
-                        <option value="植物">植物</option>
-                        <option value="天花板">天花板</option>
-                        <option value="冷氣槽">冷氣槽</option>
-                        <option value="消防設備">消防設備</option>
-                        <option value="供電用品">供電用品</option>
+                        <!-- 大類選項由 JS 自動生成 -->
                     </select>
                     <select class="prefix venue-problem" style="flex: 1.5;"></select>
                     <input type="text" class="table-num venue-location" placeholder="位置/台號">
                 </div>
                 <div class="issue-row" style="margin-top: 8px;">
                     <span style="font-size:12px; color:#1565c0; font-weight:bold;">跟進狀態：</span>
-                    <select class="issue-status" style="color: #1565c0;"><option value="已處理" selected>已處理</option><option value="跟進中">跟進中</option><option value="待處理">待處理</option></select>
+                    <select class="issue-status" style="color: #1565c0;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
                 </div>
             </div>
         </div>
@@ -279,39 +259,52 @@
 </div>
 <script>
     const venueCategories = {
-        "賭檯 - Display(大Mon)": ["黑屏", "主機異響", "主機自動關閉", "大細mon畫面調轉", "屏幕彈出小鍵盤", "觸屏鍵盤無法使用", "LED熄滅", "LED燈光異常", "屏幕裂縫"],
-        "賭檯 - Display(細Mon)": ["黑屏", "LED熄滅", "LED燈光異常", "屏幕裂縫"],
-        "賭檯 - Layout": ["損壞", "污跡"],
-        "賭檯 - Surround": ["損壞", "無聲"],
-        "賭檯 - Sound Bar": ["無聲", "損壞"],
-        "賭檯 - 地腳燈": ["熄滅", "損壞"],
-        "賭檯 - 銀紙機": ["卡紙", "損壞"],
-        "賭檯 - 掃描槍": ["無法掃描", "損壞"],
-        "賭檯 - 台號牌": ["損壞", "污跡"],
+        "賭檯 - Display(大Mon)": ["黑屏", "播放廣告定格", "主機異響", "主機自動關閉", "大細mon畫面調轉", "屏幕彈出小鍵盤", "觸控屏鍵盤無法使用", "LED熄滅", "LED燈光異常", "屏幕裂痕"],
+        "賭檯 - Display(細Mon)": ["黑屏", "LED熄滅", "LED燈光異常", "屏幕裂痕", "頂部展示牌破損"],
+        "賭檯 - Layout": ["污跡", "太薄", "筆跡", "突起不平", "破損"],
+        "賭檯 - Surround": ["筆跡", "污跡", "突起", "破損"],
+        "賭檯 - Sound Bar": ["無聲", "電流聲"],
+        "賭檯 - Table view": ["觸控屏無法使用", "支撐架螺絲鬆動"],
+        "賭檯 - 珠盤": ["珠盤蓋破損", "珠盤部分螺絲鬆脫"],
+        "賭檯 - 地腳燈": ["熄滅", "彩紅", "部分熄滅"],
+        "賭檯 - 銀紙機": ["屏慕脫落", "部分零件損壞"],
+        "賭檯 - 掃描槍": ["無法掃描", "異響", "損壞"],
+        "賭檯 - 台號牌": ["數字字樣甩色", "NB字樣甩色"],
         "賭檯 - 廢牌桶": ["損壞"],
-        "賭檯 - 備用牌箱": ["損壞", "卡住", "玻璃面裂縫", "無法上鎖"],
-        "賭檯 - 賭檯木紋": ["破損", "污跡"],
-        "賭檯 - 櫃門": ["損壞", "無法關閉"],
-        "地墊": ["翹起", "破損", "污跡", "移位"],
-        "地磚": ["破損", "裂縫", "污跡"],
+        "賭檯 - 備用牌箱": ["損壞", "玻璃面裂縫", "無法上鎖"],
+        "賭檯 - 賭檯木紋": ["破損", "甩漆", "污跡"],
+        "賭檯 - 櫃門": ["損壞", "無法關閉", "缺少門鎖"],
+        "賭檯 - 限紅柱": ["黑屏", "藍屏", "破損"],
+        "地墊": ["翹起", "破損", "裂縫", "污跡"],
+        "地磚": ["破損", "裂痕", "污跡"],
         "牆磚": ["破損", "裂縫", "污跡"],
-        "燈": ["熄滅", "閃爍", "光線不足", "損壞"],
+        "雲石柱": ["破損", "裂縫", "污跡"],
+        "燈-龍船燈": ["熄滅", "閃爍", "光線不足", "偏暗"],
+        "燈-水晶燈": ["熄滅", "閃爍", "光線不足", "偏暗"],
+        "燈-吊燈": ["熄滅", "閃爍", "光線不足", "偏暗"],
+        "燈-射燈": ["熄滅", "閃爍", "光線不足", "偏暗"],
+        "燈-吸煙室燈牌": ["熄滅", "閃爍", "白光", "偏暗"],
         "櫈 - DLR櫈": ["坐墊破損", "靠背異常", "升降異常", "螺絲鬆動", "甩轆"],
         "櫈 - 客櫈": ["坐墊破損", "靠背異常", "升降異常", "螺絲鬆動", "甩轆"],
-        "窗簾": ["破損", "污跡", "脫軌", "凌亂"],
-        "垃圾桶": ["滿溢", "破損", "污跡"],
-        "充電宝": ["無法充電", "損壞", "機座空"],
-        "電視機": ["黑屏", "花屏", "無聲", "損壞"],
-        "植物": ["枯萎", "缺水", "盆爛"],
+        "窗簾": ["破損", "污跡", "凌亂"],
+        "垃圾桶": ["位置轉移", "部分零件破損", "污跡"],
+        "場面租用充電宝": ["黑屏", "損壞", "無法連線"],
+        "ATM櫃員機": ["黑屏", "外殼框損壞", "無法連線"],
+        "電視機-場面": ["黑屏", "定格", "跳出主介面", "USB資料損壞"],
+        "電視機-煙房": ["黑屏", "定格", "跳出主介面", "USB資料損壞"],
+        "植物": ["枯萎", "植物牆破損", "植物盆損壞"],
         "天花板": ["漏水", "污跡", "破損", "掉漆"],
         "冷氣槽": ["滴水", "污跡", "聲響"],
-        "消防設備": ["阻擋", "過期", "損壞"],
-        "供電用品": ["跳掣", "插座鬆脫", "損壞"]
+        "消防設備-灑水蓋": ["缺少", "鬆脫", "傾斜移位"],
+        "消防設備-煙霧探測器": ["電源燈不亮", "受阻", "損壞"],
+        "消防設備-滅火筒": ["即將到期", "過期", "受阻", "特定標籤受損"],
+        "供電用品": ["拖板過載", "插座鬆脫", "插座損壞", "拖板損壞"]
     };
 
     function showForm() {
         document.getElementById('list-container').style.display = 'none';
         document.getElementById('form-container').style.display = 'block';
+        loadPendingIssues(); // 載入未完成項目
         window.scrollTo(0, 0); 
     }
     function showList() {
@@ -335,6 +328,12 @@
         document.getElementById('nfc-issue-group').style.display = (val === '有異常') ? 'block' : 'none';
     }
 
+    function initVenueCategory(selectEl) {
+        let options = Object.keys(venueCategories).map(key => `<option value="${key}">${key}</option>`).join('');
+        selectEl.innerHTML = options;
+        updateVenueProblem(selectEl);
+    }
+
     function updateVenueProblem(selectEl) {
         let cat = selectEl.value;
         let probSelect = selectEl.nextElementSibling;
@@ -343,27 +342,27 @@
     }
 
     function addVenueRow() {
-        document.getElementById('venue-container').insertAdjacentHTML('beforeend', `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"><option value="賭檯 - Display(大Mon)">賭檯 - Display(大Mon)</option><option value="賭檯 - Display(細Mon)">賭檯 - Display(細Mon)</option><option value="賭檯 - Layout">賭檯 - Layout</option><option value="賭檯 - Surround">賭檯 - Surround</option><option value="賭檯 - Sound Bar">賭檯 - Sound Bar</option><option value="賭檯 - 地腳燈">賭檯 - 地腳燈</option><option value="賭檯 - 銀紙機">賭檯 - 銀紙機</option><option value="賭檯 - 掃描槍">賭檯 - 掃描槍</option><option value="賭檯 - 台號牌">賭檯 - 台號牌</option><option value="賭檯 - 廢牌桶">賭檯 - 廢牌桶</option><option value="賭檯 - 備用牌箱">賭檯 - 備用牌箱</option><option value="賭檯 - 賭檯木紋">賭檯 - 賭檯木紋</option><option value="賭檯 - 櫃門">賭檯 - 櫃門</option><option value="地墊">地墊</option><option value="地磚">地磚</option><option value="牆磚">牆磚</option><option value="燈">燈</option><option value="櫈 - DLR櫈">櫈 - DLR櫈</option><option value="櫈 - 客櫈">櫈 - 客櫈</option><option value="窗簾">窗簾</option><option value="垃圾桶">垃圾桶</option><option value="充電宝">充電宝</option><option value="電視機">電視機</option><option value="植物">植物</option><option value="天花板">天花板</option><option value="冷氣槽">冷氣槽</option><option value="消防設備">消防設備</option><option value="供電用品">供電用品</option></select><select class="prefix venue-problem" style="flex: 1.5;"></select><input type="text" class="table-num venue-location" placeholder="位置/台號"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#1565c0; font-weight:bold;">跟進狀態：</span><select class="issue-status" style="color: #1565c0;"><option value="已處理" selected>已處理</option><option value="跟進中">跟進中</option><option value="待處理">待處理</option></select></div></div>`);
+        document.getElementById('venue-container').insertAdjacentHTML('beforeend', `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select><select class="prefix venue-problem" style="flex: 1.5;"></select><input type="text" class="table-num venue-location" placeholder="位置/台號"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#1565c0; font-weight:bold;">跟進狀態：</span><select class="issue-status" style="color: #1565c0;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`);
         let newSelect = document.querySelector('.venue-item:last-child .venue-category');
-        updateVenueProblem(newSelect);
+        initVenueCategory(newSelect);
     }
 
     function addLuxRow() {
-        document.getElementById('lux-container').insertAdjacentHTML('beforeend', `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="跟進中">跟進中</option><option value="待處理">待處理</option></select></div></div>`);
+        document.getElementById('lux-container').insertAdjacentHTML('beforeend', `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`);
     }
     function addTempRow() {
-        document.getElementById('temp-container').insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="跟進中">跟進中</option><option value="待處理">待處理</option></select></div></div>`);
+        document.getElementById('temp-container').insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`);
     }
     function addBgmRow() {
-        document.getElementById('bgm-container').insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="跟進中">跟進中</option><option value="待處理">待處理</option></select></div></div>`);
+        document.getElementById('bgm-container').insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`);
     }
     function addNfcRow() {
-        document.getElementById('nfc-container').insertAdjacentHTML('beforeend', `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="跟進中">跟進中</option><option value="待處理">待處理</option></select></div></div>`);
+        document.getElementById('nfc-container').insertAdjacentHTML('beforeend', `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`);
     }
 
     document.addEventListener("DOMContentLoaded", function() {
         let firstVenue = document.querySelector('.venue-category');
-        if(firstVenue) updateVenueProblem(firstVenue);
+        if(firstVenue) initVenueCategory(firstVenue);
     });
 function submitForm() {
     let selectedHall = document.getElementById('nfc-hall-select').value;
@@ -430,8 +429,15 @@ function submitForm() {
     }
 
     let overallStatus = "已處理";
-    document.querySelectorAll('.issue-status').forEach(sel => { if(sel.value === "待處理") overallStatus = "待處理"; });
-    if(overallStatus === "已處理") document.querySelectorAll('.issue-status').forEach(sel => { if(sel.value === "跟進中") overallStatus = "跟進中"; });
+    document.querySelectorAll('.issue-status').forEach(sel => { 
+        if(sel.value === "待處理") overallStatus = "待處理"; 
+    });
+    if(overallStatus === "已處理") {
+        document.querySelectorAll('.issue-status').forEach(sel => { 
+            if(sel.value === "已通知相關部門跟進") overallStatus = "已通知相關部門跟進"; 
+            else if(sel.value === "已 Send mail") overallStatus = "已 Send mail";
+        });
+    }
 
     let data = {
         name: document.getElementById('staffName').value, shift: document.getElementById('shiftType').value,
@@ -457,26 +463,87 @@ function submitForm() {
         document.getElementById('bgm').value = '正常 (65-75)'; toggleIssue('bgm');
         document.getElementById('nfc-status').value = '無異常'; toggleNfcIssue();
         
-        document.getElementById('lux-container').innerHTML = `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="跟進中">跟進中</option><option value="待處理">待處理</option></select></div></div>`;
-        document.getElementById('temp-container').innerHTML = `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="跟進中">跟進中</option><option value="待處理">待處理</option></select></div></div>`;
-        document.getElementById('bgm-container').innerHTML = `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="跟進中">跟進中</option><option value="待處理">待處理</option></select></div></div>`;
-        document.getElementById('nfc-container').innerHTML = `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="跟進中">跟進中</option><option value="待處理">待處理</option></select></div></div>`;
-        document.getElementById('venue-container').innerHTML = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"><option value="賭檯 - Display(大Mon)">賭檯 - Display(大Mon)</option><option value="賭檯 - Display(細Mon)">賭檯 - Display(細Mon)</option><option value="賭檯 - Layout">賭檯 - Layout</option><option value="賭檯 - Surround">賭檯 - Surround</option><option value="賭檯 - Sound Bar">賭檯 - Sound Bar</option><option value="賭檯 - 地腳燈">賭檯 - 地腳燈</option><option value="賭檯 - 銀紙機">賭檯 - 銀紙機</option><option value="賭檯 - 掃描槍">賭檯 - 掃描槍</option><option value="賭檯 - 台號牌">賭檯 - 台號牌</option><option value="賭檯 - 廢牌桶">賭檯 - 廢牌桶</option><option value="賭檯 - 備用牌箱">賭檯 - 備用牌箱</option><option value="賭檯 - 賭檯木紋">賭檯 - 賭檯木紋</option><option value="賭檯 - 櫃門">賭檯 - 櫃門</option><option value="地墊">地墊</option><option value="地磚">地磚</option><option value="牆磚">牆磚</option><option value="燈">燈</option><option value="櫈 - DLR櫈">櫈 - DLR櫈</option><option value="櫈 - 客櫈">櫈 - 客櫈</option><option value="窗簾">窗簾</option><option value="垃圾桶">垃圾桶</option><option value="充電宝">充電宝</option><option value="電視機">電視機</option><option value="植物">植物</option><option value="天花板">天花板</option><option value="冷氣槽">冷氣槽</option><option value="消防設備">消防設備</option><option value="供電用品">供電用品</option></select><select class="prefix venue-problem" style="flex: 1.5;"></select><input type="text" class="table-num venue-location" placeholder="位置/台號"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#1565c0; font-weight:bold;">跟進狀態：</span><select class="issue-status" style="color: #1565c0;"><option value="已處理" selected>已處理</option><option value="跟進中">跟進中</option><option value="待處理">待處理</option></select></div></div>`;
+        document.getElementById('lux-container').innerHTML = `<div class="issue-item lux-item"><div class="issue-row"><select class="prefix lux-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
+        document.getElementById('temp-container').innerHTML = `<div class="issue-item temp-item"><div class="issue-row"><select class="prefix temp-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num temp-table" placeholder="台號"><input type="text" class="value temp-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
+        document.getElementById('bgm-container').innerHTML = `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
+        document.getElementById('nfc-container').innerHTML = `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
+        document.getElementById('venue-container').innerHTML = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select><select class="prefix venue-problem" style="flex: 1.5;"></select><input type="text" class="table-num venue-location" placeholder="位置/台號"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#1565c0; font-weight:bold;">跟進狀態：</span><select class="issue-status" style="color: #1565c0;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
         
         let firstVenue = document.querySelector('.venue-category');
-        if(firstVenue) updateVenueProblem(firstVenue);
+        if(firstVenue) initVenueCategory(firstVenue);
 
         showList();
     })
     .catch(error => { alert("連線失敗！"); console.error(error); });
 }
+        // 載入未完成項目
+        function loadPendingIssues() {
+            fetch('/api/pending_issues').then(res => res.json()).then(issues => {
+                let container = document.getElementById('pending-container');
+                let listDiv = document.getElementById('pending-list');
+                if (issues.length === 0) {
+                    container.style.display = 'none';
+                    return;
+                }
+                container.style.display = 'block';
+                let html = "";
+                issues.forEach(issue => {
+                    html += `<div class="pending-card" id="pending-${issue.id}">
+                        <strong>由 ${issue.name} 交更嘅未完成項目：</strong><br>
+                        ${issue.lux_issue ? 'Lux: ' + issue.lux_issue.replace(/\[狀態:.*?\]/g, '') + '<br>' : ''}
+                        ${issue.temp_issue ? '溫度: ' + issue.temp_issue.replace(/\[狀態:.*?\]/g, '') + '<br>' : ''}
+                        ${issue.db_issue ? '分貝: ' + issue.db_issue.replace(/\[狀態:.*?\]/g, '') + '<br>' : ''}
+                        ${issue.note && issue.note.includes('【場面問題】') ? issue.note.split('【場面問題】')[1].trim() + '<br>' : ''}
+                        <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px;">
+                            <span>請更新狀態：</span>
+                            <select class="issue-status" id="status-${issue.id}" style="flex: 1; padding: 4px; font-size: 12px;">
+                                <option value="已處理">已處理</option>
+                                <option value="已 Send mail">已 Send mail</option>
+                                <option value="已通知相關部門跟進">已通知相關部門跟進</option>
+                                <option value="待處理">待處理</option>
+                            </select>
+                            <button type="button" class="btn-add" style="margin-top: 0; background: #2ecc71;" onclick="updatePendingStatus(${issue.id})">更新</button>
+                        </div>
+                    </div>`;
+                });
+                listDiv.innerHTML = html;
+            });
+        }
+
+        function updatePendingStatus(id) {
+            let newStatus = document.getElementById(`status-${id}`).value;
+            fetch('/api/update_status', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ id: id, status: newStatus })
+            })
+            .then(res => res.json())
+            .then(res => {
+                alert("✅ 狀態已更新！");
+                document.getElementById(`pending-${id}`).style.display = 'none';
+                displayRecords();
+            })
+            .catch(err => alert("更新失敗"));
+        }
+
         function formatIssueText(text, defaultPrefix) {
             if (!text) return "";
             let match = text.match(/\[狀態:(.*?)\]/);
             let status = match ? match[1] : '已處理';
-            let cleanText = text.replace(/\[狀態:.*?\]/, '').trim();
-            let badgeClass = status === '已處理' ? 'status-done' : (status === '跟進中' ? 'status-processing' : 'status-pending');
-            return `<div class="issue-data"><span>${defaultPrefix} ${cleanText}</span><span class="status-badge ${badgeClass}">${status}</span></div>`;
+            let cleanText = text.replace(/\[狀態:.*?\]/g, '').trim();
+            
+            let isDone = (status === '已處理' || status === '已 Send mail');
+            let bgColor = isDone ? '#e8f5e9' : '#ffebee';
+            let textColor = isDone ? '#2e7d32' : '#d32f2f';
+            let prefixIcon = isDone ? '✅ ' + status + ':' : '⚠️ 異常:';
+            let displayPrefix = defaultPrefix.replace('⚠️ 異常:', prefixIcon);
+
+            let badgeClass = '';
+            if (status === '已處理') badgeClass = 'status-done';
+            else if (status === '已 Send mail') badgeClass = 'status-mail';
+            else if (status === '已通知相關部門跟進') badgeClass = 'status-processing';
+            else badgeClass = 'status-pending';
+
+            return `<div class="issue-data" style="background:${bgColor}; color:${textColor};"><span>${displayPrefix} ${cleanText}</span><span class="status-badge ${badgeClass}">${status}</span></div>`;
         }
 
         function displayRecords() {
@@ -509,7 +576,6 @@ function submitForm() {
                         if (normalItems.length > 0) { checkItemsHtml = `<div class="record-data">✅ 正常: ${normalItems.join(' | ')}</div>`; }
                     }
 
-                    // 修改：如果 lux_issue 有嘢，上面就強制顯示正常數值，避免矛盾
                     let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : 'Lux數值大致在於450-650之間';
                     let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常' || r.temp_issue) ? '溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
                     let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常' || r.db_issue) ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
@@ -530,7 +596,6 @@ function submitForm() {
                         followerHtml = `<div class="record-data" style="background:#fff3cd; color:#856404; display:flex; align-items:center;">👤 跟進人: <div style="margin-left:5px;">${iconsHtml}</div></div>`;
                     }
                     
-                    // 修改：移除右上角嘅整體狀態 Tag
                     html += `
                         <div class="record-card">
                             <div class="record-header">
