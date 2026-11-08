@@ -292,17 +292,17 @@
         "賭檯 - 備用牌箱": ["損壞", "卡住", "玻璃面裂縫", "無法上鎖"],
         "賭檯 - 賭檯木紋": ["破損", "污跡"],
         "賭檯 - 櫃門": ["損壞", "無法關閉"],
-        "地墊": ["翹起", "破損", "污跡"],
+        "地墊": ["翹起", "破損", "污跡", "移位"],
         "地磚": ["破損", "裂縫", "污跡"],
         "牆磚": ["破損", "裂縫", "污跡"],
-        "燈": ["熄滅", "閃爍", "光線不足", "偏暗"],
+        "燈": ["熄滅", "閃爍", "光線不足", "損壞"],
         "櫈 - DLR櫈": ["坐墊破損", "靠背異常", "升降異常", "螺絲鬆動", "甩轆"],
         "櫈 - 客櫈": ["坐墊破損", "靠背異常", "升降異常", "螺絲鬆動", "甩轆"],
-        "窗簾": ["破損", "污跡", "凌亂"],
+        "窗簾": ["破損", "污跡", "脫軌", "凌亂"],
         "垃圾桶": ["滿溢", "破損", "污跡"],
-        "充電宝": ["黑屏", "損壞", "無法連線"],
-        "電視機": ["黑屏", "定格", "彈出主介面", "USB資料損壞"],
-        "植物": ["枯萎", "植物牆破損", "盆爛"],
+        "充電宝": ["無法充電", "損壞", "機座空"],
+        "電視機": ["黑屏", "花屏", "無聲", "損壞"],
+        "植物": ["枯萎", "缺水", "盆爛"],
         "天花板": ["漏水", "污跡", "破損", "掉漆"],
         "冷氣槽": ["滴水", "污跡", "聲響"],
         "消防設備": ["阻擋", "過期", "損壞"],
@@ -439,6 +439,7 @@ function submitForm() {
         checklist: checklistString, status: overallStatus, follower: followerString,
         note: finalNote, lux_issue: luxIssue, temp_issue: tempIssue, db_issue: dbIssue
     };
+
     if (!data.name) { alert("請選擇交更人！"); return; }
     if (!data.note || data.note.trim() === '【場面問題】') { alert("請填寫交更事項或場面問題！"); return; }
 
@@ -484,8 +485,6 @@ function submitForm() {
                 if (records.length === 0) { listDiv.innerHTML = "<p style='color: #888; text-align: center;'>暫時未有紀錄。</p >"; return; }
                 let html = "";
                 records.forEach(r => {
-                    let statusClass = r.status === "已處理" ? "status-done" : (r.status === "跟進中" ? "status-processing" : "status-pending");
-                    
                     let issuesHtml = "";
                     if (r.lux_issue) issuesHtml += formatIssueText(r.lux_issue, '⚠️ 異常: Lux -');
                     if (r.temp_issue) issuesHtml += formatIssueText(r.temp_issue, '⚠️ 異常: 溫度 -');
@@ -510,10 +509,12 @@ function submitForm() {
                         if (normalItems.length > 0) { checkItemsHtml = `<div class="record-data">✅ 正常: ${normalItems.join(' | ')}</div>`; }
                     }
 
-                    let luxStr = r.lux === '450-650' ? 'Lux數值大致在於450-650之間' : `Lux: ${r.lux}`;
-                    let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常') ? '溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
-                    let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常') ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
+                    // 修改：如果 lux_issue 有嘢，上面就強制顯示正常數值，避免矛盾
+                    let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : 'Lux數值大致在於450-650之間';
+                    let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常' || r.temp_issue) ? '溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
+                    let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常' || r.db_issue) ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
                     let dataHtml = `<div class="record-data">📊 ${luxStr} | ${tempStr} | ${bgmStr}</div>`;
+
                     let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${new Date(r.created_at).toLocaleString('zh-HK')}</div>` : "";
                     
                     let followerHtml = '';
@@ -529,11 +530,11 @@ function submitForm() {
                         followerHtml = `<div class="record-data" style="background:#fff3cd; color:#856404; display:flex; align-items:center;">👤 跟進人: <div style="margin-left:5px;">${iconsHtml}</div></div>`;
                     }
                     
+                    // 修改：移除右上角嘅整體狀態 Tag
                     html += `
                         <div class="record-card">
                             <div class="record-header">
                                 <div><strong>${r.name} (${r.shift})</strong>${timeStr}</div>
-                                <span class="status-badge ${statusClass}">${r.status}</span>
                             </div>
                             ${dataHtml}
                             ${checkItemsHtml}
