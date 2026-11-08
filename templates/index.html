@@ -465,16 +465,16 @@ function submitForm() {
     let venueStr = venueIssues.length > 0 ? `\n\n【場面問題】\n` + venueIssues.join('\n') : '';
     let finalNote = document.getElementById('notes').value + venueStr;
 
-    // 收集未完成項目
+    // 🌟 收集未完成項目 (只收集顯示緊嘅卡片)
     let pendingItems = [];
     document.querySelectorAll('.pending-card').forEach(card => {
         if (card.style.display !== 'none') {
-            let textContent = card.innerText.split('請更新狀態：')[0].trim();
+            let textContent = card.querySelector('div').innerText;
             pendingItems.push(textContent);
         }
     });
     if (pendingItems.length > 0) {
-        finalNote += `\n\n【早前未完成跟進】\n` + pendingItems.join('\n');
+        finalNote += `\n\n【早前未完成跟進】\n` + pendingItems.join('\n\n');
     }
 
     let luxIssue = "";
@@ -580,12 +580,33 @@ function submitForm() {
                 
                 let html = "";
                 issues.forEach(issue => {
+                    let htmlContent = "";
+                    if (issue.lux_issue) {
+                        let h = formatIssueText(issue.lux_issue, 'Lux -');
+                        if (!issue.lux_issue.includes('[狀態:已處理]') && !issue.lux_issue.includes('[狀態:已 Send mail]')) htmlContent += h;
+                    }
+                    if (issue.temp_issue) {
+                        let h = formatIssueText(issue.temp_issue, '溫度 -');
+                        if (!issue.temp_issue.includes('[狀態:已處理]') && !issue.temp_issue.includes('[狀態:已 Send mail]')) htmlContent += h;
+                    }
+                    if (issue.db_issue) {
+                        let h = formatIssueText(issue.db_issue, '分貝 -');
+                        if (!issue.db_issue.includes('[狀態:已處理]') && !issue.db_issue.includes('[狀態:已 Send mail]')) htmlContent += h;
+                    }
+                    if (issue.note && issue.note.includes('【場面問題】')) {
+                        let venueStr = issue.note.split('【場面問題】')[1].trim();
+                        venueStr.split('\n').forEach(line => {
+                            if (line.trim() && !line.includes('[狀態:已處理]') && !line.includes('[狀態:已 Send mail]')) {
+                                htmlContent += formatIssueText(line.trim(), '場面 -');
+                            }
+                        });
+                    }
+                    
+                    if (htmlContent === "") return;
+
                     html += `<div class="pending-card" id="pending-${issue.id}">
-                        <strong>由 ${issue.name} 交更嘅未完成項目：</strong><br>
-                        ${issue.lux_issue ? 'Lux: ' + issue.lux_issue.replace(/\[狀態:.*?\]/g, '') + '<br>' : ''}
-                        ${issue.temp_issue ? '溫度: ' + issue.temp_issue.replace(/\[狀態:.*?\]/g, '') + '<br>' : ''}
-                        ${issue.db_issue ? '分貝: ' + issue.db_issue.replace(/\[狀態:.*?\]/g, '') + '<br>' : ''}
-                        ${issue.note && issue.note.includes('【場面問題】') ? issue.note.split('【場面問題】')[1].trim() + '<br>' : ''}
+                        <strong>由 ${issue.name} 交更嘅未完成項目：</strong>
+                        <div style="margin-top: 5px;">${htmlContent}</div>
                         <div style="margin-top: 8px; display: flex; align-items: center; gap: 10px;">
                             <span>請更新狀態：</span>
                             <select class="issue-status" id="status-${issue.id}" style="flex: 1; padding: 4px; font-size: 12px;">
@@ -696,7 +717,6 @@ function submitForm() {
                         });
                     }
 
-                    // 抽出「早前未完成跟進」
                     let pendingOldHtml = "";
                     if (mainNote.includes('【早前未完成跟進】')) {
                         let parts = mainNote.split('【早前未完成跟進】');
