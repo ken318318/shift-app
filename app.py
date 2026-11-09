@@ -46,13 +46,17 @@ def submit():
     data = request.json
     conn = get_db_connection()
     c = conn.cursor()
-    # 使用 NOW() 確保存入係當下時間
+    
+    # 🌟 強制用 Python 攞澳門當前時間
+    macau_tz = pytz.timezone('Asia/Macau')
+    now_macau = datetime.now(macau_tz)
+    
     c.execute("""INSERT INTO records 
                  (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, created_at) 
-                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())""", 
+                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
               (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                data.get('checklist'), data.get('status'), data.get('follower'), data.get('note'),
-               data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue')))
+               data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'), now_macau))
     conn.commit()
     conn.close()
     return jsonify({"message": "交更成功！", "status": "success"})
@@ -61,7 +65,6 @@ def submit():
 def get_records():
     conn = get_db_connection()
     c = conn.cursor()
-    # 轉換時區做澳門時間
     c.execute("""SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, 
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
                  FROM records ORDER BY id DESC""")
@@ -82,7 +85,7 @@ def get_records():
 def get_pending_issues():
     conn = get_db_connection()
     c = conn.cursor()
-    # 抽未處理嘅數據
+    # 確保抽出嚟嘅時間係澳門時間
     c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status, 
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
                  FROM records 
