@@ -610,6 +610,7 @@ if (hasUnresolved) {
                 container.style.display = 'block';
                 let html = "";
                 let totalItems = 0;
+                let seenItems = new Set(); // 🌟 防重複機制
 
                 issues.forEach(issue => {
                     let itemHtml = "";
@@ -621,8 +622,9 @@ if (hasUnresolved) {
                         if (!clean) return;
                         
                         let checkText = `${type} - ${clean}`;
-                        // 🌟 如果呢個字眼喺黑名單入面，就唔好顯示
-                        if (doneSet.includes(checkText)) return;
+                        // 🌟 如果已處理，或者已經喺畫面顯示過，就跳過
+                        if (doneSet.includes(checkText) || seenItems.has(checkText)) return;
+                            seenItems.add(checkText);
 
                         itemHtml += `<div style="display:flex; align-items:center; background:#ffebee; padding:10px; margin-bottom:5px; border-radius:6px; border: 1px solid #ffcdd2;">
                             <input type="checkbox" class="pending-checkbox" data-text="${checkText}" style="width:20px; height:20px; margin-right:10px; cursor:pointer; flex-shrink: 0;">
@@ -751,6 +753,22 @@ if (hasUnresolved) {
                         });
                     }
 
+                    let pendingOldHtml = "";
+                      if (mainNote.includes('【早前未處理】')) {
+                      if(mainNote.includes('【早前未處理】')) mainNote = mainNote.split('【早前未處理】')[0].trim();
+                    let parts = r.note.split('【早前未處理】');
+                    let pendingStr = parts[1].trim();
+                    let oldItemsHtml = "";
+                        pendingStr.split('\n').forEach(line => {
+                      if (line.trim()) {
+                       oldItemsHtml += `<div class="issue-data" style="background:#ffebee; color:#d32f2f; padding:8px; margin-bottom:5px; border-radius:4px;"><span>⚠️ 早前未處理: ${line.trim()}</span></div>`;
+                       }
+                  });
+                       pendingOldHtml = `<div style="background: #fff3cd; border: 2px dashed #ffa000; padding: 12px; border-radius: 8px; margin-top: 15px;">
+                    <div style="font-weight: bold; color: #d84315; margin-bottom: 8px;">📌 早前未處理跟進項目：</div>
+                    <div>${oldItemsHtml}</div>
+                    </div>`;
+                 }
                     let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : 'Lux數值大致在於450-650之間';
                     let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常' || r.temp_issue) ? '溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
                     let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常' || r.db_issue) ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
