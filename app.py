@@ -77,7 +77,7 @@ def get_records():
 def get_pending_issues():
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status 
+    c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status, created_at 
                  FROM records 
                  WHERE status NOT IN ('已處理', '已 Send mail') 
                  AND (lux_issue != '' OR temp_issue != '' OR db_issue != '' OR note LIKE '%【場面問題】%')
@@ -89,7 +89,8 @@ def get_pending_issues():
     for row in rows:
         pending.append({
             "id": row[0], "name": row[1], "lux_issue": row[2], "temp_issue": row[3], 
-            "db_issue": row[4], "note": row[5], "overall_status": row[6]
+            "db_issue": row[4], "note": row[5], "overall_status": row[6],
+            "created_at": str(row[7]) if row[7] else None
         })
     return jsonify(pending)
 
