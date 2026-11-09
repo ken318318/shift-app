@@ -47,7 +47,6 @@ def submit():
     conn = get_db_connection()
     c = conn.cursor()
     
-    # 🌟 強制用 Python 攞澳門當前時間
     macau_tz = pytz.timezone('Asia/Macau')
     now_macau = datetime.now(macau_tz)
     
@@ -85,22 +84,33 @@ def get_records():
 def get_pending_issues():
     conn = get_db_connection()
     c = conn.cursor()
-    # 確保抽出嚟嘅時間係澳門時間
     c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status, 
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
                  FROM records 
                  WHERE status NOT IN ('已處理', '已 Send mail') 
-                 AND (lux_issue != '' OR temp_issue != '' OR db_issue != '' OR note LIKE '%【場面問題】%' OR note LIKE '%【早前未處理】%')
+                 AND (lux_issue != '' OR temp_issue != '' OR db_issue != '' OR note LIKE '%【場面問題】%')
                  ORDER BY id DESC""")
     rows = c.fetchall()
     conn.close()
     
+    # 1. 先收集所有「已處理」嘅字眼，放入黑名單
+    done_items_set = set()
+    for row in rows:
+        note = row[5] or ""
+        if '【早前已處理】' in note:
+            done_part = note.split('【早前已處理】')[1].split('【早前未處理】')[0]
+            for line in done_part.split('\n'):
+                if line.strip():
+                    done_items_set.add(line.strip())
+
+    # 2. 真正抽未處理嘅時候，過濾走黑名單入面嘅嘢
     pending = []
     for row in rows:
         pending.append({
             "id": row[0], "name": row[1], "lux_issue": row[2], "temp_issue": row[3], 
             "db_issue": row[4], "note": row[5], "overall_status": row[6],
-            "created_at": str(row[7]) if row[7] else None
+            "created_at": str(row[7]) if row[7] else None,
+            "done_items_set": list(done_items_set)
         })
     return jsonify(pending)
 
