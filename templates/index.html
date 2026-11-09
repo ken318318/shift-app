@@ -567,7 +567,10 @@ function submitForm() {
     .catch(error => { alert("連線失敗！"); console.error(error); });
 }
         function loadPendingIssues() {
-            fetch('/api/pending_issues').then(res => res.json()).then(issues => {
+            fetch('/api/pending_issues').then(res => res.json()).then(data => {
+                let issues = data.issues;
+                let doneSet = data.done_items || []; // 攞返個黑名單
+                
                 let container = document.getElementById('pending-container');
                 let listDiv = document.getElementById('pending-list');
                 let title = document.getElementById('pending-title');
@@ -580,7 +583,6 @@ function submitForm() {
                 container.style.display = 'block';
                 let html = "";
                 let totalItems = 0;
-                let doneSet = issues[0].done_items_set || []; 
 
                 issues.forEach(issue => {
                     let itemHtml = "";
@@ -592,6 +594,7 @@ function submitForm() {
                         if (!clean) return;
                         
                         let checkText = `${type} - ${clean}`;
+                        // 🌟 如果呢個字眼喺黑名單入面，就唔好顯示
                         if (doneSet.includes(checkText)) return;
 
                         itemHtml += `<div style="display:flex; align-items:center; background:#ffebee; padding:10px; margin-bottom:5px; border-radius:6px; border: 1px solid #ffcdd2;">
@@ -612,6 +615,14 @@ function submitForm() {
                         let venueStr = issue.note.split('【場面問題】')[1].split('【早前')[0].trim();
                         venueStr.split('\n').forEach(line => {
                             if (line.trim()) addItem('場面', line);
+                        });
+                    }
+
+                    // 🌟 確保抽返舊有嘅未處理項目出嚟
+                    if (issue.note && issue.note.includes('【早前未處理】')) {
+                        let oldStr = issue.note.split('【早前未處理】')[1].trim();
+                        oldStr.split('\n').forEach(line => {
+                            if (line.trim()) addItem('早前', line);
                         });
                     }
 
