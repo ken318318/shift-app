@@ -525,8 +525,17 @@ function submitForm() {
         note: finalNote, lux_issue: luxIssue, temp_issue: tempIssue, db_issue: dbIssue
     };
 
-    if (!data.name) { alert("請選擇交更人！"); return; }
-    if (!data.note || data.note.trim() === '【場面問題】') { alert("請填寫交更事項或場面問題！"); return; }
+   if (!data.name) { alert("請選擇交更人！"); return; }
+
+// 🌟 新驗證：只要你有填新嘢，或者有打勾舊嘢，都准許提交！
+let rawNote = document.getElementById('notes').value.trim();
+let hasNewContent = rawNote !== '' || venueIssues.length > 0 || luxIssue !== '' || tempIssue !== '' || dbIssue !== '' || nfcIssueStr !== '';
+let hasResolvedOld = doneOldItems.length > 0;
+
+if (!hasNewContent && !hasResolvedOld) {
+    alert("請填寫交更事項，或者喺「未完成跟進項目」度撳圓點剔選已處理嘅嘢！");
+    return;
+}
 
     let pendingContainer = document.getElementById('pending-container');
     if (pendingContainer.style.display !== 'none') {
