@@ -592,7 +592,7 @@ function submitForm() {
 
                 issues.forEach(issue => {
                     let itemHtml = "";
-                    let timeStr = issue.created_at ? new Date(issue.created_at).toLocaleString('zh-HK') : '';
+                    let timeStr = issue.created_at ? issue.created_at.substring(0, 19).replace('T', ' ') : '';
                     
                     let addItem = (type, text) => {
                         if (!text) return;
@@ -613,9 +613,16 @@ function submitForm() {
                     if (issue.db_issue) addItem('分貝', issue.db_issue);
                     
                     if (issue.note && issue.note.includes('【場面問題】')) {
-                        let venueStr = issue.note.split('【場面問題】')[1].trim();
+                        let venueStr = issue.note.split('【場面問題】')[1].split('【早前')[0].trim();
                         venueStr.split('\n').forEach(line => {
                             if (line.trim()) addItem('場面', line);
+                        });
+                    }
+
+                    if (issue.note && issue.note.includes('【早前未處理】')) {
+                        let oldStr = issue.note.split('【早前未處理】')[1].trim();
+                        oldStr.split('\n').forEach(line => {
+                            if (line.trim()) addItem('早前', line);
                         });
                     }
 
