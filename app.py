@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import psycopg2
 import os
+from datetime import datetime
+import pytz
 
 app = Flask(__name__)
 CORS(app)
@@ -30,7 +32,7 @@ def init_db():
                   lux_issue TEXT,
                   temp_issue TEXT,
                   db_issue TEXT,
-                  created_at TIMESTAMP DEFAULT NOW())''')
+                  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)''')
     conn.commit()
     conn.close()
 
@@ -44,9 +46,10 @@ def submit():
     data = request.json
     conn = get_db_connection()
     c = conn.cursor()
+    # 使用 NOW() 確保存入係當下時間
     c.execute("""INSERT INTO records 
-                 (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue) 
-                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+                 (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, created_at) 
+                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())""", 
               (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                data.get('checklist'), data.get('status'), data.get('follower'), data.get('note'),
                data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue')))
@@ -58,7 +61,9 @@ def submit():
 def get_records():
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("""SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, created_at 
+    # 轉換時區做澳門時間
+    c.execute("""SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, 
+                 created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
                  FROM records ORDER BY id DESC""")
     rows = c.fetchall()
     conn.close()
@@ -77,10 +82,12 @@ def get_records():
 def get_pending_issues():
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status, created_at 
+    # 抽未處理嘅數據
+    c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status, 
+                 created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
                  FROM records 
                  WHERE status NOT IN ('已處理', '已 Send mail') 
-                 AND (lux_issue != '' OR temp_issue != '' OR db_issue != '' OR note LIKE '%【場面問題】%')
+                 AND (lux_issue != '' OR temp_issue != '' OR db_issue != '' OR note LIKE '%【場面問題】%' OR note LIKE '%【早前未處理】%')
                  ORDER BY id DESC""")
     rows = c.fetchall()
     conn.close()
