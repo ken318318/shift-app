@@ -84,35 +84,40 @@ def get_records():
 def get_pending_issues():
     conn = get_db_connection()
     c = conn.cursor()
+    
+    # 1. 先搵出所有「已處理」嘅字眼，放入黑名單
+    c.execute("SELECT note FROM records WHERE note LIKE '%【早前已處理】%'")
+    done_rows = c.fetchall()
+    done_items = set()
+    for r in done_rows:
+        if r[0] and '【早前已處理】' in r[0]:
+            part = r[0].split('【早前已處理】')[1]
+            if '【早前未處理】' in part:
+                part = part.split('【早前未處理】')[0]
+            for line in part.split('\n'):
+                if line.strip(): done_items.add(line.strip())
+
+    # 2. 搵出所有未完成嘅紀錄 (加入咗 OR note LIKE '%【早前未處理】%')
     c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status, 
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
                  FROM records 
                  WHERE status NOT IN ('已處理', '已 Send mail') 
-                 AND (lux_issue != '' OR temp_issue != '' OR db_issue != '' OR note LIKE '%【場面問題】%')
+                 AND (lux_issue != '' OR temp_issue != '' OR db_issue != '' 
+                      OR note LIKE '%【場面問題】%' OR note LIKE '%【早前未處理】%')
                  ORDER BY id DESC""")
     rows = c.fetchall()
     conn.close()
     
-    # 1. 先收集所有「已處理」嘅字眼，放入黑名單
-    done_items_set = set()
-    for row in rows:
-        note = row[5] or ""
-        if '【早前已處理】' in note:
-            done_part = note.split('【早前已處理】')[1].split('【早前未處理】')[0]
-            for line in done_part.split('\n'):
-                if line.strip():
-                    done_items_set.add(line.strip())
-
-    # 2. 真正抽未處理嘅時候，過濾走黑名單入面嘅嘢
     pending = []
     for row in rows:
         pending.append({
             "id": row[0], "name": row[1], "lux_issue": row[2], "temp_issue": row[3], 
             "db_issue": row[4], "note": row[5], "overall_status": row[6],
-            "created_at": str(row[7]) if row[7] else None,
-            "done_items_set": list(done_items_set)
+            "created_at": str(row[7]) if row[7] else None
         })
-    return jsonify(pending)
+        
+    # 將未完成紀錄同黑名單一齊交畀前端
+    return jsonify({"issues": pending, "done_items": list(done_items)})
 
 @app.route('/api/update_status', methods=['POST'])
 def update_status():
