@@ -254,7 +254,6 @@
     <label>詳細交更事項：</label>
     <textarea id="notes" rows="4" placeholder="請輸入詳細問題、位置及跟進情況..."></textarea>
 
-    <!-- 未完成跟進項目 (逐項 Checkbox) -->
     <div id="pending-container" style="display: none; background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 30px; margin-bottom: 20px;">
         <div onclick="togglePending()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
             <h3 id="pending-title" style="margin: 0; font-size: 15px; color: #856404;">⚠️ 未完成跟進項目</h3>
@@ -468,24 +467,16 @@ function submitForm() {
     let venueStr = venueIssues.length > 0 ? `\n\n【場面問題】\n` + venueIssues.join('\n') : '';
     let finalNote = document.getElementById('notes').value + venueStr;
 
-    // 🌟 收集早前問題 (根據 Checkbox)
+    // 🌟 收集未完成項目 (只將打咗勾嘅寫入新紀錄)
     let doneOldItems = [];
-    let pendingOldItems = [];
-    
     document.querySelectorAll('.pending-checkbox').forEach(cb => {
-        let text = cb.getAttribute('data-text');
         if (cb.checked) {
-            doneOldItems.push(text);
-        } else {
-            pendingOldItems.push(text);
+            doneOldItems.push(cb.getAttribute('data-text'));
         }
     });
 
     if (doneOldItems.length > 0) {
         finalNote += `\n\n【早前已處理】\n` + doneOldItems.join('\n');
-    }
-    if (pendingOldItems.length > 0) {
-        finalNote += `\n\n【早前未處理】\n` + pendingOldItems.join('\n');
     }
 
     let luxIssue = "";
@@ -589,6 +580,7 @@ function submitForm() {
                 container.style.display = 'block';
                 let html = "";
                 let totalItems = 0;
+                let doneSet = issues[0].done_items_set || []; 
 
                 issues.forEach(issue => {
                     let itemHtml = "";
@@ -598,10 +590,14 @@ function submitForm() {
                         if (!text) return;
                         let clean = text.replace(/\[狀態:.*?\]/g, '').replace('⚠️', '').replace('✅', '').trim();
                         if (!clean) return;
+                        
+                        let checkText = `${type} - ${clean}`;
+                        if (doneSet.includes(checkText)) return;
+
                         itemHtml += `<div style="display:flex; align-items:center; background:#ffebee; padding:10px; margin-bottom:5px; border-radius:6px; border: 1px solid #ffcdd2;">
-                            <input type="checkbox" class="pending-checkbox" data-text="${type} - ${clean}" style="width:20px; height:20px; margin-right:10px; cursor:pointer; flex-shrink: 0;">
+                            <input type="checkbox" class="pending-checkbox" data-text="${checkText}" style="width:20px; height:20px; margin-right:10px; cursor:pointer; flex-shrink: 0;">
                             <div style="font-size:13px; color:#d32f2f;">
-                                <strong>⚠️ ${type} - ${clean}</strong><br>
+                                <strong>⚠️ ${checkText}</strong><br>
                                 <span style="font-size:11px; color:#888;">交更時間: ${timeStr}</span>
                             </div>
                         </div>`;
@@ -619,13 +615,6 @@ function submitForm() {
                         });
                     }
 
-                    if (issue.note && issue.note.includes('【早前未處理】')) {
-                        let oldStr = issue.note.split('【早前未處理】')[1].trim();
-                        oldStr.split('\n').forEach(line => {
-                            if (line.trim()) addItem('早前', line);
-                        });
-                    }
-
                     if(itemHtml !== "") {
                         html += `<div class="pending-card" style="border-left: 4px solid #ffa000; margin-bottom: 15px;">
                             <strong style="font-size:12px; color:#856404; display:block; margin-bottom:5px;">由 ${issue.name} 交更：</strong>
@@ -634,8 +623,12 @@ function submitForm() {
                     }
                 });
                 
-                title.innerHTML = `⚠️ 有 ${totalItems} 項未完成跟進項目 (點擊展開剔選)`;
-                listDiv.innerHTML = html;
+                if (totalItems === 0) {
+                    container.style.display = 'none';
+                } else {
+                    title.innerHTML = `⚠️ 有 ${totalItems} 項未完成跟進項目 (點擊展開剔選)`;
+                    listDiv.innerHTML = html;
+                }
             });
         }
 
@@ -699,43 +692,25 @@ function submitForm() {
                     if (mainNote.includes('【場面問題】')) {
                         let parts = mainNote.split('【場面問題】');
                         mainNote = parts[0].trim();
-                        let venueStr = parts[1].trim();
+                        let venueStr = parts[1].split('【早前')[0].trim();
                         venueStr.split('\n').forEach(line => {
                             line = line.trim();
-                            if (line !== '' && !line.includes('【早前未完成跟進】') && !line.includes('【早前已處理】') && !line.includes('【早前未處理】') && !line.startsWith('⚠️') && !line.startsWith('✅')) {
+                            if (line !== '' && !line.startsWith('⚠️') && !line.startsWith('✅')) {
                                 processIssue(line, '場面 -');
                             }
                         });
                     }
 
                     let doneOldHtml = "";
-                    let pendingOldHtml = "";
-
                     if (mainNote.includes('【早前已處理】')) {
-                        let parts = mainNote.split('【早前已處理】');
-                        mainNote = parts[0].trim();
+                        if(mainNote.includes('【早前已處理】')) mainNote = mainNote.split('【早前已處理】')[0].trim();
+                        let parts = r.note.split('【早前已處理】');
                         let doneStr = parts[1].split('【早前未處理】')[0].trim();
                         doneStr.split('\n').forEach(line => {
                             if (line.trim()) {
                                 doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 早前已處理: ${line.trim()}</span></div>`;
                             }
                         });
-                    }
-
-                    if (mainNote.includes('【早前未處理】')) {
-                        let parts = mainNote.split('【早前未處理】');
-                        mainNote = parts[0].trim();
-                        let pendingStr = parts[1].trim();
-                        let oldItemsHtml = "";
-                        pendingStr.split('\n').forEach(line => {
-                            if (line.trim()) {
-                                oldItemsHtml += `<div class="issue-data" style="background:#ffebee; color:#d32f2f; padding:8px; margin-bottom:5px; border-radius:4px;"><span>⚠️ 早前未處理: ${line.trim()}</span></div>`;
-                            }
-                        });
-                        pendingOldHtml = `<div style="background: #fff3cd; border: 2px dashed #ffa000; padding: 12px; border-radius: 8px; margin-top: 15px;">
-                            <div style="font-weight: bold; color: #d84315; margin-bottom: 8px;">📌 早前未處理跟進項目：</div>
-                            <div>${oldItemsHtml}</div>
-                        </div>`;
                     }
 
                     let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : 'Lux數值大致在於450-650之間';
@@ -776,7 +751,6 @@ function submitForm() {
                             ${pendingIssuesList.join('')}
                             ${followerHtml}
                             <div class="record-note" style="margin-top: 10px;">${mainNote}</div>
-                            ${pendingOldHtml}
                         </div>
                     `;
                 });
