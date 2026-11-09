@@ -537,14 +537,24 @@ if (!hasNewContent && !hasResolvedOld) {
     return;
 }
 
-    let pendingContainer = document.getElementById('pending-container');
-    if (pendingContainer.style.display !== 'none') {
-        let isConfirmed = document.getElementById('confirm-pending').checked;
-        if (!isConfirmed) {
-            alert("⚠️ 請注意：仲有未完成嘅跟進項目！\n\n如果你確定呢啲問題仍然未處理，請喺最底撳『我確定早前發現的所有問題尚未處理？』個格仔，然後再提交。");
-            return;
-        }
+    // 🌟 新邏輯：檢查係咪真係仲有「未打勾」嘅舊問題
+let allPendingBoxes = document.querySelectorAll('.pending-checkbox');
+let hasUnresolved = false;
+
+allPendingBoxes.forEach(cb => {
+    if (!cb.checked) {
+        hasUnresolved = true; // 只要仲有一個未打勾，就當係有未處理
     }
+});
+
+// 如果仲有未打勾嘅舊問題，先要求撳確認格
+if (hasUnresolved) {
+    let isConfirmed = document.getElementById('confirm-pending').checked;
+    if (!isConfirmed) {
+        alert("⚠️ 請注意：仲有未完成嘅跟進項目！\n\n如果你確定呢啲問題仍然未處理，請喺最底撳『我確定早前發現的所有問題尚未處理？』個格仔，然後再提交。");
+        return;
+    }
+}
 
     fetch('/api/submit', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
