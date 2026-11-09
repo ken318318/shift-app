@@ -467,17 +467,25 @@ function submitForm() {
     let venueStr = venueIssues.length > 0 ? `\n\n【場面問題】\n` + venueIssues.join('\n') : '';
     let finalNote = document.getElementById('notes').value + venueStr;
 
-    // 🌟 收集未完成項目 (只將打咗勾嘅寫入新紀錄)
-    let doneOldItems = [];
-    document.querySelectorAll('.pending-checkbox').forEach(cb => {
-        if (cb.checked) {
-            doneOldItems.push(cb.getAttribute('data-text'));
-        }
-    });
-
-    if (doneOldItems.length > 0) {
-        finalNote += `\n\n【早前已處理】\n` + doneOldItems.join('\n');
+    // 🌟 收集舊問題 (已處理同未處理都要收集)
+let doneOldItems = [];
+let pendingOldItems = [];
+document.querySelectorAll('.pending-checkbox').forEach(cb => {
+    let text = cb.getAttribute('data-text');
+    if (cb.checked) {
+        doneOldItems.push(text);
+    } else {
+        pendingOldItems.push(text);
     }
+});
+
+if (doneOldItems.length > 0) {
+    finalNote += `\n\n【早前已處理】\n` + doneOldItems.join('\n');
+}
+if (pendingOldItems.length > 0) {
+    // 寫入未處理，等歷史紀錄有嘢顯示
+    finalNote += `\n\n【早前未處理】\n` + pendingOldItems.join('\n');
+}
 
     let luxIssue = "";
     if (document.getElementById('lux-issue-group').style.display === 'block') {
