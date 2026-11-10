@@ -688,10 +688,10 @@ if (hasUnresolved) {
                     let addItem = (type, text) => {
                      if (!text) return;
     
-                     // 🌟 關鍵修正：如果呢個字本身已經標記為已處理/已Send mail，直接跳過！
-                     if (text.includes('[狀態:已處理]') || text.includes('[狀態:已 Send mail]')) {
-                          return;
-                       }
+                     // 🌟 關鍵修正：如果呢個字本身已經標記為已處理，直接跳過！
+                     if (text.includes('[狀態:已處理]')) {
+                         return;
+                    }
 
                      let clean = text.replace(/\[狀態:.*?\]/g, '').replace('⚠️', '').replace('✅', '').trim();
                       if (!clean) return;
