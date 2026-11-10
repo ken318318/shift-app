@@ -617,24 +617,31 @@ if (hasUnresolved) {
                     let timeStr = issue.created_at ? new Date(issue.created_at).toLocaleString('zh-HK') : '';
                     
                     let addItem = (type, text) => {
-                        if (!text) return;
-                        let clean = text.replace(/\[狀態:.*?\]/g, '').replace('⚠️', '').replace('✅', '').trim();
-                        if (!clean) return;
-                        
-                        let checkText = `${type} - ${clean}`;
-                        // 🌟 如果已處理，或者已經喺畫面顯示過，就跳過
-                        if (doneSet.includes(checkText) || seenItems.has(checkText)) return;
-                            seenItems.add(checkText);
+                     if (!text) return;
+    
+                     // 🌟 關鍵修正：如果呢個字本身已經標記為已處理/已Send mail，直接跳過！
+                     if (text.includes('[狀態:已處理]') || text.includes('[狀態:已 Send mail]')) {
+                          return;
+                       }
 
-                        itemHtml += `<div style="display:flex; align-items:center; background:#ffebee; padding:10px; margin-bottom:5px; border-radius:6px; border: 1px solid #ffcdd2;">
-                            <input type="checkbox" class="pending-checkbox" data-text="${checkText}" style="width:20px; height:20px; margin-right:10px; cursor:pointer; flex-shrink: 0;">
-                            <div style="font-size:13px; color:#d32f2f;">
-                                <strong>⚠️ ${checkText}</strong><br>
-                                <span style="font-size:11px; color:#888;">交更時間: ${timeStr}</span>
-                            </div>
-                        </div>`;
-                        totalItems++;
-                    };
+                     let clean = text.replace(/\[狀態:.*?\]/g, '').replace('⚠️', '').replace('✅', '').trim();
+                      if (!clean) return;
+    
+                     let checkText = `${type} - ${clean}`;
+    
+                     // 如果已處理，或者已經喺畫面顯示過，就跳過
+                      if (doneSet.includes(checkText) || seenItems.has(checkText)) return;
+                         seenItems.add(checkText);
+
+                         itemHtml += `<div style="display:flex; align-items:center; background:#ffebee; padding:10px; margin-bottom:5px; border-radius:6px; border: 1px solid #ffcdd2;">
+                                     <input type="checkbox" class="pending-checkbox" data-text="${checkText}" style="width:20px; height:20px; margin-right:10px; cursor:pointer; flex-shrink: 0;">
+                                     <div style="font-size:13px; color:#d32f2f;">
+                                     <strong>⚠️ ${checkText}</strong><br>
+                                     <span style="font-size:11px; color:#888;">交更時間: ${timeStr}</span>
+                                  </div>
+                               </div>`;
+                         totalItems++;
+                   };
 
                     if (issue.lux_issue) addItem('Lux', issue.lux_issue);
                     if (issue.temp_issue) addItem('溫度', issue.temp_issue);
