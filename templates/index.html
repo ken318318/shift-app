@@ -732,11 +732,47 @@ if (hasUnresolved) {
                     }
 
                     if(itemHtml !== "") {
-                        html += `<div class="pending-card" style="border-left: 4px solid #ffa000; margin-bottom: 15px;">
-                            <strong style="font-size:12px; color:#856404; display:block; margin-bottom:5px;">由 ${issue.name} 交更：</strong>
-                            ${itemHtml}
-                        </div>`;
-                    }
+                          // 🌟 將 itemHtml 按「問題類別」分組
+                         let groupedItems = {};
+                         let tempDiv = document.createElement('div');
+                         tempDiv.innerHTML = itemHtml;
+    
+                         tempDiv.querySelectorAll('.pending-item-row').forEach(row => {
+                            let text = row.getAttribute('data-text');
+                            let cat = "其他問題";
+        
+                            if (text.includes('Lux')) cat = "💡 Lux 異常";
+                            else if (text.includes('溫度')) cat = "🌡️ 溫度異常";
+                            else if (text.includes('分貝')) cat = "🔊 分貝異常";
+                            else if (text.includes('場面 - [櫥')) cat = "🪑 櫈/座位問題"; // 專為你嘅櫈分類
+                            else if (text.includes('場面 - [')) {
+                                 // 抽出中括號入面嘅大類，例如 [賭檯 - Display...]
+                                 let match = text.match(/\[(.*?)\s*-/);
+                                 cat = "🛠️ " + (match ? match[1] : "場面問題");
+                            }
+        
+                            if (!groupedItems[cat]) groupedItems[cat] = [];
+                            groupedItems[cat].push(row.outerHTML);
+                       });
+
+                       // 🌟 生成摺疊 HTML
+                       let groupedHtml = "";
+                       for (let cat in groupedItems) {
+                           groupedHtml += `
+                               <details style="margin-bottom: 10px; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 5px;">
+                                   <summary style="cursor: pointer; font-weight: bold; color: #856404; padding: 5px; outline: none;">
+                                       ${cat} (${groupedItems[cat].length} 項)
+                                   </summary>
+                                   <div style="padding: 5px 0 0 0;">${groupedItems[cat].join('')}</div>
+                               </details>
+                         `;
+                 }
+
+                 html += `<div class="pending-card" style="border-left: 4px solid #ffa000; margin-bottom: 15px;">
+                     <strong style="font-size:12px; color:#856404; display:block; margin-bottom:5px;">由 ${issue.name} 交更：</strong>
+                     ${groupedHtml}
+                 </div>`;
+             }
                 });
                 
                if (totalItems === 0) {
