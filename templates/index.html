@@ -432,17 +432,38 @@
     }
 
     function addVenueLocation(btn) {
-        let container = btn.parentElement.parentElement;
-        let newRow = document.createElement('div');
-        newRow.className = 'issue-row venue-loc-row';
-        newRow.style.marginTop = '5px';
-        newRow.innerHTML = `<select class="prefix venue-prefix" style="flex: 1;"><option value="">(空白)</option><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num venue-location" placeholder="位置/台號" style="flex: 1.5;"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button>`;
-        container.appendChild(newRow);
-    }
+    let container = btn.parentElement.parentElement;
+    
+    // 🌟 1. 自動讀取當前呢行嘅前綴 (NB, BJ 等)
+    let currentPrefix = btn.parentElement.querySelector('.venue-prefix').value;
+    
+    let newRow = document.createElement('div');
+    newRow.className = 'issue-row venue-loc-row';
+    newRow.style.marginTop = '5px';
+    newRow.style.position = 'relative'; // 🌟 2. 解決 X 掣亂飄嘅問題
+    
+    // 🌟 3. 生成新行，並自動帶入 currentPrefix
+    newRow.innerHTML = `
+        <select class="prefix venue-prefix" style="flex: 1;">
+            <option value="">(空白)</option>
+            <option value="NB" ${currentPrefix === 'NB' ? 'selected' : ''}>NB</option>
+            <option value="BJ" ${currentPrefix === 'BJ' ? 'selected' : ''}>BJ</option>
+            <option value="CR" ${currentPrefix === 'CR' ? 'selected' : ''}>CR</option>
+            <option value="CS" ${currentPrefix === 'CS' ? 'selected' : ''}>CS</option>
+            <option value="DS" ${currentPrefix === 'DS' ? 'selected' : ''}>DS</option>
+            <option value="FP" ${currentPrefix === 'FP' ? 'selected' : ''}>FP</option>
+            <option value="RL" ${currentPrefix === 'RL' ? 'selected' : ''}>RL</option>
+            <option value="LT" ${currentPrefix === 'LT' ? 'selected' : ''}>LT</option>
+        </select>
+        <input type="text" class="table-num venue-location" placeholder="位置/台號" style="flex: 1.5; margin-right: 25px;">
+        <button type="button" class="btn-remove" style="right: 0; top: 8px;" onclick="this.parentElement.remove()">X</button>
+    `;
+    container.appendChild(newRow);
+}
 
     function addVenueRow() {
         let html = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9; position: relative;">
-            <button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button>
+            <button type="button" class="btn-remove" style="top: 5px; right: 5px;" onclick="this.parentElement.remove()">X</button>
             <div class="issue-row">
                 <select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select>
                 <select class="prefix venue-problem" style="flex: 1.5;"></select>
