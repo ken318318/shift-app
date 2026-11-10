@@ -54,6 +54,14 @@
     <div class="card" id="list-container">
         <h2>📋 歷史交更紀錄</h2>
         <button class="submit-btn" onclick="showForm()" style="margin-top: 0; margin-bottom: 20px; background-color: #2ecc71;">📝 新增交更紀錄</button>
+        <!-- 🌟 主頁專用：未完成項目總覽 -->
+<div id="home-pending-container" style="display: none; background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 20px;">
+    <div onclick="toggleHomePending()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+        <h3 id="home-pending-title" style="margin: 0; font-size: 15px; color: #856404;">⚠️ 未完成跟進項目</h3>
+        <span id="home-pending-arrow" style="color: #856404; font-weight: bold;">▼ 展開</span>
+    </div>
+    <div id="home-pending-list" style="display: none; margin-top: 15px; border-top: 1px dashed #e0c97e; padding-top: 15px;"></div>
+</div>
         <div id="recordList"></div>
     </div>
 
@@ -330,6 +338,7 @@
         document.getElementById('form-container').style.display = 'none';
         document.getElementById('list-container').style.display = 'block';
         displayRecords(); 
+        loadPendingIssues();
         window.scrollTo(0, 0);
     }
 
@@ -344,7 +353,17 @@
             arrow.innerHTML = '▼ 展開';
         }
     }
-
+    function toggleHomePending() {
+    let list = document.getElementById('home-pending-list');
+    let arrow = document.getElementById('home-pending-arrow');
+    if (list.style.display === 'none') {
+        list.style.display = 'block';
+        arrow.innerHTML = '▲ 收起';
+    } else {
+        list.style.display = 'none';
+        arrow.innerHTML = '▼ 展開';
+    }
+}
     function toggleIssue(type) {
         let selectEl = document.getElementById(type);
         let groupEl = document.getElementById(type + '-issue-group');
@@ -666,12 +685,19 @@ if (hasUnresolved) {
                     }
                 });
                 
-                if (totalItems === 0) {
-                    container.style.display = 'none';
-                } else {
-                    title.innerHTML = `⚠️ 有 ${totalItems} 項未完成跟進項目 (點擊展開剔選)`;
-                    listDiv.innerHTML = html;
-                }
+               if (totalItems === 0) {
+                   container.style.display = 'none';
+                   document.getElementById('home-pending-container').style.display = 'none'; 
+           } else {
+                   title.innerHTML = `⚠️ 有 ${totalItems} 項未完成跟進項目 (點擊展開剔選)`;
+                   listDiv.innerHTML = html;
+
+                   document.getElementById('home-pending-container').style.display = 'block';
+                   document.getElementById('home-pending-title').innerHTML = `⚠️ 有 ${totalItems} 項未完成跟進項目 (點擊展開查看)`;
+    
+              let homeHtml = html.replace(/<input type="checkbox"[^>]*>/g, '');
+                   document.getElementById('home-pending-list').innerHTML = homeHtml;
+                 }
             });
         }
 
