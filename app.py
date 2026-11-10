@@ -115,32 +115,32 @@ def get_pending_issues():
     seen_issues = set() 
 
     def is_duplicate(prefix, text):
-        """解析字串，抽出台號同類別，判斷係咪重複"""
-        if not text: return False
+    """解析字串，抽出台號同類別，判斷係咪重複"""
+    if not text: return False
+    
+    tables = re.findall(r'([A-Za-z]{2}\d+)', text)
+    if not tables:
+        return False
         
-        # 抽出所有「英文字母+數字」嘅台號 (例如 NB1101, BJ22)
-        tables = re.findall(r'([A-Za-z]{2}\d+)', text)
-        if not tables:
-            return False # 搵唔到台號，當作唔重複，照樣顯示
-            
-        table_key = tables[0].upper() # 統一用大寫比對
-        
-        # 判斷問題類別
-        if prefix in ['Lux', '溫度', '分貝']:
-            category_key = prefix
+    table_key = tables[0].upper()
+    
+    if prefix in ['Lux', '溫度', '分貝']:
+        category_key = prefix
+    else:
+        # 🌟 呢度改咗：無視前面有冇「場面 -」，總之見到中括號就抽入面嘅嘢
+        match = re.search(r'\[(.*?)\]', text)
+        if match:
+            category_key = match.group(1)
         else:
-            # 場面問題：抽出 [類別 - 問題] 入面嘅嘢
-            match = re.search(r'\[(.*?)\]', text)
-            category_key = match.group(1) if match else text[:20]
-            
-        # 組合出獨一無二嘅 Key
-        unique_key = f"{prefix}_{table_key}_{category_key}"
+            category_key = text[:20]
         
-        if unique_key in seen_issues:
-            return True # 重複咗！
-        else:
-            seen_issues.add(unique_key) # 第一次見，記錄低
-            return False
+    unique_key = f"{prefix}_{table_key}_{category_key}"
+    
+    if unique_key in seen_issues:
+        return True
+    else:
+        seen_issues.add(unique_key)
+        return False
 
     for row in rows:
         # 我哋要將字串拆開，逐條問題去 check 係咪重複
