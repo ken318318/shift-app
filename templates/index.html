@@ -462,28 +462,31 @@
 }
 
     function addVenueRow() {
-        let html = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9; position: relative;">
-            <button type="button" class="btn-remove" style="top: 5px; right: 5px;" onclick="this.parentElement.remove()">X</button>
-            <div class="issue-row">
-                <select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select>
-                <select class="prefix venue-problem" style="flex: 1.5;"></select>
+    let html = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;">
+        <div class="issue-row">
+            <select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select>
+            <select class="prefix venue-problem" style="flex: 1.5;"></select>
+        </div>
+        <div class="venue-location-container">
+            <div class="issue-row venue-loc-row" style="margin-top: 5px;">
+                <select class="prefix venue-prefix" style="flex: 1;"><option value="">(空白)</option><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select>
+                <input type="text" class="table-num venue-location" placeholder="位置/台號" style="flex: 1.5;">
+                <button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px; font-size: 14px;" onclick="addVenueLocation(this)">+</button>
             </div>
-            <div class="venue-location-container">
-                <div class="issue-row venue-loc-row" style="margin-top: 5px;">
-                    <select class="prefix venue-prefix" style="flex: 1;"><option value="">(空白)</option><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select>
-                    <input type="text" class="table-num venue-location" placeholder="位置/台號" style="flex: 1.5;">
-                    <button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px; font-size: 14px;" onclick="addVenueLocation(this)">+</button>
-                </div>
+        </div>
+        <!-- 🌟 X 掣搬咗去右下角 -->
+        <div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; flex: 1;">
+                <span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span>
+                <select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
             </div>
-            <div class="issue-row" style="margin-top: 8px;">
-                <span style="font-size:12px; color:#1565c0; font-weight:bold;">跟進狀態：</span>
-                <select class="issue-status" style="color: #1565c0;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
-            </div>
-        </div>`;
-        document.getElementById('venue-container').insertAdjacentHTML('beforeend', html);
-        let newSelect = document.querySelector('.venue-item:last-child .venue-category');
-        initVenueCategory(newSelect);
-    }
+            <button type="button" class="btn-remove" style="position: static; margin-left: 10px; margin-top: 0; flex-shrink: 0;" onclick="this.parentElement.parentElement.remove()">X</button>
+        </div>
+    </div>`;
+    document.getElementById('venue-container').insertAdjacentHTML('beforeend', html);
+    let newSelect = document.querySelector('.venue-item:last-child .venue-category');
+    initVenueCategory(newSelect);
+}
 
     function addLuxRow() {
         document.getElementById('lux-container').insertAdjacentHTML('beforeend', `<div class="issue-item lux-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><select class="prefix lux-prefix"><option value="">(空白)</option><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num lux-table" placeholder="台號"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`);
@@ -673,7 +676,26 @@ if (hasUnresolved) {
         document.getElementById('bgm-container').innerHTML = `<div class="issue-item bgm-item"><div class="issue-row"><select class="prefix bgm-prefix"><option value="">(空白)</option><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num bgm-table" placeholder="台號"><input type="text" class="value bgm-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
         document.getElementById('nfc-container').innerHTML = `<div class="issue-item nfc-item"><div class="issue-row"><select class="prefix nfc-prefix"><option value="">(空白)</option><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
         
-        let venueHtml = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9; position: relative;"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select><select class="prefix venue-problem" style="flex: 1.5;"></select></div><div class="venue-location-container"><div class="issue-row venue-loc-row" style="margin-top: 5px;"><select class="prefix venue-prefix" style="flex: 1;"><option value="">(空白)</option><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num venue-location" placeholder="位置/台號" style="flex: 1.5;"><button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px; font-size: 14px;" onclick="addVenueLocation(this)">+</button></div></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#1565c0; font-weight:bold;">跟進狀態：</span><select class="issue-status" style="color: #1565c0;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
+       let venueHtml = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;">
+    <div class="issue-row">
+        <select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select>
+        <select class="prefix venue-problem" style="flex: 1.5;"></select>
+    </div>
+    <div class="venue-location-container">
+        <div class="issue-row venue-loc-row" style="margin-top: 5px;">
+            <select class="prefix venue-prefix" style="flex: 1;"><option value="">(空白)</option><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select>
+            <input type="text" class="table-num venue-location" placeholder="位置/台號" style="flex: 1.5;">
+            <button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px; font-size: 14px;" onclick="addVenueLocation(this)">+</button>
+        </div>
+    </div>
+    <div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; flex: 1;">
+            <span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span>
+            <select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
+        </div>
+        <button type="button" class="btn-remove" style="position: static; margin-left: 10px; margin-top: 0; flex-shrink: 0;" onclick="this.parentElement.parentElement.remove()">X</button>
+    </div>
+</div>`;
         document.getElementById('venue-container').innerHTML = venueHtml;
         
         let firstVenue = document.querySelector('.venue-category');
