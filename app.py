@@ -80,12 +80,14 @@ def get_records():
         })
     return jsonify(records)
 
+import re # ⚠️ 記得喺 app.py 最頂部（import pytz 附近）加返呢句
+
 @app.route('/api/pending_issues', methods=['GET'])
 def get_pending_issues():
     conn = get_db_connection()
     c = conn.cursor()
     
-    # 1. 先搵出所有「已處理」嘅字眼，放入黑名單
+    # 1. 先搵出所有「已處理」嘅字眼，放入黑名單 (保持不變)
     c.execute("SELECT note FROM records WHERE note LIKE '%【早前已處理】%'")
     done_rows = c.fetchall()
     done_items = set()
@@ -97,7 +99,7 @@ def get_pending_issues():
             for line in part.split('\n'):
                 if line.strip(): done_items.add(line.strip())
 
-    # 2. 搵出所有未完成嘅紀錄 (加入咗 OR note LIKE '%【早前未處理】%')
+    # 2. 搵出所有未完成嘅紀錄 (保持不變)
     c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status, 
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
                  FROM records 
@@ -109,14 +111,87 @@ def get_pending_issues():
     conn.close()
     
     pending = []
-    for row in rows:
-        pending.append({
-            "id": row[0], "name": row[1], "lux_issue": row[2], "temp_issue": row[3], 
-            "db_issue": row[4], "note": row[5], "overall_status": row[6],
-            "created_at": str(row[7]) if row[7] else None
-        })
+    # 🌟 新增：用嚟記錄已經見過嘅「台號+問題類別」，防止舊紀錄重複出現
+    seen_issues = set() 
+
+    def is_duplicate(prefix, text):
+        """解析字串，抽出台號同類別，判斷係咪重複"""
+        if not text: return False
         
-    # 將未完成紀錄同黑名單一齊交畀前端
+        # 抽出所有「英文字母+數字」嘅台號 (例如 NB1101, BJ22)
+        tables = re.findall(r'([A-Za-z]{2}\d+)', text)
+        if not tables:
+            return False # 搵唔到台號，當作唔重複，照樣顯示
+            
+        table_key = tables[0].upper() # 統一用大寫比對
+        
+        # 判斷問題類別
+        if prefix in ['Lux', '溫度', '分貝']:
+            category_key = prefix
+        else:
+            # 場面問題：抽出 [類別 - 問題] 入面嘅嘢
+            match = re.search(r'\[(.*?)\]', text)
+            category_key = match.group(1) if match else text[:20]
+            
+        # 組合出獨一無二嘅 Key
+        unique_key = f"{prefix}_{table_key}_{category_key}"
+        
+        if unique_key in seen_issues:
+            return True # 重複咗！
+        else:
+            seen_issues.add(unique_key) # 第一次見，記錄低
+            return False
+
+    for row in rows:
+        # 我哋要將字串拆開，逐條問題去 check 係咪重複
+        # 因為一條紀錄入面可能包含多個問題 (例如 lux_issue 有兩行)
+        
+        new_lux = []
+        if row[2]: # lux_issue
+            for item in row[2].split(' | '):
+                if item.strip() and not is_duplicate('Lux', item):
+                    new_lux.append(item)
+                    
+        new_temp = []
+        if row[3]: # temp_issue
+            for item in row[3].split(' | '):
+                if item.strip() and not is_duplicate('溫度', item):
+                    new_temp.append(item)
+                    
+        new_db = []
+        if row[4]: # db_issue
+            for item in row[4].split(' | '):
+                if item.strip() and not is_duplicate('分貝', item):
+                    new_db.append(item)
+        
+        new_note = row[5] or ""
+        note_lines = new_note.split('\n')
+        filtered_note_lines = []
+        
+        for line in note_lines:
+            # 保留標題 (例如 【場面問題】, 【早前未處理】)
+            if line.startswith('【') or not line.strip():
+                filtered_note_lines.append(line)
+            else:
+                # 場面問題同早前未處理嘅行數
+                prefix = '場面' if '位置:' in line else '早前'
+                if not is_duplicate(prefix, line):
+                    filtered_note_lines.append(line)
+                    
+        new_note = '\n'.join(filtered_note_lines)
+
+        # 如果過濾完之後，呢條紀錄仲有嘢剩，先至加入 pending 列表
+        if new_lux or new_temp or new_db or '位置:' in new_note:
+            pending.append({
+                "id": row[0], "name": row[1], 
+                "lux_issue": ' | '.join(new_lux), 
+                "temp_issue": ' | '.join(new_temp), 
+                "db_issue": ' | '.join(new_db), 
+                "note": new_note, 
+                "overall_status": row[6],
+                "created_at": str(row[7]) if row[7] else None
+            })
+        
     return jsonify({"issues": pending, "done_items": list(done_items)})
 
 @app.route('/api/update_status', methods=['POST'])
