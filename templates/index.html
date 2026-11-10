@@ -831,7 +831,7 @@ if (hasUnresolved) {
                         let doneStr = parts[1].split('【早前未處理】')[0].trim();
                         doneStr.split('\n').forEach(line => {
                             if (line.trim()) {
-                                doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 早前已處理: ${line.trim()}</span></div>`;
+                                doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 舊有事項已處理: ${line.trim()}</span></div>`;
                             }
                         });
                     }
