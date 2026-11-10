@@ -301,7 +301,7 @@
         <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #ffeeba; font-size: 13px; color: #856404;">
             <label style="display: flex; align-items: flex-start; cursor: pointer; margin: 0;">
                 <input type="checkbox" id="confirm-pending" style="margin-right: 8px; margin-top: 2px; width: 16px; height: 16px;">
-                <span>我確定早前發現的所有問題尚未處理？</span>
+                <span>我確定未打勾的項目仍然未處理</span>
             </label>
         </div>
     </div>
@@ -603,7 +603,7 @@ allPendingBoxes.forEach(cb => {
 if (hasUnresolved) {
     let isConfirmed = document.getElementById('confirm-pending').checked;
     if (!isConfirmed) {
-        alert("⚠️ 請注意：仲有未完成嘅跟進項目！\n\n如果你確定呢啲問題仍然未處理，請喺最底撳『我確定早前發現的所有問題尚未處理？』個格仔，然後再提交。");
+        alert("⚠️ 請注意：你尚有未打勾的跟進項目！\n\n如果你確定(未打勾)的問題仍然未處理，請在下方位置按『我確定未打勾的項目仍然未處理』的格仔，然後再提交。");
         return;
     }
 }
