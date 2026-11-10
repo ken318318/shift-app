@@ -689,11 +689,11 @@ if (hasUnresolved) {
                    container.style.display = 'none';
                    document.getElementById('home-pending-container').style.display = 'none'; 
            } else {
-                   title.innerHTML = `⚠️ 有 ${totalItems} 項未完成跟進項目 (點擊展開剔選)`;
+                   title.innerHTML = `⚠️ 有 ${totalItems} 項已通知相關部門跟進(尚待解決) (點擊展開剔選)`;
                    listDiv.innerHTML = html;
 
                    document.getElementById('home-pending-container').style.display = 'block';
-                   document.getElementById('home-pending-title').innerHTML = `⚠️ 有 ${totalItems} 項未完成跟進項目 (點擊展開查看)`;
+                   document.getElementById('home-pending-title').innerHTML = `⚠️ 有 ${totalItems} 項已通知相關部門跟進(尚待解決) (點擊展開查看)`;
     
               let homeHtml = html.replace(/<input type="checkbox"[^>]*>/g, '');
                    document.getElementById('home-pending-list').innerHTML = homeHtml;
