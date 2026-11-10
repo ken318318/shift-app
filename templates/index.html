@@ -97,64 +97,85 @@
         </div>
 
         <div class="row">
-            <div>
-                <label>全場 Lux：</label>
-                <select id="lux" onchange="toggleIssue('lux')">
-                    <option value="< 450">&lt; 450</option>
-                    <option value="450-650" selected>450 - 650 (正常)</option>
-                    <option value="> 650">&gt; 650</option>
-                </select>
-                <div id="lux-issue-group" class="issue-group">
-                    <div class="issue-title">Lux 異常紀錄：</div>
-                    <div id="lux-container">
-                        <div class="issue-item lux-item">
-                            <div class="issue-row">
-                                <select class="prefix lux-prefix"><option value="">(空白)</option><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select>
-                                <input type="text" class="table-num lux-table" placeholder="台號">
-                            </div>
-                            <div class="box-row">
-                                <div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div>
-                                <div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div>
-                                <div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div>
-                            </div>
-                            <div class="issue-row" style="margin-top: 8px;">
-                                <span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span>
-                                <select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
-                            </div>
+    <div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+            <label>全場 Lux：</label>
+            <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center;">
+                <input type="checkbox" id="skip-lux" onchange="toggleSkip('lux')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
+            </label>
+        </div>
+        <div id="lux-input-area">
+            <select id="lux" onchange="toggleIssue('lux')">
+                <option value="< 450">&lt; 450</option>
+                <option value="450-650" selected>450 - 650 (正常)</option>
+                <option value="> 650">&gt; 650</option>
+            </select>
+            <div id="lux-issue-group" class="issue-group">
+                <div class="issue-title">Lux 異常紀錄：</div>
+                <div id="lux-container">
+                    <div class="issue-item lux-item">
+                        <div class="issue-row">
+                            <select class="prefix lux-prefix"><option value="">(空白)</option><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select>
+                            <input type="text" class="table-num lux-table" placeholder="台號">
+                        </div>
+                        <div class="box-row">
+                            <div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div>
+                            <div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div>
+                            <div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div>
+                        </div>
+                        <div class="issue-row" style="margin-top: 8px;">
+                            <span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span>
+                            <select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
                         </div>
                     </div>
-                    <button type="button" class="btn-add" onclick="addLuxRow()">+ 新增位置</button>
                 </div>
-            </div>
-            <div>
-                <label>溫度：</label>
-                <select id="temp" onchange="toggleIssue('temp')">
-                    <option value="偏低 (<22.5)">偏低 (&lt;22.5)</option>
-                    <option value="正常 (22.5-24.5)" selected>正常 (22.5-24.5)</option>
-                    <option value="偏高 (>24.5)">偏高 (&gt;24.5)</option>
-                </select>
-                <div id="temp-issue-group" class="issue-group">
-                    <div class="issue-title">溫度異常紀錄：</div>
-                    <div id="temp-container">
-                        <div class="issue-item temp-item">
-                            <div class="issue-row">
-                                <select class="prefix temp-prefix"><option value="">(空白)</option><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select>
-                                <input type="text" class="table-num temp-table" placeholder="台號">
-                                <input type="text" class="value temp-value" placeholder="數值">
-                            </div>
-                            <div class="issue-row" style="margin-top: 8px;">
-                                <span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span>
-                                <select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
-                            </div>
-                        </div>
-                    </div>
-                    <button type="button" class="btn-add" onclick="addTempRow()">+ 新增位置</button>
-                </div>
+                <button type="button" class="btn-add" onclick="addLuxRow()">+ 新增位置</button>
             </div>
         </div>
-    <div class="row">
-        <div>
+    </div>
+    <div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+            <label>溫度：</label>
+            <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center;">
+                <input type="checkbox" id="skip-temp" onchange="toggleSkip('temp')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
+            </label>
+        </div>
+        <div id="temp-input-area">
+            <select id="temp" onchange="toggleIssue('temp')">
+                <option value="偏低 (<22.5)">偏低 (&lt;22.5)</option>
+                <option value="正常 (22.5-24.5)" selected>正常 (22.5-24.5)</option>
+                <option value="偏高 (>24.5)">偏高 (&gt;24.5)</option>
+            </select>
+            <div id="temp-issue-group" class="issue-group">
+                <div class="issue-title">溫度異常紀錄：</div>
+                <div id="temp-container">
+                    <div class="issue-item temp-item">
+                        <div class="issue-row">
+                            <select class="prefix temp-prefix"><option value="">(空白)</option><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select>
+                            <input type="text" class="table-num temp-table" placeholder="台號">
+                            <input type="text" class="value temp-value" placeholder="數值">
+                        </div>
+                        <div class="issue-row" style="margin-top: 8px;">
+                            <span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span>
+                            <select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="btn-add" onclick="addTempRow()">+ 新增位置</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-end;">
             <label>BGM 分貝：</label>
+            <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center;">
+                <input type="checkbox" id="skip-bgm" onchange="toggleSkip('bgm')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
+            </label>
+        </div>
+        <div id="bgm-input-area">
             <select id="bgm" onchange="toggleIssue('bgm')">
                 <option value="偏低 (<65)">偏低 (&lt;65)</option>
                 <option value="正常 (65-75)" selected>正常 (65-75)</option>
@@ -179,8 +200,15 @@
             </div>
         </div>
     </div>
+</div>
 
+<div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 15px;">
     <label>NFC 檢測：</label>
+    <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center;">
+        <input type="checkbox" id="skip-nfc" onchange="toggleSkip('nfc')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
+    </label>
+</div>
+<div id="nfc-input-area">
     <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
         <div style="flex: 1;">
             <span style="font-size: 13px; color: #555;">今日檢測 Hall (正常)：</span>
@@ -226,7 +254,8 @@
         </div>
         <button type="button" class="btn-add" onclick="addNfcRow()">+ 新增位置</button>
     </div>
-
+</div>
+        
     <label>場面問題項目輸入 (可留空)：</label>
     <div class="issue-group" style="background: #e3f2fd; border-color: #90caf9; display: block;">
         <div id="venue-container">
