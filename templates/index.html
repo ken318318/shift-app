@@ -482,10 +482,6 @@ document.querySelectorAll('.pending-checkbox').forEach(cb => {
 if (doneOldItems.length > 0) {
     finalNote += `\n\n【早前已處理】\n` + doneOldItems.join('\n');
 }
-if (pendingOldItems.length > 0) {
-    // 寫入未處理，等歷史紀錄有嘢顯示
-    finalNote += `\n\n【早前未處理】\n` + pendingOldItems.join('\n');
-}
 
     let luxIssue = "";
     if (document.getElementById('lux-issue-group').style.display === 'block') {
