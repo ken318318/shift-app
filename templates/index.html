@@ -714,171 +714,148 @@ if (hasUnresolved) {
     })
     .catch(error => { alert("連線失敗！"); console.error(error); });
 }
-        function loadPendingIssues() {
-            fetch('/api/pending_issues').then(res => res.json()).then(data => {
-                let issues = data.issues;
-                let doneSet = data.done_items || []; // 攞返個黑名單
+       function loadPendingIssues() {
+    fetch('/api/pending_issues').then(res => res.json()).then(data => {
+        let issues = data.issues;
+        let doneSet = data.done_items || []; 
+        
+        let container = document.getElementById('pending-container');
+        let listDiv = document.getElementById('pending-list');
+        let title = document.getElementById('pending-title');
+        
+        if (issues.length === 0) {
+            container.style.display = 'none';
+            document.getElementById('home-pending-container').style.display = 'none'; 
+            return;
+        }
+        
+        container.style.display = 'block';
+        let totalItems = 0;
+        let seenItems = new Set(); 
+        window.globalGroupedItems = {}; // 用嚟做全局合併
+
+        issues.forEach(issue => {
+            let timeStr = issue.created_at ? new Date(issue.created_at).toLocaleString('zh-HK') : '';
+            
+            let addItem = (type, text) => {
+                if (!text) return;
+
+                // 🌟 自動拆分多台號（只拆純台號格式，防止誤拆描述）
+                if (type === '場面' && text.includes('位置:')) {
+                    let parts = text.split('位置:');
+                    if (parts.length === 2) {
+                        let beforePos = parts[0]; 
+                        let afterPos = parts[1];  
+                        let statusMatch = afterPos.match(/\[狀態:.*?\]/);
+                        let statusStr = statusMatch ? statusMatch[0] : '';
+                        let tablesStr = afterPos.replace(/\[狀態:.*?\]/g, '').trim();
+                        
+                        if (tablesStr.includes(',') || tablesStr.includes('，')) {
+                            let tables = tablesStr.split(/[,，]/).map(t => t.trim()).filter(Boolean);
+                            // 確保每一忽都係「英文字母+數字」嘅台號格式先准拆
+                            let isAllTables = tables.every(t => /^[A-Za-z]{2,4}\d+$/i.test(t));
+                            
+                            if (isAllTables) {
+                                tables.forEach(table => {
+                                    addItem(type, `${beforePos}位置: ${table} ${statusStr}`.trim());
+                                });
+                                return; 
+                            }
+                        }
+                    }
+                }
+
+                // 🌟 抽取狀態顯示
+                let statusMatch = text.match(/\[狀態:(.*?)\]/);
+                let currentStatus = statusMatch ? statusMatch[1] : '待處理';
+                if (currentStatus === '已處理') return; 
+
+                let clean = text.replace(/\[狀態:.*?\]/g, '').replace('⚠️', '').replace('✅', '').trim();
+                if (!clean) return;
+
+                let checkText = `${type} - ${clean}`;
+
+                // 正常黑名單過濾（復發會由後端新紀錄自動處理）
+                if (doneSet.includes(checkText) || seenItems.has(checkText)) return;
+                seenItems.add(checkText);
+
+                let badgeColor = currentStatus === '已 Send mail' ? '#9c27b0' : (currentStatus === '已通知相關部門跟進' ? '#e67c73' : '#f5b041');
+
+                let itemHtml = `<div class="pending-item-row" data-text="${checkText}" style="display:flex; align-items:center; background:#ffebee; padding:10px; margin-bottom:5px; border-radius:6px; border: 1px solid #ffcdd2;">
+                             <input type="checkbox" class="pending-checkbox" data-text="${checkText}" style="width:20px; height:20px; margin-right:10px; cursor:pointer; flex-shrink: 0;">
+                             <div style="font-size:13px; color:#d32f2f; flex:1;">
+                             <strong>⚠️ ${checkText}</strong>
+                             <span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:5px; white-space:nowrap;">${currentStatus}</span><br>
+                             <span style="font-size:11px; color:#888;">交更時間: ${timeStr}</span>
+                          </div>
+                       </div>`;
                 
-                let container = document.getElementById('pending-container');
-                let listDiv = document.getElementById('pending-list');
-                let title = document.getElementById('pending-title');
-                
-                if (issues.length === 0) {
-                    container.style.display = 'none';
-                    return;
+                // 🌟 分類與全局合併
+                let cat = "其他問題";
+                if (checkText.includes('Lux')) cat = "💡 Lux 異常";
+                else if (checkText.includes('溫度')) cat = "🌡️ 溫度異常";
+                else if (checkText.includes('分貝')) cat = "🔊 分貝異常";
+                else if (checkText.includes('場面 - [櫈')) cat = "🪑 櫈/座位問題"; 
+                else if (checkText.includes('場面 - [')) {
+                    let match = checkText.match(/\[(.*?)\]/);
+                    if (match) {
+                        let parts = match[1].split('-');
+                        if (parts.length >= 2) cat = "🛠️ " + parts[0].trim() + " - " + parts[1].trim();
+                        else cat = "🛠️ " + match[1].trim();
+                    } else {
+                        cat = "🛠️ 場面問題";
+                    }
                 }
                 
-                container.style.display = 'block';
-                let html = "";
-                let totalItems = 0;
-                let seenItems = new Set(); // 🌟 防重複機制
-
-                issues.forEach(issue => {
-                    let itemHtml = "";
-                    let timeStr = issue.created_at ? new Date(issue.created_at).toLocaleString('zh-HK') : '';
-                    
-                   let addItem = (type, text) => {
-    if (!text) return;
-
-    // 🌟 解決問題二：自動拆分多台號
-    if (type === '場面' && text.includes('位置:')) {
-        let parts = text.split('位置:');
-        if (parts.length === 2) {
-            let beforePos = parts[0]; 
-            let afterPos = parts[1];  
-            let statusMatch = afterPos.match(/\[狀態:.*?\]/);
-            let statusStr = statusMatch ? statusMatch[0] : '';
-            let tablesStr = afterPos.replace(/\[狀態:.*?\]/g, '').trim();
-            if (tablesStr.includes(',') || tablesStr.includes('，')) {
-                let tables = tablesStr.split(/[,，]/).map(t => t.trim()).filter(Boolean);
-                tables.forEach(table => {
-                    addItem(type, `${beforePos}位置: ${table} ${statusStr}`.trim());
-                });
-                return; 
-            }
-        }
-    }
-
-    // 🌟 解決問題五：抽返個狀態出嚟顯示
-    let statusMatch = text.match(/\[狀態:(.*?)\]/);
-    let currentStatus = statusMatch ? statusMatch[1] : '待處理';
-    if (currentStatus === '已處理') return; // 已處理就跳過
-
-    let clean = text.replace(/\[狀態:.*?\]/g, '').replace('⚠️', '').replace('✅', '').trim();
-    if (!clean) return;
-
-    let checkText = `${type} - ${clean}`;
-
-    // 🌟 解決問題三：復發問題解鎖
-    if (doneSet.includes(checkText) && !seenItems.has(checkText)) {
-        doneSet = doneSet.filter(item => item !== checkText);
-    }
-
-    if (doneSet.includes(checkText) || seenItems.has(checkText)) return;
-    seenItems.add(checkText);
-
-    // 狀態顏色
-    let badgeColor = currentStatus === '已 Send mail' ? '#9c27b0' : (currentStatus === '已通知相關部門跟進' ? '#e67c73' : '#f5b041');
-
-    itemHtml += `<div class="pending-item-row" data-text="${checkText}" style="display:flex; align-items:center; background:#ffebee; padding:10px; margin-bottom:5px; border-radius:6px; border: 1px solid #ffcdd2;">
-                 <input type="checkbox" class="pending-checkbox" data-text="${checkText}" style="width:20px; height:20px; margin-right:10px; cursor:pointer; flex-shrink: 0;">
-                 <div style="font-size:13px; color:#d32f2f; flex:1;">
-                 <strong>⚠️ ${checkText}</strong>
-                 <span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:5px; white-space:nowrap;">${currentStatus}</span><br>
-                 <span style="font-size:11px; color:#888;">交更時間: ${timeStr}</span>
-              </div>
-           </div>`;
-    totalItems++;
-};
-
-                    if (issue.lux_issue) addItem('Lux', issue.lux_issue);
-                    if (issue.temp_issue) addItem('溫度', issue.temp_issue);
-                    if (issue.db_issue) addItem('分貝', issue.db_issue);
-                    
-                    if (issue.note && issue.note.includes('【場面問題】')) {
-                        let venueStr = issue.note.split('【場面問題】')[1].split('【早前')[0].trim();
-                        venueStr.split('\n').forEach(line => {
-                            if (line.trim()) addItem('場面', line);
-                        });
-                    }
-
-                    // 🌟 確保抽返舊有嘅未處理項目出嚟
-                    if (issue.note && issue.note.includes('【早前未處理】')) {
-                        let oldStr = issue.note.split('【早前未處理】')[1].trim();
-                        oldStr.split('\n').forEach(line => {
-                            if (line.trim()) addItem('早前', line);
-                        });
-                    }
-
-                    if(itemHtml !== "") {
-                          // 🌟 將 itemHtml 按「問題類別」分組
-                         let groupedItems = {};
-                         let tempDiv = document.createElement('div');
-                         tempDiv.innerHTML = itemHtml;
-    
-                         tempDiv.querySelectorAll('.pending-item-row').forEach(row => {
-                            let text = row.getAttribute('data-text');
-                            let cat = "其他問題";
-        
-                            if (text.includes('Lux')) cat = "💡 Lux 異常";
-                            else if (text.includes('溫度')) cat = "🌡️ 溫度異常";
-                            else if (text.includes('分貝')) cat = "🔊 分貝異常";
-                            else if (text.includes('場面 - [櫥')) cat = "🪑 櫈/座位問題"; // 專為你嘅櫈分類
-                            else if (text.includes('場面 - [')) {
-                            let match = text.match(/\[(.*?)\]/);
-                            if (match) {
-                            let parts = match[1].split('-');
-                            if (parts.length >= 2) {
-                                // 抽出大類同細類，例如：賭檯 - Sound Bar
-                                cat = "🛠️ " + parts[0].trim() + " - " + parts[1].trim();
-                            } else {
-                                cat = "🛠️ " + match[1].trim();
-                            }
-                        } else {
-                            cat = "🛠️ 場面問題";
-                        }
-                  }
-        
-                            if (!groupedItems[cat]) groupedItems[cat] = [];
-                            groupedItems[cat].push(row.outerHTML);
-                       });
-
-                       // 🌟 生成摺疊 HTML
-                       let groupedHtml = "";
-                       for (let cat in groupedItems) {
-                           groupedHtml += `
-                               <details style="margin-bottom: 10px; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 5px;">
-                                   <summary style="cursor: pointer; font-weight: bold; color: #856404; padding: 5px; outline: none;">
-                                       ${cat} (${groupedItems[cat].length} 項)
-                                   </summary>
-                                   <div style="padding: 5px 0 0 0;">${groupedItems[cat].join('')}</div>
-                               </details>
-                         `;
-                 }
-
-                 html += `<div class="pending-card" style="border-left: 4px solid #ffa000; margin-bottom: 15px;">
-                     <strong style="font-size:12px; color:#856404; display:block; margin-bottom:5px;">由 ${issue.name} 交更：</strong>
-                     ${groupedHtml}
-                 </div>`;
-             }
-                });
+                if (!window.globalGroupedItems[cat]) window.globalGroupedItems[cat] = [];
+                let nameHtml = `<div style="font-size:11px; color:#856404; margin-bottom:3px;">👤 由 ${issue.name} 交更</div>`;
+                window.globalGroupedItems[cat].push(`<div style="margin-bottom:8px;">${nameHtml}${itemHtml}</div>`);
                 
-               if (totalItems === 0) {
-                   container.style.display = 'none';
-                   document.getElementById('home-pending-container').style.display = 'none'; 
-           } else {
-                   title.innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開剔選)`;
-                   listDiv.innerHTML = html;
+                totalItems++;
+            };
 
-                   document.getElementById('home-pending-container').style.display = 'block';
-                   document.getElementById('home-pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開查看)`;
-    
-              let homeHtml = html.replace(/<input type="checkbox"[^>]*>/g, '');
-                   document.getElementById('home-pending-list').innerHTML = homeHtml;
-                 }
-            });
+            if (issue.lux_issue) addItem('Lux', issue.lux_issue);
+            if (issue.temp_issue) addItem('溫度', issue.temp_issue);
+            if (issue.db_issue) addItem('分貝', issue.db_issue);
+            
+            if (issue.note && issue.note.includes('【場面問題】')) {
+                let venueStr = issue.note.split('【場面問題】')[1].split('【早前')[0].trim();
+                venueStr.split('\n').forEach(line => {
+                    if (line.trim()) addItem('場面', line);
+                });
+            }
+        });
+        
+        // 🌟 生成最終合併 HTML
+        let finalHtml = "";
+        for (let cat in window.globalGroupedItems) {
+            finalHtml += `
+                <div class="pending-card" style="border-left: 4px solid #ffa000; margin-bottom: 15px;">
+                    <details style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 5px;">
+                        <summary style="cursor: pointer; font-weight: bold; color: #856404; padding: 5px; outline: none;">
+                            ${cat} (${window.globalGroupedItems[cat].length} 項)
+                        </summary>
+                        <div style="padding: 5px 0 0 0;">${window.globalGroupedItems[cat].join('')}</div>
+                    </details>
+                </div>
+            `;
         }
 
+        if (totalItems === 0) {
+            container.style.display = 'none';
+            document.getElementById('home-pending-container').style.display = 'none'; 
+        } else {
+            title.innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開剔選)`;
+            listDiv.innerHTML = finalHtml;
+
+            document.getElementById('home-pending-container').style.display = 'block';
+            document.getElementById('home-pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開查看)`;
+            
+            let homeHtml = finalHtml.replace(/<input type="checkbox"[^>]*>/g, '');
+            document.getElementById('home-pending-list').innerHTML = homeHtml;
+        }
+    });
+}
         function formatIssueText(text, defaultPrefix, statusStr) {
             if (!text) return "";
             let rawStatus = statusStr || '待處理';
