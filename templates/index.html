@@ -61,8 +61,11 @@
 <body>
 
     <div class="card" id="list-container">
-        <h2>📋 BS歷史交更紀錄</h2>
-        <button class="submit-btn" onclick="showForm()" style="margin-top: 0; margin-bottom: 20px; background-color: #2ecc71;">📝 新增交更紀錄</button>
+       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <h2 style="margin: 0;">📋 BS歷史交更紀錄</h2>
+    <a href=" " style="font-size: 13px; color: #e74c3c; text-decoration: none; font-weight: bold; background: #ffebee; padding: 5px 10px; border-radius: 6px;">🚪 登出</a >
+</div>
+        <button class="submit-btn" onclick="showForm()" style="margin-top: 0; margin-bottom: 20px; background-color: #2ecc71;">📝 新增BS交更紀錄</button>
         <!-- 🌟 主頁專用：未完成項目總覽 -->
 <div id="home-pending-container" style="display: none; background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 20px;">
     <div onclick="toggleHomePending()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
