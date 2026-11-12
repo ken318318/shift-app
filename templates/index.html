@@ -776,8 +776,17 @@ if (hasUnresolved) {
                 let checkText = `${type} - ${clean}`;
 
                 // 正常黑名單過濾（復發會由後端新紀錄自動處理）
+                // 🌟 終極防漏機制：如果呢個問題喺最新嘅交更紀錄出現（即係復發），就算喺黑名單都要強制彈出嚟！
+                if (doneSet.includes(checkText) && !seenItems.has(checkText)) {
+                // 我哋要檢查呢條係咪最新紀錄。因為 issues 係按時間倒序，第一條就係最新。
+                if (issue.id === issues[0].id || issue.created_at === issues[0].created_at) {
+                // 如果係最新紀錄，強制放行，並將佢由黑名單踢走！
+                   doneSet = doneSet.filter(item => item !== checkText);
+                }
+             }
+
                 if (doneSet.includes(checkText) || seenItems.has(checkText)) return;
-                seenItems.add(checkText);
+                   seenItems.add(checkText);
 
                 let badgeColor = currentStatus === '已 Send mail' ? '#9c27b0' : (currentStatus === '已通知相關部門跟進' ? '#e67c73' : '#f5b041');
 
