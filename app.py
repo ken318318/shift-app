@@ -10,7 +10,7 @@ app = Flask(__name__)
 CORS(app)
 
 # ⚠️ 呢度保留你原本嗰條 Supabase 網址
-DB_URL = "postgresql://postgres.mwnwvpvmtjgqwchtpenv:KenShiftHandover2026@aws-0-ap-south-1.pooler.supabase.com:5432/postgres"
+DB_URL = os.environ.get("DB_URL")
 
 def get_db_connection():
     conn = psycopg2.connect(DB_URL)
