@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系統設定 - BS交更系統</title>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; padding: 15px; margin: 0; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 500px; margin: auto; margin-bottom: 20px;}
+        h2 { text-align: center; color: #333; margin-top: 0; }
+        label { display: block; margin-top: 15px; font-weight: bold; font-size: 14px; color: #444; }
+        input[type="text"] { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
+        button { width: 100%; padding: 14px; margin-top: 25px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        button:active { background: #1557b0; }
+        .back-btn { background: #e67c73; margin-top: 0; margin-bottom: 20px; padding: 10px; font-size: 14px; }
+        #result { margin-top: 20px; text-align: center; font-weight: bold; color: #2ecc71; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>⚙️ 系統設定</h2>
+        <button class="back-btn" onclick="window.location.href='/'">❌ 返回交更系統</button>
+
+        <label>類別 (例如：賭檯 - 新系統)：</label>
+        <input type="text" id="categoryInput" placeholder="請輸入大類別" list="category-list">
+        <datalist id="category-list">
+            <!-- JS 會自動填入現有類別 -->
+        </datalist>
+
+        <label>問題 (例如：當機)：</label>
+        <input type="text" id="problemInput" placeholder="請輸入具體問題">
+
+        <button onclick="addConfig()">➕ 新增選項</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        // 載入現有類別，方便你打錯字或者重用
+        fetch('/api/get_configs')
+            .then(res => res.json())
+            .then(data => {
+                let datalist = document.getElementById('category-list');
+                for (let cat in data) {
+                    let option = document.createElement('option');
+                    option.value = cat;
+                    datalist.appendChild(option);
+                }
+            });
+
+        function addConfig() {
+            let cat = document.getElementById('categoryInput').value.trim();
+            let prob = document.getElementById('problemInput').value.trim();
+            let resultDiv = document.getElementById('result');
+
+            if (!cat || !prob) {
+                resultDiv.style.color = '#e74c3c';
+                resultDiv.innerHTML = "請填寫類別同問題！";
+                return;
+            }
+
+            resultDiv.style.color = '#333';
+            resultDiv.innerHTML = "處理中...";
+
+            fetch('/api/add_config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ category: cat, problem: prob })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    resultDiv.style.color = '#2ecc71';
+                    resultDiv.innerHTML = "✅ 新增成功！";
+                    document.getElementById('problemInput').value = ''; // 清空問題輸入框
+                } else {
+                    resultDiv.style.color = '#e74c3c';
+                    resultDiv.innerHTML = "❌ 失敗：" + data.message;
+                }
+            })
+            .catch(err => {
+                resultDiv.style.color = '#e74c3c';
+                resultDiv.innerHTML = "❌ 連線失敗！";
+            });
+        }
+    </script>
+</body>
+</html>
