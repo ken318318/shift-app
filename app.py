@@ -272,6 +272,13 @@ def update_status():
     conn.close()
     return jsonify({"message": "狀態已更新", "status": "success"})
 
+@app.route('/admin')
+def admin():
+    # 只有管理員 (用 ADMIN888 登入) 先可以入到呢度
+    if session.get('role') != 'admin':
+        return "⚠️ 權限不足！請用管理員密碼登入。", 403
+    return render_template('admin.html')
+
 @app.route('/')
 def index():
     return render_template('index.html')
