@@ -75,6 +75,40 @@ try:
     init_db()
 except Exception as e:
     print("數據庫連線失敗:", e)
+@app.route('/api/get_configs', methods=['GET'])
+def get_configs():
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT category, problem FROM venue_configs ORDER BY id ASC")
+    rows = c.fetchall()
+    conn.close()
+    
+    configs = {}
+    for row in rows:
+        category = row[0]
+        problem = row[1]
+        if category not in configs:
+            configs[category] = []
+        configs[category].append(problem)
+        
+    return jsonify(configs)
+
+@app.route('/api/add_config', methods=['POST'])
+def add_config():
+    data = request.json
+    category = data.get('category')
+    problem = data.get('problem')
+    
+    if not category or not problem:
+        return jsonify({"status": "error", "message": "請提供分類同問題名稱！"}), 400
+        
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("INSERT INTO venue_configs (category, problem) VALUES (%s, %s)", (category, problem))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({"status": "success", "message": "新增成功！"})
 
 @app.route('/api/submit', methods=['POST'])
 def submit():
