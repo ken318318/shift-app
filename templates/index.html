@@ -327,52 +327,7 @@
     <div id="current-time" style="text-align: center; color: #888; font-size: 14px; margin-top: 20px; font-weight: bold;"></div>
 </div>
 <script>
-    const venueCategories = {
-        "賭檯 - Display(大Mon)": ["黑屏", "播放廣告定格", "主機異響", "主機自動關閉", "大細mon畫面調轉", "屏幕彈出小鍵盤", "觸控屏鍵盤無法使用", "LED熄滅", "LED燈光異常", "LED顏色不一致", "屏慕閃爍", "屏幕裂痕", "廣告無法更新"],
-        "賭檯 - Display(細Mon)": ["黑屏", "LED熄滅", "LED燈光異常", "LED顏色不一致", "屏慕閃爍", "屏幕裂痕", "廣告無法更新", "頂部展示牌破損"],
-        "賭檯 - Layout": ["污跡", "太薄", "筆跡", "突起不平", "破損"],
-        "賭檯 - Surround": ["筆跡", "污跡", "突起", "破損"],
-        "賭檯 - Sound Bar": ["無聲", "電流聲"],
-        "賭檯 - Table view": ["觸控屏無法使用", "支撐架螺絲鬆動"],
-        "賭檯 - 大型Led Banner(直/横)": ["黑屏", "破損", "廣告未更新"],
-        "賭檯 - 珠盤": ["珠盤蓋破損", "珠盤部分螺絲鬆脫"],
-        "賭檯 - 地腳燈": ["熄滅", "彩紅", "部分熄滅"],
-        "賭檯 - 銀紙機": ["屏慕脫落", "部分零件損壞"],
-        "賭檯 - 掃描槍": ["無法掃描", "異響", "損壞"],
-        "賭檯 - 台號牌": ["數字字樣甩色", "NB字樣甩色"],
-        "賭檯 - 廢牌桶": ["損壞"],
-        "賭檯 - 備用牌箱": ["損壞", "玻璃面裂縫", "無法上鎖"],
-        "賭檯 - 賭檯木紋": ["破損", "甩漆", "污跡"],
-        "賭檯 - 櫃門": ["損壞", "無法關閉", "缺少門鎖"],
-        "賭檯 - 限紅柱": ["黑屏", "藍屏", "破損"],
-        "地墊": ["翹起", "破損", "裂縫", "污跡"],
-        "地磚": ["破損", "裂痕", "污跡"],
-        "牆磚": ["破損", "裂縫", "污跡"],
-        "雲石柱": ["破損", "裂縫", "污跡"],
-        "燈-龍船燈": ["熄滅", "閃爍", "光線不足", "偏暗"],
-        "燈-水晶燈": ["熄滅", "閃爍", "光線不足", "偏暗"],
-        "燈-吊燈": ["熄滅", "閃爍", "光線不足", "偏暗"],
-        "燈-射燈": ["熄滅", "閃爍", "光線不足", "偏暗"],
-        "燈-吸煙室燈牌": ["熄滅", "閃爍", "白光", "偏暗"],
-        "燈-孔雀燈": ["燈蓋脫落", "熄滅", "閃爍"],
-        "場面衛生": ["玻璃碎", "香口膠跡", "污跡"],
-        "櫈 - DLR櫈": ["坐墊破損", "靠背異常", "升降異常", "螺絲鬆動", "甩轆"],
-        "櫈 - 客櫈": ["坐墊破損", "靠背異常", "升降異常", "螺絲鬆動", "甩轆"],
-        "窗簾": ["破損", "污跡", "凌亂"],
-        "垃圾桶": ["位置轉移", "部分零件破損", "污跡"],
-        "場面租用充電宝": ["黑屏", "損壞", "無法連線"],
-        "ATM櫃員機": ["黑屏", "外殼框損壞", "無法連線"],
-        "電視機-場面": ["黑屏", "定格", "跳出主介面", "USB資料損壞"],
-        "電視機-煙房": ["黑屏", "定格", "跳出主介面", "USB資料損壞"],
-        "植物": ["枯萎", "植物牆破損", "植物盆損壞"],
-        "天花板": ["漏水", "污跡", "破損", "掉漆"],
-        "冷氣槽": ["滴水", "污跡", "聲響"],
-        "消防設備-灑水蓋": ["缺少", "鬆脫", "傾斜移位"],
-        "消防設備-煙霧探測器": ["電源燈不亮", "受阻", "損壞"],
-        "消防設備-滅火筒": ["即將到期", "過期", "受阻", "特定標籤受損"],
-        "供電用品": ["拖板過載", "插座鬆脫", "插座損壞", "拖板損壞"]
-    };
-
+    let venueCategories = {};
     function showForm() {
         document.getElementById('list-container').style.display = 'none';
         document.getElementById('form-container').style.display = 'block';
@@ -516,10 +471,22 @@
         document.getElementById('nfc-container').insertAdjacentHTML('beforeend', `<div class="issue-item nfc-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><select class="prefix nfc-prefix"><option value="">(空白)</option><option value="NB">NB</option><option value="BJ">BJ</option><option value="CR">CR</option><option value="CS">CS</option><option value="DS">DS</option><option value="FP">FP</option><option value="RL">RL</option><option value="LT">LT</option></select><input type="text" class="table-num nfc-table" placeholder="台號"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div><div class="issue-row" style="margin-top: 8px;"><span style="font-size:12px; color:#856404; font-weight:bold;">跟進狀態：</span><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`);
     }
 
-    document.addEventListener("DOMContentLoaded", function() {
-        let firstVenue = document.querySelector('.venue-category');
-        if(firstVenue) initVenueCategory(firstVenue);
-    });
+   document.addEventListener("DOMContentLoaded", function() {
+    // 🌟 網頁載入時，自動去後台攞最新嘅選項
+    fetch('/api/get_configs')
+        .then(res => res.json())
+        .then(data => {
+            venueCategories = data; // 將攞到嘅資料放入變數
+            let firstVenue = document.querySelector('.venue-category');
+            if(firstVenue) initVenueCategory(firstVenue);
+        })
+        .catch(err => {
+            console.error("無法讀取設定檔", err);
+            // 如果失敗，都照樣載入空表單，唔會白畫面
+            let firstVenue = document.querySelector('.venue-category');
+            if(firstVenue) initVenueCategory(firstVenue);
+        });
+});
 function submitForm() {
     let selectedHall = document.getElementById('nfc-hall-select').value;
     let nfcDetails = [];
