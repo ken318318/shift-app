@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_cors import CORS
 import psycopg2
 import os
@@ -7,7 +7,41 @@ from datetime import datetime
 import pytz
 
 app = Flask(__name__)
+app.secret_key = "Ken_Shift_App_Secret_123"  # 🌟 用嚟加密登入狀態
 CORS(app)
+
+# 🌟 你設定嘅密碼
+STAFF_PASSWORD = "BS2026"       # 普通同事交更嘅密碼
+ADMIN_PASSWORD = "ADMIN888"     # 管理員密碼
+
+@app.before_request
+def require_login():
+    # 允許訪問登入頁同靜態檔案
+    allowed_routes = ['login', 'static']
+    if 'logged_in' not in session and request.endpoint not in allowed_routes:
+        return redirect(url_for('login'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    error = None
+    if request.method == 'POST':
+        pwd = request.form.get('password')
+        if pwd == STAFF_PASSWORD:
+            session['logged_in'] = True
+            session['role'] = 'staff'
+            return redirect(url_for('index'))
+        elif pwd == ADMIN_PASSWORD:
+            session['logged_in'] = True
+            session['role'] = 'admin'
+            return redirect(url_for('index'))
+        else:
+            error = "密碼錯誤，請再試一次！"
+    return render_template('login.html', error=error)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 # ⚠️ 呢度保留你原本嗰條 Supabase 網址
 DB_URL = os.environ.get("DB_URL")
