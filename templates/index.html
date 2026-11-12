@@ -341,7 +341,7 @@
         document.getElementById('form-container').style.display = 'none';
         document.getElementById('list-container').style.display = 'block';
         displayRecords(); 
-        loadPendingIssues();
+        
         window.scrollTo(0, 0);
     }
 
@@ -350,6 +350,7 @@
         let arrow = document.getElementById('pending-arrow');
         if (list.style.display === 'none') {
             list.style.display = 'block';
+            
             arrow.innerHTML = '▲ 收起';
         } else {
             list.style.display = 'none';
@@ -362,6 +363,9 @@
     if (list.style.display === 'none') {
         list.style.display = 'block';
         arrow.innerHTML = '▲ 收起';
+
+         loadPendingIssues();
+        
     } else {
         list.style.display = 'none';
         arrow.innerHTML = '▼ 展開';
