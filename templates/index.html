@@ -337,13 +337,13 @@
         loadPendingIssues(); 
         window.scrollTo(0, 0); 
     }
-    function showList() {
-        document.getElementById('form-container').style.display = 'none';
-        document.getElementById('list-container').style.display = 'block';
-        displayRecords(); 
-        
-        window.scrollTo(0, 0);
-    }
+   function showList() {
+    document.getElementById('form-container').style.display = 'none';
+    document.getElementById('list-container').style.display = 'block';
+    displayRecords(); 
+    loadPendingIssues(); 
+    window.scrollTo(0, 0);
+}
 
     function togglePending() {
         let list = document.getElementById('pending-list');
@@ -363,9 +363,6 @@
     if (list.style.display === 'none') {
         list.style.display = 'block';
         arrow.innerHTML = '▲ 收起';
-
-         loadPendingIssues();
-        
     } else {
         list.style.display = 'none';
         arrow.innerHTML = '▼ 展開';
