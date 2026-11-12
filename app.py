@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_cors import CORS
 import psycopg2
+from psycopg2 import pool
 import os
 import re
 from datetime import datetime
@@ -45,10 +46,25 @@ def logout():
 
 # ⚠️ 呢度保留你原本嗰條 Supabase 網址
 DB_URL = os.environ.get("DB_URL")
+# 🌟 建立連線池 (預留 1 到 10 條連線備用)
+DB_POOL = None
+def init_pool():
+    global DB_POOL
+    try:
+        DB_POOL = psycopg2.pool.SimpleConnectionPool(1, 10, DB_URL)
+        print("連線池建立成功！")
+    except Exception as e:
+        print("連線池建立失敗:", e)
+
+init_pool() # 🌟 啟動連線池
 
 def get_db_connection():
-    conn = psycopg2.connect(DB_URL)
-    return conn
+    # 🌟 改為由連線池攞連線 (唔再每次重新 connect)
+    return DB_POOL.getconn()
+
+def release_db_connection(conn):
+    # 🌟 用完之後，將連線還返去連線池，等下次可以重用
+    DB_POOL.putconn(conn)
 
 def init_db():
     conn = get_db_connection()
@@ -69,7 +85,7 @@ def init_db():
                   db_issue TEXT,
                   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)''')
     conn.commit()
-    conn.close()
+    release_db_connection(conn)
 
 try:
     init_db()
@@ -81,7 +97,7 @@ def get_configs():
     c = conn.cursor()
     c.execute("SELECT category, problem FROM venue_configs ORDER BY id ASC")
     rows = c.fetchall()
-    conn.close()
+    release_db_connection(conn)
     
     configs = {}
     for row in rows:
@@ -106,7 +122,7 @@ def add_config():
     c = conn.cursor()
     c.execute("INSERT INTO venue_configs (category, problem) VALUES (%s, %s)", (category, problem))
     conn.commit()
-    conn.close()
+    release_db_connection(conn)
     
     return jsonify({"status": "success", "message": "新增成功！"})
 
@@ -126,7 +142,7 @@ def submit():
                data.get('checklist'), data.get('status'), data.get('follower'), data.get('note'),
                data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'), now_macau))
     conn.commit()
-    conn.close()
+    release_db_connection(conn)
     return jsonify({"message": "交更成功！", "status": "success"})
 
 @app.route('/api/records', methods=['GET'])
@@ -137,7 +153,7 @@ def get_records():
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
                  FROM records ORDER BY id DESC""")
     rows = c.fetchall()
-    conn.close()
+    release_db_connection(conn)
 
     records = []
     for row in rows:
@@ -175,7 +191,7 @@ def get_pending_issues():
                       OR note LIKE '%【場面問題】%' OR note LIKE '%【早前未處理】%')
                  ORDER BY id DESC""")
     rows = c.fetchall()
-    conn.close()
+    release_db_connection(conn)
     
     pending = []
     seen_issues = set() 
@@ -269,7 +285,7 @@ def update_status():
     c = conn.cursor()
     c.execute("UPDATE records SET status = %s WHERE id = %s", (new_status, record_id))
     conn.commit()
-    conn.close()
+    release_db_connection(conn)
     return jsonify({"message": "狀態已更新", "status": "success"})
 
 @app.route('/admin')
