@@ -997,6 +997,49 @@ if (hasUnresolved) {
                 });
                 listDiv.innerHTML = html;
             }).catch(error => console.error("讀取失敗:", error));
+            function deleteRecord(id) {
+    // 🌟 彈出確認框
+    if (confirm("⚠️ 你確定要刪除這條交更紀錄嗎？刪除後無法復原！")) {
+        fetch('/api/delete_record', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message); // 顯示成功或權限不足
+            if (data.status === 'success') {
+                showList(); // 重新載入紀錄
+            }
+        })
+        .catch(err => alert("❌ 連線失敗，請稍後再試。"));
+    }
+}
+
+function editRecord(id, currentNote, currentStatus) {
+    currentNote = currentNote || "";
+    
+    // 彈出輸入框俾同事改字
+    let newNote = prompt("請修改交更內容：", currentNote);
+    if (newNote === null) return; // 撳取消就唔做嘢
+    
+    let newStatus = prompt("請修改跟進狀態 (例如：待處理 / 已處理 / 已通知相關部門跟進)：", currentStatus);
+    if (newStatus === null) return;
+
+    fetch('/api/update_record', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: id, note: newNote, status: newStatus })
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message); 
+        if (data.status === 'success') {
+            showList();
+        }
+    })
+    .catch(err => alert("❌ 連線失敗，請稍後再試。"));
+}
         }
 
         function updateClock() {
