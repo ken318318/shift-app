@@ -343,7 +343,9 @@ def update_record():
     release_db_connection(conn)
     
     return jsonify({"status": "success", "message": "✅ 紀錄已成功更新！"})
-
+@app.route('/bf392e0c1abdaeb5d994c628262a24a2.txt')
+def verify_wechat():
+    return "3d858c8569ab9afadbbc62d5f31c30007c34f14b", 200, {'Content-Type': 'text/plain; charset=utf-8'}
 @app.route('/')
 def index():
     return render_template('index.html')
