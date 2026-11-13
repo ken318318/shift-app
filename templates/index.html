@@ -443,10 +443,26 @@ function loadPendingIssues() {
                 window.globalGroupedItems[cat].push(`<div style="margin-bottom:8px;"><div style="font-size:11px; color:#856404; margin-bottom:3px;">👤 ${issue.name}</div>${itemHtml}</div>`);
                 totalItems++;
             };
-            if (issue.lux_issue) addItem('Lux', issue.lux_issue);
-            if (issue.temp_issue) addItem('溫度', issue.temp_issue);
-            if (issue.db_issue) addItem('分貝', issue.db_issue);
-            if (issue.note && issue.note.includes('【場面問題】')) issue.note.split('【場面問題】')[1].split('【早前')[0].trim().split('\n').forEach(line => { if(line.trim()) addItem('場面', line); });
+                if (issue.lux_issue) addItem('Lux', issue.lux_issue);
+                if (issue.temp_issue) addItem('溫度', issue.temp_issue);
+                if (issue.db_issue) addItem('分貝', issue.db_issue);
+
+                if (issue.note && issue.note.includes('【場面問題】')) {
+                let venueStr = issue.note.split('【場面問題】')[1].split('【早前')[0].trim();
+                    venueStr.split('\n').forEach(line => {
+                if (line.trim()) addItem('場面', line);
+            });
+          }
+
+            // 🌟 新增：讀取「早前未處理」（救返 ATM 嘅關鍵）
+               if (issue.note && issue.note.includes('【早前未處理】')) {
+               let oldStr = issue.note.split('【早前未處理】')[1].trim();
+                  oldStr.split('\n').forEach(line => {
+               if (line.trim() && !line.includes('【')) { 
+                  addItem('場面', line);
+             }
+         });
+      }
         });
         let finalHtml = "";
         for (let cat in window.globalGroupedItems) finalHtml += `<div class="pending-card" style="border-left: 4px solid #ffa000; margin-bottom: 15px;"><details style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 5px;"><summary style="cursor: pointer; font-weight: bold; color: #856404; padding: 5px;">${cat} (${window.globalGroupedItems[cat].length} 項)</summary><div style="padding: 5px 0 0 0;">${window.globalGroupedItems[cat].join('')}</div></details></div>`;
