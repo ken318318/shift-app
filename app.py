@@ -8,19 +8,44 @@ from datetime import datetime
 import pytz
 
 app = Flask(__name__)
-app.secret_key = "Ken_Shift_App_Secret_123"  # 🌟 用嚟加密登入狀態
+app.secret_key = "Ken_Shift_App_Secret_123" 
 CORS(app)
 
 # 🌟 你設定嘅密碼
-STAFF_PASSWORD = "BS2026"       # 普通同事交更嘅密碼
-ADMIN_PASSWORD = "ADMIN888"     # 管理員密碼
+STAFF_PASSWORD = "BS2026"       
+ADMIN_PASSWORD = "ADMIN888"     
 
+DB_URL = os.environ.get("DB_URL")
+
+# 🌟 建立連線池
+DB_POOL = None
+def init_pool():
+    global DB_POOL
+    try:
+        DB_POOL = psycopg2.pool.SimpleConnectionPool(1, 10, DB_URL)
+        print("連線池建立成功！")
+    except Exception as e:
+        print("連線池建立失敗:", e)
+
+init_pool()
+
+def get_db_connection():
+    return DB_POOL.getconn()
+
+def release_db_connection(conn):
+    DB_POOL.putconn(conn)
+
+# 🌟 登入攔截器 (白名單已加入 verify_wechat)
 @app.before_request
 def require_login():
-    # 允許訪問登入頁同靜態檔案
     allowed_routes = ['login', 'static', 'verify_wechat']
     if 'logged_in' not in session and request.endpoint not in allowed_routes:
         return redirect(url_for('login'))
+
+# 🌟 微信部署驗證路由 (放喺登入路由上面)
+@app.route('/bf392e0c1abdaeb5d994c628262a24a2.txt')
+def verify_wechat():
+    return "3d858c8569ab9afadbbc62d5f31c30007c34f14b", 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -44,53 +69,14 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# ⚠️ 呢度保留你原本嗰條 Supabase 網址
-DB_URL = os.environ.get("DB_URL")
-# 🌟 建立連線池 (預留 1 到 10 條連線備用)
-DB_POOL = None
-def init_pool():
-    global DB_POOL
-    try:
-        DB_POOL = psycopg2.pool.SimpleConnectionPool(1, 10, DB_URL)
-        print("連線池建立成功！")
-    except Exception as e:
-        print("連線池建立失敗:", e)
+@app.route('/admin')
+def admin():
+    if session.get('role') != 'admin':
+        return "⚠️ 權限不足！請用管理員密碼登入。", 403
+    return render_template('admin.html')
 
-init_pool() # 🌟 啟動連線池
+# ---------------- API 區塊 ----------------
 
-def get_db_connection():
-    # 🌟 改為由連線池攞連線 (唔再每次重新 connect)
-    return DB_POOL.getconn()
-
-def release_db_connection(conn):
-    # 🌟 用完之後，將連線還返去連線池，等下次可以重用
-    DB_POOL.putconn(conn)
-
-def init_db():
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS records
-                 (id SERIAL PRIMARY KEY,
-                  name TEXT,
-                  shift TEXT,
-                  lux TEXT,
-                  temp TEXT,
-                  bgm TEXT,
-                  checklist TEXT,
-                  status TEXT,
-                  follower TEXT,
-                  note TEXT,
-                  lux_issue TEXT,
-                  temp_issue TEXT,
-                  db_issue TEXT,
-                  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP)''')
-    conn.commit()
-    release_db_connection(conn)
-
-try:
-    init_db()
-except Exception as e:
-    print("數據庫連線失敗:", e)
 @app.route('/api/get_configs', methods=['GET'])
 def get_configs():
     conn = get_db_connection()
@@ -170,7 +156,7 @@ def get_pending_issues():
     conn = get_db_connection()
     c = conn.cursor()
     
-    # 1. 先搵出所有「已處理」嘅字眼，放入黑名單
+    # 1. 搵出所有「已處理」嘅字眼，放入黑名單
     c.execute("SELECT note FROM records WHERE note LIKE '%【早前已處理】%'")
     done_rows = c.fetchall()
     done_items = set()
@@ -194,109 +180,17 @@ def get_pending_issues():
     release_db_connection(conn)
     
     pending = []
-    seen_issues = set() 
-
-    # 🌟 判斷係咪重複嘅核心邏輯
-    def is_duplicate(prefix, text):
-        if not text: 
-            return False
-        
-        # 抽出所有「英文字母+數字」嘅台號 (例如 NB1101)
-        tables = re.findall(r'([A-Za-z]{2}\d+)', text)
-        if not tables:
-            return False
-            
-        table_key = tables[0].upper()
-        
-        # 判斷問題類別
-        if prefix in ['Lux', '溫度', '分貝']:
-            category_key = prefix
-        else:
-            # 無視前面有冇「場面 -」，只要見到中括號 [...] 就抽出嚟做類別
-            match = re.search(r'\[(.*?)\]', text)
-            if match:
-                category_key = match.group(1)
-            else:
-                category_key = text[:20]
-            
-        unique_key = f"{prefix}_{table_key}_{category_key}"
-        
-        if unique_key in seen_issues:
-            return True # 重複咗
-        else:
-            seen_issues.add(unique_key) # 第一次見，記錄低
-            return False
-
-    # 開始過濾每一條紀錄
     for row in rows:
-        new_lux = []
-        if row[2]: 
-            for item in row[2].split(' | '):
-                if item.strip() and not is_duplicate('Lux', item):
-                    new_lux.append(item)
-                    
-        new_temp = []
-        if row[3]: 
-            for item in row[3].split(' | '):
-                if item.strip() and not is_duplicate('溫度', item):
-                    new_temp.append(item)
-                    
-        new_db = []
-        if row[4]: 
-            for item in row[4].split(' | '):
-                if item.strip() and not is_duplicate('分貝', item):
-                    new_db.append(item)
-        
-        new_note = row[5] or ""
-        note_lines = new_note.split('\n')
-        filtered_note_lines = []
-        
-        for line in note_lines:
-            if line.startswith('【') or not line.strip():
-                filtered_note_lines.append(line)
-            else:
-                prefix = '場面' if '位置:' in line else '早前'
-                if not is_duplicate(prefix, line):
-                    filtered_note_lines.append(line)
-                    
-        new_note = '\n'.join(filtered_note_lines)
-
-        # 如果過濾完之後仲有嘢剩，先加入列表
-        if new_lux or new_temp or new_db or '位置:' in new_note:
-            pending.append({
-                "id": row[0], "name": row[1], 
-                "lux_issue": ' | '.join(new_lux), 
-                "temp_issue": ' | '.join(new_temp), 
-                "db_issue": ' | '.join(new_db), 
-                "note": new_note, 
-                "overall_status": row[6],
-                "created_at": str(row[7]) if row[7] else None
-            })
+        pending.append({
+            "id": row[0], "name": row[1], "lux_issue": row[2], "temp_issue": row[3], 
+            "db_issue": row[4], "note": row[5], "overall_status": row[6],
+            "created_at": str(row[7]) if row[7] else None
+        })
         
     return jsonify({"issues": pending, "done_items": list(done_items)})
 
-@app.route('/api/update_status', methods=['POST'])
-def update_status():
-    data = request.json
-    record_id = data.get('id')
-    new_status = data.get('status')
-    
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("UPDATE records SET status = %s WHERE id = %s", (new_status, record_id))
-    conn.commit()
-    release_db_connection(conn)
-    return jsonify({"message": "狀態已更新", "status": "success"})
-
-@app.route('/admin')
-def admin():
-    # 只有管理員 (用 ADMIN888 登入) 先可以入到呢度
-    if session.get('role') != 'admin':
-        return "⚠️ 權限不足！請用管理員密碼登入。", 403
-    return render_template('admin.html')
 @app.route('/api/delete_record', methods=['POST'])
 def delete_record():
-    # 🌟 權限檢查：只有 Admin 先可以刪除
     if session.get('role') != 'admin':
         return jsonify({"status": "error", "message": "⚠️ 權限不足！只有管理員可以刪除紀錄。"})
     
@@ -329,7 +223,6 @@ def update_record():
         
     created_at = row[0]
     
-    # 🌟 時間檢查：非 Admin 超過 5 分鐘即拒絕
     if session.get('role') != 'admin':
         import datetime
         now = datetime.datetime.now(pytz.timezone('Asia/Macau'))
@@ -343,9 +236,7 @@ def update_record():
     release_db_connection(conn)
     
     return jsonify({"status": "success", "message": "✅ 紀錄已成功更新！"})
-@app.route('/bf392e0c1abdaeb5d994c628262a24a2.txt')
-def verify_wechat():
-    return "3d858c8569ab9afadbbc62d5f31c30007c34f14b", 200, {'Content-Type': 'text/plain; charset=utf-8'}
+
 @app.route('/')
 def index():
     return render_template('index.html')
