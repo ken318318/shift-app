@@ -360,7 +360,26 @@ function toggleSkip(type) {
     document.getElementById(type + '-input-area').style.display = isSkipped ? 'none' : 'block';
 }
 function initVenueCategory(selectEl) {
-    selectEl.innerHTML = Object.keys(venueCategories).map(key => `<option value="${key}">${key}</option>`).join('');
+    let keys = Object.keys(venueCategories);
+    
+    // 🌟 自訂排序邏輯：確保你最常用嘅排最前
+    keys.sort((a, b) => {
+        const priority = ['賭檯 - Display(大Mon)', '賭檯 - Display(細Mon)', '賭檯 - Layout', '賭檯 - Sound Bar'];
+        let indexA = priority.indexOf(a);
+        let indexB = priority.indexOf(b);
+        
+        // 如果兩個都喺優先名單入面，按名單順序排
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        // 如果 A 喺名單，B 唔喺，A 排先
+        if (indexA !== -1) return -1;
+        // 如果 B 喺名單，A 唔喺，B 排先
+        if (indexB !== -1) return 1;
+        
+        // 其他唔喺名單嘅，按中文字典順序排
+        return a.localeCompare(b, 'zh-HK');
+    });
+
+    selectEl.innerHTML = keys.map(key => `<option value="${key}">${key}</option>`).join('');
     updateVenueProblem(selectEl);
 }
 function updateVenueProblem(selectEl) {
