@@ -970,30 +970,32 @@ if (hasUnresolved) {
                         followerHtml = `<div class="record-data" style="background:#fff3cd; color:#856404; display:flex; align-items:center;">👤 跟進人: <div style="margin-left:5px;">${iconsHtml}</div></div>`;
                     }
 
-                    let divider = index > 0 ? `<hr style="border: 0; height: 8px; background: #d1d5db; margin: 30px 0; border-radius: 4px;">` : "";
-                    
-                    html += `
-                        ${divider}
-                        <div class="record-card">
-                            <div class="record-header" style="background: #f8f9fa; padding: 10px; border-radius: 6px 6px 0 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #1a73e8; display: flex; justify-content: space-between; align-items: center;">
-                                <div>
-                                  <strong style="font-size: 16px;">${r.name} (${r.shift})</strong>
-                                  ${timeStr}
-                               </div>
-                               <div>
-                                  <button onclick="editRecord(this)" data-id="${r.id}" data-note="${r.note ? r.note.replace(/"/g, '&quot;') : ''}" data-status="${r.status}" style="background: #f5b041; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">✏️ 修改</button>
-                                  <button onclick="deleteRecord(${r.id})" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ 刪除</button>
-                               </div>
-                         </div>
-                            ${dataHtml}
-                            ${checkItemsHtml}
-                            ${doneIssuesList.join('')}
-                            ${doneOldHtml}
-                            ${pendingIssuesList.join('')}
-                            ${followerHtml}
-                            <div class="record-note" style="margin-top: 10px;">${mainNote}</div>
-                        </div>
-                    `;
+                  let divider = index > 0 ? `<hr style="border: 0; height: 8px; background: #d1d5db; margin: 30px 0; border-radius: 4px;">` : "";
+
+// 🌟 安全處理字串，防止引號或換行搞死網頁
+let safeNote = r.note ? r.note.replace(/"/g, '&quot;').replace(/`/g, '&#96;').replace(/\$/g, '&#36;') : '';
+
+html += `
+    ${divider}
+    <div class="record-card">
+        <div class="record-header" style="background: #f8f9fa; padding: 10px; border-radius: 6px 6px 0 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #1a73e8; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <strong style="font-size: 16px;">${r.name} (${r.shift})</strong>
+                ${timeStr}
+            </div>
+            <div>
+                <button onclick="editRecord(this)" data-id="${r.id}" data-note="${safeNote}" data-status="${r.status}" style="background: #f5b041; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">✏️ 修改</button>
+                <button onclick="deleteRecord(${r.id})" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ 刪除</button>
+            </div>
+        </div>
+        ${dataHtml}
+        ${checkItemsHtml}
+        ${doneIssuesList.join('')}
+        ${doneOldHtml}
+        ${pendingIssuesList.join('')}
+        ${followerHtml}
+        <div class="record-note" style="margin-top: 10px;">${mainNote}</div>
+    </div>
                 });
                 listDiv.innerHTML = html;
             }).catch(error => console.error("讀取失敗:", error));
