@@ -4,14 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BS交更系統</title>
-    
-    <!-- 微信分享卡片預覽 -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="BS交更系統 | 每日交更紀錄" />
     <meta property="og:description" content="點擊查看最新的交更事項及未完成跟進項目。" />
     <meta property="og:image" content="https://i.postimg.cc/Jhjtp4n8/f2150ee8ffeb916f27de3c102c70a7da.jpg" />
     <meta property="og:url" content="https://shift-app-wwgf.onrender.com/" />
-    
     <meta name="wx.share.title" content="BS交更系統 | 每日交更紀錄" />
     <meta name="wx.share.desc" content="點擊查看最新的交更事項及未完成跟進項目。" />
     <meta name="wx.share.img" content="https://i.postimg.cc/Jhjtp4n8/f2150ee8ffeb916f27de3c102c70a7da.jpg" />
@@ -22,8 +19,8 @@
         h2 { text-align: center; color: #333; margin-top: 0; }
         label { display: block; margin-top: 15px; font-weight: bold; font-size: 14px; color: #444; }
         input[type="text"], textarea, select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-family: inherit; font-size: 14px; background-color: #fff;}
-        .row { display: flex; gap: 10px; }
-        .row > div { flex: 1; }
+        .row { display: flex; gap: 10px; flex-wrap: wrap; }
+        .row > div { flex: 1; min-width: 140px; }
         
         .checkbox-group { margin-top: 5px; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; display: flex; flex-wrap: wrap; gap: 10px;}
         .checkbox-group label { font-weight: normal; display: flex; align-items: center; margin-top: 0; cursor: pointer; font-size: 13px; width: 30%;}
@@ -97,7 +94,7 @@
                 <option value="阿能 (8055532)">阿能 (8055532)</option>
                 <option value="阿威 (8055475)">阿威 (8055475)</option>
                 <option value="阿倫 (8017308)">阿倫 (8017308)</option>
-                <option value="阿mio (298)">阿mio (298)</option>
+                <option value="阿mio (298)">Mio (298)</option>
                 <option value="Paco (8047393)">Paco (8047393)</option>
                 <option value="小信 (8056027)">小信 (8056027)</option>
                 <option value="kiko (1227)">kiko (1227)</option>
@@ -115,13 +112,13 @@
 
     <div class="row">
         <div>
-            <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-                <label>全場 Lux：</label>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                <label style="margin: 0;">全場 Lux：</label>
                 <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center;">
                     <input type="checkbox" id="skip-lux" onchange="toggleSkip('lux')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
                 </label>
             </div>
-            <div id="lux-input-area">
+            <div id="lux-input-area" style="margin-top: 5px;">
                 <select id="lux" onchange="toggleIssue('lux')">
                     <option value="< 450">&lt; 450</option>
                     <option value="450-650" selected>450 - 650 (正常)</option>
@@ -147,13 +144,13 @@
             </div>
         </div>
         <div>
-            <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-                <label>溫度：</label>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+                <label style="margin: 0;">溫度：</label>
                 <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center;">
                     <input type="checkbox" id="skip-temp" onchange="toggleSkip('temp')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
                 </label>
             </div>
-            <div id="temp-input-area">
+            <div id="temp-input-area" style="margin-top: 5px;">
                 <select id="temp" onchange="toggleIssue('temp')">
                     <option value="偏低 (<22.5)">偏低 (&lt;22.5)</option>
                     <option value="正常 (22.5-24.5)" selected>正常 (22.5-24.5)</option>
@@ -177,115 +174,116 @@
             </div>
         </div>
     </div>
-
-    <div class="row">
-        <div>
-            <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-                <label>BGM 分貝：</label>
-                <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center;">
-                    <input type="checkbox" id="skip-bgm" onchange="toggleSkip('bgm')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
-                </label>
-            </div>
-            <div id="bgm-input-area">
-                <select id="bgm" onchange="toggleIssue('bgm')">
-                    <option value="偏低 (<65)">偏低 (&lt;65)</option>
-                    <option value="正常 (65-75)" selected>正常 (65-75)</option>
-                    <option value="偏高 (>75)">偏高 (&gt;75)</option>
-                </select>
-                <div id="bgm-issue-group" class="issue-group">
-                    <div class="issue-title">分貝異常紀錄：</div>
-                    <div id="bgm-container">
-                        <div class="issue-item bgm-item">
-                            <div class="issue-row">
-                                <input type="text" class="table-num bgm-table" placeholder="輸入數字(如0201)">
-                                <input type="text" class="value bgm-value" placeholder="數值">
-                            </div>
-                            <div class="issue-row" style="margin-top: 8px;">
-                                <select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
-                            </div>
+<div class="row">
+    <div>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <label style="margin: 0;">BGM 分貝：</label>
+            <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center;">
+                <input type="checkbox" id="skip-bgm" onchange="toggleSkip('bgm')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
+            </label>
+        </div>
+        <div id="bgm-input-area" style="margin-top: 5px;">
+            <select id="bgm" onchange="toggleIssue('bgm')">
+                <option value="偏低 (<65)">偏低 (&lt;65)</option>
+                <option value="正常 (65-75)" selected>正常 (65-75)</option>
+                <option value="偏高 (>75)">偏高 (&gt;75)</option>
+            </select>
+            <div id="bgm-issue-group" class="issue-group">
+                <div class="issue-title">分貝異常紀錄：</div>
+                <div id="bgm-container">
+                    <div class="issue-item bgm-item">
+                        <div class="issue-row">
+                            <input type="text" class="table-num bgm-table" placeholder="輸入數字(如0201)">
+                            <input type="text" class="value bgm-value" placeholder="數值">
+                        </div>
+                        <div class="issue-row" style="margin-top: 8px;">
+                            <select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
                         </div>
                     </div>
-                    <button type="button" class="btn-add" onclick="addBgmRow()">+ 新增位置</button>
                 </div>
-            </div>
-        </div>
-    </div>
-    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 15px;">
-        <label>NFC 檢測：</label>
-        <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center;">
-            <input type="checkbox" id="skip-nfc" onchange="toggleSkip('nfc')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
-        </label>
-    </div>
-    <div id="nfc-input-area">
-        <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px;">
-            <div style="flex: 1;">
-                <span style="font-size: 13px; color: #555;">今日檢測 Hall (正常)：</span>
-                <select id="nfc-hall-select">
-                    <option value="Hall 1">Hall 1</option>
-                    <option value="Hall 2">Hall 2</option>
-                    <option value="Hall 3">Hall 3</option>
-                    <option value="Hall 4">Hall 4</option>
-                    <option value="Hall 5">Hall 5</option>
-                    <option value="Hall 6">Hall 6</option>
-                    <option value="全場">全場</option>
-                </select>
-            </div>
-            <div>
-                <span style="font-size: 13px; color: #555;">有無異常？</span>
-                <select id="nfc-status" onchange="toggleNfcIssue()" style="margin-top: 5px;">
-                    <option value="無異常" selected>無異常</option>
-                    <option value="有異常">有異常</option>
-                </select>
-            </div>
-        </div>
-        
-        <div id="nfc-issue-group" class="issue-group">
-            <div class="issue-title">NFC 異常台號：</div>
-            <div id="nfc-container">
-                <div class="issue-item nfc-item">
-                    <div class="issue-row">
-                        <input type="text" class="table-num nfc-table" placeholder="輸入數字(如0201)">
-                    </div>
-                    <div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;">
-                        <label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label>
-                        <label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label>
-                        <label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label>
-                        <label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label>
-                        <label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label>
-                        <label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label>
-                    </div>
-                    <div class="issue-row" style="margin-top: 8px;">
-                        <select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
-                    </div>
-                </div>
-            </div>
-            <button type="button" class="btn-add" onclick="addNfcRow()">+ 新增位置</button>
-        </div>
-    </div>
-
-    <label>場面問題項目輸入 (可留空)：</label>
-    <div class="issue-group" style="background: #e3f2fd; border-color: #90caf9; display: block;">
-       <div id="venue-container">
-    <div class="issue-item venue-item" style="border-bottom-color: #90caf9;">
-        <div class="issue-row">
-            <select class="venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select>
-            <select class="venue-problem" style="flex: 1.5;"></select>
-        </div>
-        <div class="venue-location-container">
-            <div class="issue-row venue-loc-row" style="margin-top: 5px;">
-                <input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5;">
-                <button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px; font-size: 14px;" onclick="addVenueLocation(this)">+</button>
-            </div>
-        </div>
-        <div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; flex: 1;">
-                <span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span>
-                <select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
+                <button type="button" class="btn-add" onclick="addBgmRow()">+ 新增位置</button>
             </div>
         </div>
     </div>
 </div>
 
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-top: 15px;">
+    <label style="margin: 0;">NFC 檢測：</label>
+    <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center;">
+        <input type="checkbox" id="skip-nfc" onchange="toggleSkip('nfc')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
+    </label>
+</div>
+<div id="nfc-input-area" style="margin-top: 5px;">
+    <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 140px;">
+            <span style="font-size: 13px; color: #555;">今日檢測 Hall (正常)：</span>
+            <select id="nfc-hall-select">
+                <option value="Hall 1">Hall 1</option>
+                <option value="Hall 2">Hall 2</option>
+                <option value="Hall 3">Hall 3</option>
+                <option value="Hall 4">Hall 4</option>
+                <option value="Hall 5">Hall 5</option>
+                <option value="Hall 6">Hall 6</option>
+                <option value="全場">全場</option>
+            </select>
+        </div>
+        <div>
+            <span style="font-size: 13px; color: #555;">有無異常？</span>
+            <select id="nfc-status" onchange="toggleNfcIssue()" style="margin-top: 5px;">
+                <option value="無異常" selected>無異常</option>
+                <option value="有異常">有異常</option>
+            </select>
+        </div>
+    </div>
+    
+    <div id="nfc-issue-group" class="issue-group">
+        <div class="issue-title">NFC 異常台號：</div>
+        <div id="nfc-container">
+            <div class="issue-item nfc-item">
+                <div class="issue-row">
+                    <input type="text" class="table-num nfc-table" placeholder="輸入數字(如0201)">
+                </div>
+                <div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;">
+                    <label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label>
+                    <label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label>
+                    <label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label>
+                    <label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label>
+                    <label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label>
+                    <label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label>
+                </div>
+                <div class="issue-row" style="margin-top: 8px;">
+                    <select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
+                </div>
+            </div>
+        </div>
+        <button type="button" class="btn-add" onclick="addNfcRow()">+ 新增位置</button>
+    </div>
+</div>
+
+<label style="margin-top: 20px;">場面問題項目輸入 (可留空)：</label>
+<div class="issue-group" style="background: #e3f2fd; border-color: #90caf9; display: block;">
+    <div id="venue-container">
+        <div class="issue-item venue-item" style="border-bottom-color: #90caf9;">
+            <div class="issue-row">
+                <select class="venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select>
+                <select class="venue-problem" style="flex: 1.5;"></select>
+            </div>
+            <div class="venue-location-container">
+                <div class="issue-row venue-loc-row" style="margin-top: 5px;">
+                    <input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5;">
+                    <button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px; font-size: 14px;" onclick="addVenueLocation(this)">+</button>
+                </div>
+            </div>
+            <div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; flex: 1;">
+                    <span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span>
+                    <select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
+                </div>
+            </div>
+        </div>
+    </div>
+    <button type="button" class="btn-add" style="background: #1976d2;" onclick="addVenueRow()">+ 新增場面問題</button>
+</div>
     <label>負責跟進人 (可多選)：</label>
     <div class="checkbox-group" style="display:block;">
         <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Carman" class="follower-item"> Carman</label>
@@ -316,10 +314,10 @@
     <div id="result"></div>
     <div id="current-time" style="text-align: center; color: #888; font-size: 14px; margin-top: 20px; font-weight: bold;"></div>
 </div>
+
 <script>
 let venueCategories = {}; 
 
-// 🌟 台號大字典
 const rawTableList = `RL0101,RL0102,RL0103,RL0105,CS0106,CS0107,CS0108,CS0109,CS0110,BJ0111,BJ0112,BJ0113,BJ0115,BJ0128,BJ0117,FP0120,FP0121,BJ0122,BJ0123,FP0129,FP0130,FP0116,FP0117,CR0118,BJ0125,BJ0126,CR0127,LT3101,LT3102,LT3103,LT3105,LT6301,LT6302,LT6303,LT6305,DS0927,DS0928,DS0929,DS1106,DS1107,DS1108,DS1109,DS1110,DS1111,NB0201,NB0202,NB0203,NB0205,NB0210,NB0211,NB0212,NB0213,NB0215,NB0216,NB0217,NB0218,NB0219,NB0220,NB0221,NB0223,NB0225,NB0226,NB0227,NB3205,NB3206,NB3207,NB3208,NB3209,NB3210,NB3211,NB3212,NB3213,NB3215,NB3216,NB3217,NB3218,NB3219,NB3220,NB3509,NB3510,NB3511,NB3512,NB3513,NB3515,NB3516,NB3517,NB3518,NB3519,NB0301,NB0302,NB0303,NB0305,NB0306,NB0307,NB0308,NB0309,NB0310,NB0311,NB0312,NB0313,NB0315,NB0316,NB0317,NB0318,NB0501,NB0502,NB0503,NB0505,NB0506,NB0507,NB0508,NB0509,NB0510,NB0511,NB0516,NB0517,NB0518,NB0519,NB0520,NB0521,NB0522,NB0523,NB0525,NB0526,NB0527,NB0528,NB0529,NB0530,NB0801,NB0802,NB0803,NB0805,NB0806,NB0807,NB0808,NB0809,NB0810,NB0811,NB0812,NB0815,NB0816,NB0817,NB0818,NB2601,NB2602,NB2603,NB2605,NB2606,NB2607,NB2608,NB2609,NB2610,NB2611,NB2612,NB2613,NB2615,NB2616,NB2617,NB2618,NB2619,NB2620,NB2621,NB2622,NB2623,NB2625,NB2701,NB2702,NB2703,NB2705,NB2706,NB2707,NB2708,NB2709,NB2710,NB2711,NB2712,NB2715,NB2716,NB2717,NB2718,NB2719,NB2720,NB2721,NB2801,NB2802,NB2803,NB2805,NB2806,NB2807,NB2808,NB2809,NB2810,NB2811,NB2812,NB2813,NB2815,NB2816,NB2817,NB2818,NB2819,NB2820,NB2821,NB2822,NB2823,NB2825,NB2826,NB2901,NB2902,NB2903,NB2905,NB2906,NB2907,NB2908,NB2909,NB2910,NB2911,NB2912,NB2913,NB2915,NB2916,NB2919,NB2917,NB2918,NB2921,NB2922,NB2920,NB2923,NB2925,NB3005,NB3006,NB3007,NB3022,NB3008,NB3023,NB3025,NB3013,NB3015,NB3016,NB3017,NB3018,NB3019,NB3020,NB3021,NB3028,NB3029,NB3030,NB3031,NB3301,NB3302,NB3303,NB3305,NB3306,NB3307,NB3308,NB3309,NB3310,NB3311,NB3312,NB3313,NB3315,NB3316,NB3317,NB3318,NB0901,NB0902,NB0903,NB0905,NB0906,NB0907,NB0908,NB0909,NB0910,NB0911,NB0912,NB0913,NB0915,NB0916,NB0917,NB0918,NB0919,NB0920,NB0921,NB0922,NB0923,NB0925,NB0926,NB1101,NB1102,NB1103,NB1105,NB1112,NB1113,NB1115,NB1116,NB1117,NB1118,NB1119,NB1120,NB1121,NB1122,NB1123,NB1125,NB1126,NB1127,NB1128,NB1129,NB1130,NB1131,NB1132,NB1201,NB1202,NB1203,NB1205,NB1206,NB1207,NB1208,NB1209,NB1210,NB1211,NB1212,NB1213,NB1215,NB1216,NB1217,NB1218,NB1219,NB1220,NB1221,NB1222,NB1223,NB1225,NB1226,NB1227,NB1228,NB1229,NB1251,NB1230,NB1231,NB1232,NB1233,NB1250,NB1235,NB1236,NB1237,NB1238,NB1239,NB2501,NB2502,NB2503,NB2505,NB2506,NB2507,NB2508,NB2509,NB2510,NB2511,NB2512,NB2513,NB2515,NB2516,NB2517,NB2518,NB2519,NB2520,NB2521,NB2522,NB2523,NB2525,NB2526,NB2527,NB2528,NB2529,NB2530,NB2531,NB2532,NB2533,NB2535,NB2536,NB2537,NB2538,NB1601,NB1602,NB1603,NB1605,NB1606,NB1607,NB1608,NB1609,NB1610,NB1611,NB1612,NB1613,NB1615,NB1616,NB1617,NB1618,NB1619,NB1620,NB1621,NB1622,NB1623,NB1625,NB1626,NB1627,NB1628,NB1629,NB1630,NB1631,NB1632,NB1633,NB1301,NB1302,NB1303,NB1305,NB1306,NB1307,NB1308,NB1309,NB1310,NB1311,NB1312,NB1313,NB1315,NB1316,NB1317,NB1318,NB1319,NB1320,NB1321,NB1322,NB1323,NB1325,NB1326,NB1327,NB1501,NB1502,NB1503,NB1505,NB1506,NB1507,NB1508,NB1509,NB1510,NB1511,NB1512,NB1513,NB1515,NB1516,NB1517,NB1518,NB1519,NB1520,NB1521,NB1522,NB1523,NB1525,NB1526,NB1527,NB1701,NB1702,NB1703,NB1705,NB1706,NB1707,NB1708,NB1709,NB1710,NB1711,NB1712,NB1713,NB1715,NB1716,NB1717,NB1718,NB1719,NB1720,NB1721,NB1722,NB1723,NB1725,NB1726,NB1727,NB1801,NB1802,NB1803,NB1805,NB1806,NB1807,NB1808,NB1809,NB1810,NB1811,NB1812,NB1813,NB1815,NB1816,NB1817,NB1818,NB1819,NB1820,NB1821,NB1822,NB1823,NB1825,NB1901,NB1902,NB1903,NB1905,NB1906,NB1907,NB1908,NB1909,NB1910,NB1911,NB1912,NB1913,NB1915,NB1916,NB1917,NB1918,NB2001,NB2002,NB2003,NB2005,NB2006,NB2007,NB2008,NB2009,NB2010,NB2011,NB2012,NB2013,NB2015,NB2016,NB2017,NB2018,NB10321,NB10322,NB10302,NB10303,NB10305,NB10301,NB10323,NB10325,NB10307,NB10308,NB10309,NB10306,NB10310,NB10311,NB10312,NB10313,NB10315,NB10316,NB10317,NB10501,NB10502,NB10503,NB10505,NB10506,NB10507,NB10508,NB10519,NB10520,NB10627,NB10601,NB10602,NB10603,NB10628,NB10629,NB10606,NB10607,NB10608,NB10605,NB10630,NB10610,NB10611,NB10609,NB10612,NB10613,NB10615,NB10616,NB10617,NB10618,NB10619,NB10620,NB10621,NB10622,NB10623,NB10625,NB10701,NB10702,NB10703,NB10705,NB10706,NB10707,NB10708,NB10709,NB10720,NB10721,NB10722,NB10723,NB10710,NB10711,NB10712,NB10713,NB10715,NB10716,NB10717,NB10718,NB10719`;
 
 const tableDict = {};
@@ -327,7 +325,6 @@ rawTableList.split(',').forEach(item => {
     let str = item.trim();
     if(str) tableDict[str.replace(/[^0-9]/g, '')] = str; 
 });
-
 function autoFillTable(el) {
     let val = el.value.trim();
     if (/^\d+$/.test(val)) { 
@@ -337,7 +334,6 @@ function autoFillTable(el) {
 }
 
 function transformInputs() {
-    // 只要幫台號輸入框加返自動識別魔法就得
     document.querySelectorAll('.table-num, .venue-location').forEach(inp => {
         inp.placeholder = '輸入數字(如0201)';
         inp.setAttribute('oninput', 'autoFillTable(this)');
@@ -437,29 +433,12 @@ function addNfcRow() {
 }
 
 function addVenueRow() {
-    let html = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;">
-        <div class="issue-row">
-            <select class="venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select>
-            <select class="venue-problem" style="flex: 1.5;"></select>
-        </div>
-        <div class="venue-location-container">
-            <div class="issue-row venue-loc-row" style="margin-top: 5px;">
-                <input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5;">
-                <button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px; font-size: 14px;" onclick="addVenueLocation(this)">+</button>
-            </div>
-        </div>
-        <div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-            <div style="display: flex; align-items: center; flex: 1;">
-                <span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span>
-                <select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
-            </div>
-            <button type="button" class="btn-remove" style="position: static; margin-left: 10px;" onclick="this.parentElement.parentElement.remove()">X</button>
-        </div>
-    </div>`;
+    let html = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select><select class="venue-problem" style="flex: 1.5;"></select></div><div class="venue-location-container"><div class="issue-row venue-loc-row" style="margin-top: 5px;"><input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5;"><button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px; font-size: 14px;" onclick="addVenueLocation(this)">+</button></div></div><div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; align-items: center; flex: 1;"><span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span><select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="待處理">待處理</option></select></div><button type="button" class="btn-remove" style="position: static; margin-left: 10px;" onclick="this.parentElement.parentElement.remove()">X</button></div></div>`;
     document.getElementById('venue-container').insertAdjacentHTML('beforeend', html);
     initVenueCategory(document.querySelector('.venue-item:last-child .venue-category'));
     transformInputs();
 }
+
 function loadPendingIssues() {
     fetch('/api/pending_issues').then(res => res.json()).then(data => {
         let issues = data.issues; let doneSet = data.done_items || []; 
@@ -534,155 +513,159 @@ function loadPendingIssues() {
         .catch(err => alert("❌ 連線失敗，請稍後再試。"));
     }
 
-   function formatIssueText(text, defaultPrefix, statusStr) {
-    if (!text) return "";
-    let rawStatus = statusStr || '待處理';
-    let isDone = (rawStatus === '已處理');
-    let displayStatus = isDone ? '已處理' : '未處理';
-    let bgColor = isDone ? '#e8f5e9' : '#ffebee';
-    let textColor = isDone ? '#2e7d32' : '#d32f2f';
-    let prefixIcon = isDone ? '✅ ' : '⚠️ ';
-    let displayPrefix = prefixIcon + defaultPrefix;
-    let badgeClass = isDone ? 'status-done' : 'status-pending';
-    return `<div class="issue-data" style="background:${bgColor}; color:${textColor};"><span><strong>${displayPrefix}</strong> ${text}</span><span class="status-badge ${badgeClass}">${displayStatus}</span></div>`;
-}
+    function formatIssueText(text, defaultPrefix, statusStr) {
+        if (!text) return "";
+        let rawStatus = statusStr || '待處理';
+        let isDone = (rawStatus === '已處理');
+        let displayStatus = isDone ? '已處理' : '未處理';
+        let bgColor = isDone ? '#e8f5e9' : '#ffebee';
+        let textColor = isDone ? '#2e7d32' : '#d32f2f';
+        let prefixIcon = isDone ? '✅ ' : '⚠️ ';
+        let displayPrefix = prefixIcon + defaultPrefix;
+        let badgeClass = isDone ? 'status-done' : 'status-pending';
+        return `<div class="issue-data" style="background:${bgColor}; color:${textColor};"><span><strong>${displayPrefix}</strong> ${text}</span><span class="status-badge ${badgeClass}">${displayStatus}</span></div>`;
+    }
 
-function displayRecords() {
-    fetch('/api/records').then(res => res.json()).then(records => {
-        let listDiv = document.getElementById('recordList');
-        if (records.length === 0) { listDiv.innerHTML = "<p style='color: #888; text-align: center;'>暫時未有紀錄。</p >"; return; }
-        let html = "";
-        records.forEach((r, index) => {
-            let doneIssuesList = [];
-            let pendingIssuesList = [];
+    function displayRecords() {
+        fetch('/api/records').then(res => res.json()).then(records => {
+            let listDiv = document.getElementById('recordList');
+            if (records.length === 0) { listDiv.innerHTML = "<p style='color: #888; text-align: center;'>暫時未有紀錄。</p >"; return; }
+            let html = "";
+            records.forEach((r, index) => {
+                let doneIssuesList = [];
+                let pendingIssuesList = [];
 
-            let processIssue = (text, defaultPrefix) => {
-                if (!text) return;
-                let match = text.match(/\[狀態:(.*?)\]/);
-                let status = match ? match[1] : '待處理';
-                let cleanText = text.replace(/\[狀態:.*?\]/g, '').trim();
+                let processIssue = (text, defaultPrefix) => {
+                    if (!text) return;
+                    let match = text.match(/\[狀態:(.*?)\]/);
+                    let status = match ? match[1] : '待處理';
+                    let cleanText = text.replace(/\[狀態:.*?\]/g, '').trim();
+                    
+                    if (status === '已處理') {
+                        doneIssuesList.push(formatIssueText(cleanText, defaultPrefix, status));
+                    } else {
+                        pendingIssuesList.push(formatIssueText(cleanText, defaultPrefix, status));
+                    }
+                };
+
+                if (r.lux_issue) processIssue(r.lux_issue, 'Lux -');
+                if (r.temp_issue) processIssue(r.temp_issue, '溫度 -');
+                if (r.db_issue) processIssue(r.db_issue, '分貝 -');
                 
-                if (status === '已處理') {
-                    doneIssuesList.push(formatIssueText(cleanText, defaultPrefix, status));
-                } else {
-                    pendingIssuesList.push(formatIssueText(cleanText, defaultPrefix, status));
+                let checkItemsHtml = '';
+                if (r.checklist) {
+                    let items = r.checklist.split(' | ');
+                    let normalItems = [];
+                    items.forEach(item => {
+                        if (item.includes('異常')) {
+                            let text = item.replace('NFC異常: ', '');
+                            processIssue(text.trim(), 'NFC -');
+                        } else {
+                            let text = item.replace('NFC正常: ', 'NFC (');
+                            if(item.includes('NFC正常')) text += ')';
+                            normalItems.push(text);
+                        }
+                    });
+                    if (normalItems.length > 0) { checkItemsHtml = `<div class="record-data">✅ 正常: ${normalItems.join(' | ')}</div>`; }
                 }
-            };
 
-            if (r.lux_issue) processIssue(r.lux_issue, 'Lux -');
-            if (r.temp_issue) processIssue(r.temp_issue, '溫度 -');
-            if (r.db_issue) processIssue(r.db_issue, '分貝 -');
-            
-            let checkItemsHtml = '';
-            if (r.checklist) {
-                let items = r.checklist.split(' | ');
-                let normalItems = [];
-                items.forEach(item => {
-                    if (item.includes('異常')) {
-                        let text = item.replace('NFC異常: ', '');
-                        processIssue(text.trim(), 'NFC -');
-                    } else {
-                        let text = item.replace('NFC正常: ', 'NFC (');
-                        if(item.includes('NFC正常')) text += ')';
-                        normalItems.push(text);
-                    }
-                });
-                if (normalItems.length > 0) { checkItemsHtml = `<div class="record-data">✅ 正常: ${normalItems.join(' | ')}</div>`; }
-            }
+                let mainNote = r.note || "";
+                if (mainNote.includes('【場面問題】')) {
+                    let parts = mainNote.split('【場面問題】');
+                    mainNote = parts[0].trim();
+                    let venueStr = parts[1].split('【早前')[0].trim();
+                    venueStr.split('\n').forEach(line => {
+                        line = line.trim();
+                        if (line !== '' && !line.startsWith('⚠️') && !line.startsWith('✅')) {
+                            processIssue(line, '場面 -');
+                        }
+                    });
+                }
 
-            let mainNote = r.note || "";
-            if (mainNote.includes('【場面問題】')) {
-                let parts = mainNote.split('【場面問題】');
-                mainNote = parts[0].trim();
-                let venueStr = parts[1].split('【早前')[0].trim();
-                venueStr.split('\n').forEach(line => {
-                    line = line.trim();
-                    if (line !== '' && !line.startsWith('⚠️') && !line.startsWith('✅')) {
-                        processIssue(line, '場面 -');
-                    }
-                });
-            }
+                let doneOldHtml = "";
+                if (r.note && r.note.includes('【早前已處理】')) {
+                    if(mainNote.includes('【早前已處理】')) mainNote = mainNote.split('【早前已處理】')[0].trim();
+                    let parts = r.note.split('【早前已處理】');
+                    let doneStr = parts[1].split('【早前未處理】')[0].trim();
+                    doneStr.split('\n').forEach(line => {
+                        if (line.trim()) {
+                            doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 舊問題已處理: ${line.trim()}</span></div>`;
+                        }
+                    });
+                }
 
-            let doneOldHtml = "";
-            if (r.note && r.note.includes('【早前已處理】')) {
-                if(mainNote.includes('【早前已處理】')) mainNote = mainNote.split('【早前已處理】')[0].trim();
-                let parts = r.note.split('【早前已處理】');
-                let doneStr = parts[1].split('【早前未處理】')[0].trim();
-                doneStr.split('\n').forEach(line => {
-                    if (line.trim()) {
-                        doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 舊問題已處理: ${line.trim()}</span></div>`;
-                    }
-                });
-            }
+                let pendingOldHtml = "";
+                if (mainNote.includes('【早前未處理】')) {
+                    if(mainNote.includes('【早前未處理】')) mainNote = mainNote.split('【早前未處理】')[0].trim();
+                    let parts = r.note.split('【早前未處理】');
+                    let pendingStr = parts[1].trim();
+                    let oldItemsHtml = "";
+                    pendingStr.split('\n').forEach(line => {
+                        if (line.trim()) {
+                            oldItemsHtml += `<div class="issue-data" style="background:#ffebee; color:#d32f2f; padding:8px; margin-bottom:5px; border-radius:4px;"><span>⚠️ 早前未處理: ${line.trim()}</span></div>`;
+                        }
+                    });
+                    pendingOldHtml = `<div style="background: #fff3cd; border: 2px dashed #ffa000; padding: 12px; border-radius: 8px; margin-top: 15px;"><div style="font-weight: bold; color: #d84315; margin-bottom: 8px;">📌 早前未處理跟進項目：</div><div>${oldItemsHtml}</div></div>`;
+                 }
 
-            let pendingOldHtml = "";
-            if (mainNote.includes('【早前未處理】')) {
-                if(mainNote.includes('【早前未處理】')) mainNote = mainNote.split('【早前未處理】')[0].trim();
-                let parts = r.note.split('【早前未處理】');
-                let pendingStr = parts[1].trim();
-                let oldItemsHtml = "";
-                pendingStr.split('\n').forEach(line => {
-                    if (line.trim()) {
-                        oldItemsHtml += `<div class="issue-data" style="background:#ffebee; color:#d32f2f; padding:8px; margin-bottom:5px; border-radius:4px;"><span>⚠️ 早前未處理: ${line.trim()}</span></div>`;
-                    }
-                });
-                pendingOldHtml = `<div style="background: #fff3cd; border: 2px dashed #ffa000; padding: 12px; border-radius: 8px; margin-top: 15px;">
-                <div style="font-weight: bold; color: #d84315; margin-bottom: 8px;">📌 早前未處理跟進項目：</div>
-                <div>${oldItemsHtml}</div>
-                </div>`;
-             }
+                let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : 'Lux數值大致在於450-650之間';
+                let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常' || r.temp_issue) ? '溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
+                let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常' || r.db_issue) ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
+                let dataHtml = `<div class="record-data">📊 ${luxStr} | ${tempStr} | ${bgmStr}</div>`;
 
-            let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : 'Lux數值大致在於450-650之間';
-            let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常' || r.temp_issue) ? '溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
-            let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常' || r.db_issue) ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
-            let dataHtml = `<div class="record-data">📊 ${luxStr} | ${tempStr} | ${bgmStr}</div>`;
+                let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${new Date(r.created_at).toLocaleString('zh-HK')}</div>` : "";
+                
+                let followerHtml = '';
+                if (r.follower && r.follower !== '無') {
+                    let names = r.follower.split(', ');
+                    let iconsHtml = names.map(name => {
+                        if (name.includes('Carman') || name.includes('Stella')) return `<span style="margin-right: 8px; font-weight: bold; color: #e91e63;"><svg viewBox="0 0 24 24" width="14" height="14" fill="#e91e63" style="vertical-align: text-top; margin-right: 2px;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>${name}</span>`;
+                        else return `<span style="margin-right: 8px; font-weight: bold; color: #1a73e8;"><svg viewBox="0 0 24 24" width="14" height="14" fill="#1a73e8" style="vertical-align: text-top; margin-right: 2px;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>${name}</span>`;
+                    }).join('');
+                    followerHtml = `<div class="record-data" style="background:#fff3cd; color:#856404; display:flex; align-items:center;">👤 跟進人: <div style="margin-left:5px;">${iconsHtml}</div></div>`;
+                }
 
-            let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${new Date(r.created_at).toLocaleString('zh-HK')}</div>` : "";
-            
-            let followerHtml = '';
-            if (r.follower && r.follower !== '無') {
-                let names = r.follower.split(', ');
-                let iconsHtml = names.map(name => {
-                    if (name.includes('Carman') || name.includes('Stella')) {
-                        return `<span style="margin-right: 8px; font-weight: bold; color: #e91e63;"><svg viewBox="0 0 24 24" width="14" height="14" fill="#e91e63" style="vertical-align: text-top; margin-right: 2px;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>${name}</span>`;
-                    } else {
-                        return `<span style="margin-right: 8px; font-weight: bold; color: #1a73e8;"><svg viewBox="0 0 24 24" width="14" height="14" fill="#1a73e8" style="vertical-align: text-top; margin-right: 2px;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>${name}</span>`;
-                    }
-                }).join('');
-                followerHtml = `<div class="record-data" style="background:#fff3cd; color:#856404; display:flex; align-items:center;">👤 跟進人: <div style="margin-left:5px;">${iconsHtml}</div></div>`;
-            }
+                let divider = index > 0 ? `<hr style="border: 0; height: 8px; background: #d1d5db; margin: 30px 0; border-radius: 4px;">` : "";
+                let safeNote = r.note ? r.note.replace(/"/g, '&quot;').replace(/`/g, '&#96;').replace(/\$/g, '&#36;') : '';
 
-            let divider = index > 0 ? `<hr style="border: 0; height: 8px; background: #d1d5db; margin: 30px 0; border-radius: 4px;">` : "";
-            let safeNote = r.note ? r.note.replace(/"/g, '&quot;').replace(/`/g, '&#96;').replace(/\$/g, '&#36;') : '';
-
-            html += `
-                ${divider}
-                <div class="record-card">
-                    <div class="record-header" style="background: #f8f9fa; padding: 10px; border-radius: 6px 6px 0 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #1a73e8; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <strong style="font-size: 16px;">${r.name} (${r.shift})</strong>
-                            ${timeStr}
+                html += `
+                    ${divider}
+                    <div class="record-card">
+                        <div class="record-header" style="background: #f8f9fa; padding: 10px; border-radius: 6px 6px 0 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #1a73e8; display: flex; justify-content: space-between; align-items: center;">
+                            <div><strong style="font-size: 16px;">${r.name} (${r.shift})</strong>${timeStr}</div>
+                            <div>
+                                <button onclick="editRecord(this)" data-id="${r.id}" data-note="${safeNote}" data-status="${r.status}" style="background: #f5b041; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">✏️ 修改</button>
+                                <button onclick="deleteRecord(${r.id})" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ 刪除</button>
+                            </div>
                         </div>
-                        <div>
-                            <button onclick="editRecord(this)" data-id="${r.id}" data-note="${safeNote}" data-status="${r.status}" style="background: #f5b041; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">✏️ 修改</button>
-                            <button onclick="deleteRecord(${r.id})" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ 刪除</button>
-                        </div>
+                        ${dataHtml}
+                        ${checkItemsHtml}
+                        ${doneIssuesList.join('')}
+                        ${doneOldHtml}
+                        ${pendingIssuesList.join('')}
+                        ${pendingOldHtml}
+                        ${followerHtml}
+                        <div class="record-note" style="margin-top: 10px;">${mainNote}</div>
                     </div>
-                    ${dataHtml}
-                    ${checkItemsHtml}
-                    ${doneIssuesList.join('')}
-                    ${doneOldHtml}
-                    ${pendingIssuesList.join('')}
-                    ${pendingOldHtml}
-                    ${followerHtml}
-                    <div class="record-note" style="margin-top: 10px;">${mainNote}</div>
-                </div>
-            `;
-        });
-        listDiv.innerHTML = html;
-    }).catch(error => console.error("讀取失敗:", error));
-}
+                `;
+            });
+            listDiv.innerHTML = html;
+        }).catch(error => console.error("讀取失敗:", error));
+    }
+
     function submitForm() {
+        let pendingCheckboxes = document.querySelectorAll('.pending-checkbox');
+        let hasUnresolved = false;
+        pendingCheckboxes.forEach(cb => { if (!cb.checked) hasUnresolved = true; });
+
+        if (hasUnresolved) {
+            let isConfirmed = document.getElementById('confirm-pending').checked;
+            if (!isConfirmed) {
+                alert("⚠️ 請注意：仲有未完成嘅跟進項目！\n\n如果你確定呢啲問題仍然未處理，請喺最底撳『我確定未打勾的項目仍然未處理』個格仔，然後再提交。");
+                return; 
+            }
+        }
+
         let data = {
             name: document.getElementById('staffName').value, shift: document.getElementById('shiftType').value,
             lux: document.getElementById('lux').value, temp: document.getElementById('temp').value, bgm: document.getElementById('bgm').value,
@@ -693,16 +676,16 @@ function displayRecords() {
         if (!data.name) { alert("請選擇交更人！"); return; }
         
         let luxIssueArr = []; document.querySelectorAll('.lux-item').forEach(item => {
-            let t = item.querySelector('.lux-table').value; let note = item.querySelector('.note-input')?.value || '';
-            if(t) luxIssueArr.push(`${t} ${note?'('+note+')':''} Box1:${item.querySelector('.lux-box1').value} [${item.querySelector('.issue-status').value}]`);
+            let t = item.querySelector('.lux-table').value; 
+            if(t) luxIssueArr.push(`${t} Box1:${item.querySelector('.lux-box1').value} [${item.querySelector('.issue-status').value}]`);
         });
         data.lux_issue = luxIssueArr.join(' | ');
 
         let venueIssues = []; document.querySelectorAll('.venue-item').forEach(item => {
             let cat = item.querySelector('.venue-category').value; let prob = item.querySelector('.venue-problem').value;
             let locs = []; item.querySelectorAll('.venue-loc-row').forEach(locRow => {
-                let t = locRow.querySelector('.venue-location').value; let note = locRow.querySelector('.note-input')?.value || '';
-                if(t) locs.push(`${t} ${note?'('+note+')':''}`);
+                let t = locRow.querySelector('.venue-location').value;
+                if(t) locs.push(`${t}`);
             });
             if (locs.length > 0) venueIssues.push(`[${cat} - ${prob}] 位置: ${locs.join(', ')} [狀態:${item.querySelector('.issue-status').value}]`);
         });
