@@ -996,7 +996,8 @@ html += `
         ${followerHtml}
         <div class="record-note" style="margin-top: 10px;">${mainNote}</div>
     </div>
-                });
+`;
+     });
                 listDiv.innerHTML = html;
             }).catch(error => console.error("讀取失敗:", error));
             function deleteRecord(id) {
