@@ -18,7 +18,7 @@ ADMIN_PASSWORD = "ADMIN888"     # 管理員密碼
 @app.before_request
 def require_login():
     # 允許訪問登入頁同靜態檔案
-    allowed_routes = ['login', 'static']
+    allowed_routes = ['login', 'static', 'verify_wechat']
     if 'logged_in' not in session and request.endpoint not in allowed_routes:
         return redirect(url_for('login'))
 
