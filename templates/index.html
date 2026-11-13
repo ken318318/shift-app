@@ -493,40 +493,88 @@ function displayRecords() {
         if (records.length === 0) { listDiv.innerHTML = "<p style='color: #888; text-align: center;'>暫時未有紀錄。</p >"; return; }
         let html = "";
         records.forEach((r, index) => {
-            let doneIssuesList = []; let pendingIssuesList = [];
-            let processIssue = (text, defaultPrefix) => {
-                if (!text) return;
-                let match = text.match(/\[狀態:(.*?)\]/); let status = match ? match[1] : '待處理'; let cleanText = text.replace(/\[狀態:.*?\]/g, '').trim();
-                if (status === '已處理') { doneIssuesList.push(formatIssueText(cleanText, defaultPrefix, status)); } else { pendingIssuesList.push(formatIssueText(cleanText, defaultPrefix, status)); }
-            };
-            if (r.lux_issue) processIssue(r.lux_issue, 'Lux -'); if (r.temp_issue) processIssue(r.temp_issue, '溫度 -'); if (r.db_issue) processIssue(r.db_issue, '分貝 -');
-            let checkItemsHtml = '';
-            if (r.checklist) {
-                let items = r.checklist.split(' | '); let normalItems = [];
-                items.forEach(item => {
-                    if (item.includes('異常')) { let text = item.replace('NFC異常: ', ''); processIssue(text.trim(), 'NFC -'); } 
-                    else { let text = item.replace('NFC正常: ', 'NFC ('); if(item.includes('NFC正常')) text += ')'; normalItems.push(text); }
-                });
-                if (normalItems.length > 0) { checkItemsHtml = `<div class="record-data">✅ 正常: ${normalItems.join(' | ')}</div>`; }
-            }
-            let mainNote = r.note || "";
-            if (mainNote.includes('【場面問題】')) {
-                let parts = mainNote.split('【場面問題】'); mainNote = parts[0].trim(); let venueStr = parts[1].split('【早前')[0].trim();
-                venueStr.split('\n').forEach(line => { line = line.trim(); if (line !== '' && !line.startsWith('⚠️') && !line.startsWith('✅')) { processIssue(line, '場面 -'); } });
-            }
-            let doneOldHtml = "";
-            if (r.note && r.note.includes('【早前已處理】')) {
-                if(mainNote.includes('【早前已處理】')) mainNote = mainNote.split('【早前已處理】')[0].trim();
-                let parts = r.note.split('【早前已處理】'); let doneStr = parts[1].split('【早前未處理】')[0].trim();
-                doneStr.split('\n').forEach(line => { if (line.trim()) { doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 舊問題已處理: ${line.trim()}</span></div>`; } });
-            }
-            let pendingOldHtml = "";
-            if (mainNote.includes('【早前未處理】')) {
-                if(mainNote.includes('【早前未處理】')) mainNote = mainNote.split('【早前未處理】')[0].trim();
-                let parts = r.note.split('【早前未處理】'); let pendingStr = parts[1].trim(); let oldItemsHtml = "";
-                pendingStr.split('\n').forEach(line => { if (line.trim()) { oldItemsHtml += `<div class="issue-data" style="background:#ffebee; color:#d32f2f; padding:8px; margin-bottom:5px; border-radius:4px;"><span>⚠️ 早前未處理: ${line.trim()}</span></div>`; } });
-                pendingOldHtml = `<div style="background: #fff3cd; border: 2px dashed #ffa000; padding: 12px; border-radius: 8px; margin-top: 15px;"><div style="font-weight: bold; color: #d84315; margin-bottom: 8px;">📌 早前未處理跟進項目：</div><div>${oldItemsHtml}</div></div>`;
-            }
+           let doneIssuesList = [];
+let pendingIssuesList = [];
+
+// 1. 提取異常紀錄 (Lux/溫度/分貝/NFC)
+let processIssue = (text, defaultPrefix) => {
+    if (!text) return;
+    let match = text.match(/\[狀態:(.*?)\]/);
+    let status = match ? match[1] : '待處理';
+    let cleanText = text.replace(/\[狀態:.*?\]/g, '').trim();
+    if (status === '已處理') {
+        doneIssuesList.push(formatIssueText(cleanText, defaultPrefix, status));
+    } else {
+        pendingIssuesList.push(formatIssueText(cleanText, defaultPrefix, status));
+    }
+};
+if (r.lux_issue) processIssue(r.lux_issue, 'Lux -');
+if (r.temp_issue) processIssue(r.temp_issue, '溫度 -');
+if (r.db_issue) processIssue(r.db_issue, '分貝 -');
+
+let checkItemsHtml = '';
+if (r.checklist) {
+    let items = r.checklist.split(' | ');
+    let normalItems = [];
+    items.forEach(item => {
+        if (item.includes('異常')) {
+            let text = item.replace('NFC異常: ', '');
+            processIssue(text.trim(), 'NFC -');
+        } else {
+            let text = item.replace('NFC正常: ', 'NFC (');
+            if(item.includes('NFC正常')) text += ')';
+            normalItems.push(text);
+        }
+    });
+    if (normalItems.length > 0) { checkItemsHtml = `<div class="record-data">✅ 正常: ${normalItems.join(' | ')}</div>`; }
+}
+
+let rawNote = r.note || "";
+let mainNote = rawNote;
+
+// 2. 提取場面問題 (並截斷 mainNote)
+if (mainNote.includes('【場面問題】')) {
+    let parts = mainNote.split('【場面問題】');
+    let venueStr = parts[1].split('【早前')[0].trim(); // 拎走後面嘅早前
+    mainNote = parts[0].trim(); // 主文字只留前面
+    venueStr.split('\n').forEach(line => {
+        line = line.trim();
+        if (line !== '' && !line.startsWith('⚠️') && !line.startsWith('✅')) {
+            processIssue(line, '場面 -');
+        }
+    });
+}
+
+// 3. 提取【早前已處理】 (改用 rawNote 判斷)
+let doneOldHtml = "";
+if (rawNote.includes('【早前已處理】')) {
+    let parts = rawNote.split('【早前已處理】');
+    let doneStr = parts[1].split('【早前未處理】')[0].trim();
+    doneStr.split('\n').forEach(line => {
+        if (line.trim()) {
+            doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 舊問題已處理: ${line.trim()}</span></div>`;
+        }
+    });
+    mainNote = mainNote.split('【早前已處理】')[0].trim();
+}
+
+// 4. 提取【早前未處理】 (改用 rawNote 判斷，咁就唔會被截斷)
+let pendingOldHtml = "";
+if (rawNote.includes('【早前未處理】')) {
+    let parts = rawNote.split('【早前未處理】');
+    let pendingStr = parts[1].trim();
+    let oldItemsHtml = "";
+    pendingStr.split('\n').forEach(line => {
+        if (line.trim()) {
+            oldItemsHtml += `<div class="issue-data" style="background:#ffebee; color:#d32f2f; padding:8px; margin-bottom:5px; border-radius:4px;"><span>⚠️ 早前未處理: ${line.trim()}</span></div>`;
+        }
+    });
+    pendingOldHtml = `<div style="background: #fff3cd; border: 2px dashed #ffa000; padding: 12px; border-radius: 8px; margin-top: 15px;">
+    <div style="font-weight: bold; color: #d84315; margin-bottom: 8px;">📌 早前未處理跟進項目：</div>
+    <div>${oldItemsHtml}</div>
+    </div>`;
+    mainNote = mainNote.split('【早前未處理】')[0].trim();
+}
             let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : 'Lux數值大致在於450-650之間';
             let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常' || r.temp_issue) ? '溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
             let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常' || r.db_issue) ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
