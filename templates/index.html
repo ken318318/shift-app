@@ -697,12 +697,16 @@ function loadPendingIssues() {
     }
 
     document.addEventListener("DOMContentLoaded", function() {
-        fetch('/api/get_configs').then(res => res.json()).then(data => {
-            venueCategories = data; 
-            let firstVenue = document.querySelector('.venue-category'); if(firstVenue) initVenueCategory(firstVenue);
-            transformInputs(); 
-        }).catch(err => { console.error(err); transformInputs(); });
-    });
+    // 🌟 網頁一打開，即刻載入歷史紀錄！
+    showList(); 
+
+    // 然後再載入後台嘅選項設定
+    fetch('/api/get_configs').then(res => res.json()).then(data => {
+        venueCategories = data; 
+        let firstVenue = document.querySelector('.venue-category'); if(firstVenue) initVenueCategory(firstVenue);
+        transformInputs(); 
+    }).catch(err => { console.error(err); transformInputs(); });
+});
     </script>
 </body>
 </html>
