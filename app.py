@@ -294,6 +294,55 @@ def admin():
     if session.get('role') != 'admin':
         return "⚠️ 權限不足！請用管理員密碼登入。", 403
     return render_template('admin.html')
+@app.route('/api/delete_record', methods=['POST'])
+def delete_record():
+    # 🌟 權限檢查：只有 Admin 先可以刪除
+    if session.get('role') != 'admin':
+        return jsonify({"status": "error", "message": "⚠️ 權限不足！只有管理員可以刪除紀錄。"})
+    
+    data = request.json
+    record_id = data.get('id')
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    c.execute("DELETE FROM records WHERE id = %s", (record_id,))
+    conn.commit()
+    release_db_connection(conn)
+    
+    return jsonify({"status": "success", "message": "✅ 紀錄已成功刪除！"})
+
+@app.route('/api/update_record', methods=['POST'])
+def update_record():
+    data = request.json
+    record_id = data.get('id')
+    new_note = data.get('note')
+    new_status = data.get('status')
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    c.execute("SELECT created_at FROM records WHERE id = %s", (record_id,))
+    row = c.fetchone()
+    if not row:
+        release_db_connection(conn)
+        return jsonify({"status": "error", "message": "❌ 找不到該紀錄！"})
+        
+    created_at = row[0]
+    
+    # 🌟 時間檢查：非 Admin 超過 5 分鐘即拒絕
+    if session.get('role') != 'admin':
+        import datetime
+        now = datetime.datetime.now(pytz.timezone('Asia/Macau'))
+        time_diff = now - created_at
+        if time_diff.total_seconds() > 300: 
+            release_db_connection(conn)
+            return jsonify({"status": "error", "message": "⏰ 已超過 5 分鐘修改時限，無法修改！"})
+
+    c.execute("UPDATE records SET note = %s, status = %s WHERE id = %s", (new_note, new_status, record_id))
+    conn.commit()
+    release_db_connection(conn)
+    
+    return jsonify({"status": "success", "message": "✅ 紀錄已成功更新！"})
 
 @app.route('/')
 def index():
