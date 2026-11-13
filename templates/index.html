@@ -454,15 +454,16 @@ function loadPendingIssues() {
             });
           }
 
-            // 🌟 新增：讀取「早前未處理」（救返 ATM 嘅關鍵）
-               if (issue.note && issue.note.includes('【早前未處理】')) {
-               let oldStr = issue.note.split('【早前未處理】')[1].trim();
-                  oldStr.split('\n').forEach(line => {
-               if (line.trim() && !line.includes('【')) { 
-                  addItem('場面', line);
-             }
-         });
-      }
+                if (issue.note && issue.note.includes('【早前未處理】')) {
+                let oldStr = issue.note.split('【早前未處理】')[1].trim();
+                   oldStr.split('\n').forEach(line => {
+                   line = line.trim();
+                  // 🌟 確保唔會再抽到啲奇怪嘅標題或者空行
+                if (line && !line.includes('【') && !line.includes('】') && !line.startsWith('早前未處理:')) { 
+                   addItem('場面', line);
+                 }
+            });
+     }
         });
         let finalHtml = "";
         for (let cat in window.globalGroupedItems) finalHtml += `<div class="pending-card" style="border-left: 4px solid #ffa000; margin-bottom: 15px;"><details style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 5px;"><summary style="cursor: pointer; font-weight: bold; color: #856404; padding: 5px;">${cat} (${window.globalGroupedItems[cat].length} 項)</summary><div style="padding: 5px 0 0 0;">${window.globalGroupedItems[cat].join('')}</div></details></div>`;
@@ -574,23 +575,7 @@ if (rawNote.includes('【早前已處理】')) {
     mainNote = mainNote.split('【早前已處理】')[0].trim();
 }
 
-// 4. 提取【早前未處理】 (改用 rawNote 判斷，咁就唔會被截斷)
-let pendingOldHtml = "";
-if (rawNote.includes('【早前未處理】')) {
-    let parts = rawNote.split('【早前未處理】');
-    let pendingStr = parts[1].trim();
-    let oldItemsHtml = "";
-    pendingStr.split('\n').forEach(line => {
-        if (line.trim()) {
-            oldItemsHtml += `<div class="issue-data" style="background:#ffebee; color:#d32f2f; padding:8px; margin-bottom:5px; border-radius:4px;"><span>⚠️ 早前未處理: ${line.trim()}</span></div>`;
-        }
-    });
-    pendingOldHtml = `<div style="background: #fff3cd; border: 2px dashed #ffa000; padding: 12px; border-radius: 8px; margin-top: 15px;">
-    <div style="font-weight: bold; color: #d84315; margin-bottom: 8px;">📌 早前未處理跟進項目：</div>
-    <div>${oldItemsHtml}</div>
-    </div>`;
-    mainNote = mainNote.split('【早前未處理】')[0].trim();
-}
+
             let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : 'Lux數值大致在於450-650之間';
             let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常' || r.temp_issue) ? '溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
             let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常' || r.db_issue) ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
@@ -607,7 +592,7 @@ if (rawNote.includes('【早前未處理】')) {
             }
             let divider = index > 0 ? `<hr style="border: 0; height: 8px; background: #d1d5db; margin: 30px 0; border-radius: 4px;">` : "";
             let safeNote = r.note ? r.note.replace(/"/g, '&quot;').replace(/`/g, '&#96;').replace(/\$/g, '&#36;') : '';
-            html += `${divider}<div class="record-card"><div class="record-header" style="background: #f8f9fa; padding: 10px; border-radius: 6px 6px 0 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #1a73e8; display: flex; justify-content: space-between; align-items: center;"><div><strong style="font-size: 16px;">${r.name} (${r.shift})</strong>${timeStr}</div><div><button onclick="editRecord(this)" data-id="${r.id}" data-note="${safeNote}" data-status="${r.status}" style="background: #f5b041; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">✏️ 修改</button><button onclick="deleteRecord(${r.id})" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ 刪除</button></div></div>${dataHtml}${checkItemsHtml}${doneIssuesList.join('')}${doneOldHtml}${pendingIssuesList.join('')}${pendingOldHtml}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div></div>`;
+            html += `${divider}<div class="record-card"><div class="record-header" style="background: #f8f9fa; padding: 10px; border-radius: 6px 6px 0 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #1a73e8; display: flex; justify-content: space-between; align-items: center;"><div><strong style="font-size: 16px;">${r.name} (${r.shift})</strong>${timeStr}</div><div><button onclick="editRecord(this)" data-id="${r.id}" data-note="${safeNote}" data-status="${r.status}" style="background: #f5b041; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">✏️ 修改</button><button onclick="deleteRecord(${r.id})" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ 刪除</button></div></div>${dataHtml}${checkItemsHtml}${doneIssuesList.join('')}${doneOldHtml}${pendingIssuesList.join('')}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div></div>`;
         });
         listDiv.innerHTML = html;
     }).catch(error => console.error("讀取失敗:", error));
