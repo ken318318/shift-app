@@ -975,12 +975,16 @@ if (hasUnresolved) {
                     html += `
                         ${divider}
                         <div class="record-card">
-                            <div class="record-header" style="background: #f8f9fa; padding: 10px; border-radius: 6px 6px 0 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #1a73e8;">
+                            <div class="record-header" style="background: #f8f9fa; padding: 10px; border-radius: 6px 6px 0 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #1a73e8; display: flex; justify-content: space-between; align-items: center;">
                                 <div>
-                                    <strong style="font-size: 16px;">${r.name} (${r.shift})</strong>
-                                    ${timeStr}
-                                </div>
-                            </div>
+                                  <strong style="font-size: 16px;">${r.name} (${r.shift})</strong>
+                                  ${timeStr}
+                               </div>
+                               <div>
+                                  <button onclick="editRecord(${r.id}, '${r.note.replace(/'/g, "\\'")}', '${r.status}')" style="background: #f5b041; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">✏️ 修改</button>
+                                  <button onclick="deleteRecord(${r.id})" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ 刪除</button>
+                               </div>
+                         </div>
                             ${dataHtml}
                             ${checkItemsHtml}
                             ${doneIssuesList.join('')}
