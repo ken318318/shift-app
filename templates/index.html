@@ -981,7 +981,7 @@ if (hasUnresolved) {
                                   ${timeStr}
                                </div>
                                <div>
-                                  <button onclick="editRecord(${r.id}, '${r.note.replace(/'/g, "\\'")}', '${r.status}')" style="background: #f5b041; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">✏️ 修改</button>
+                                  <button onclick="editRecord(this)" data-id="${r.id}" data-note="${r.note ? r.note.replace(/"/g, '&quot;') : ''}" data-status="${r.status}" style="background: #f5b041; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">✏️ 修改</button>
                                   <button onclick="deleteRecord(${r.id})" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ 刪除</button>
                                </div>
                          </div>
@@ -1016,8 +1016,11 @@ if (hasUnresolved) {
     }
 }
 
-function editRecord(id, currentNote, currentStatus) {
-    currentNote = currentNote || "";
+function editRecord(btn) {
+    // 🌟 從 data 屬性攞返資料
+    let id = btn.getAttribute('data-id');
+    let currentNote = btn.getAttribute('data-note') || "";
+    let currentStatus = btn.getAttribute('data-status') || "";
     
     // 彈出輸入框俾同事改字
     let newNote = prompt("請修改交更內容：", currentNote);
@@ -1040,7 +1043,6 @@ function editRecord(id, currentNote, currentStatus) {
     })
     .catch(err => alert("❌ 連線失敗，請稍後再試。"));
 }
-        }
 
         function updateClock() {
             let now = new Date();
