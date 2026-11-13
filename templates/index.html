@@ -265,28 +265,26 @@
 
     <label>場面問題項目輸入 (可留空)：</label>
     <div class="issue-group" style="background: #e3f2fd; border-color: #90caf9; display: block;">
-        <div id="venue-container">
-            <div class="issue-item venue-item" style="border-bottom-color: #90caf9;">
-                <div class="issue-row">
-                    <select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select>
-                    <select class="prefix venue-problem" style="flex: 1.5;"></select>
-                </div>
-                <div class="venue-location-container">
-                    <div class="issue-row venue-loc-row" style="margin-top: 5px;">
-                        <input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5;">
-                        <button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px; font-size: 14px;" onclick="addVenueLocation(this)">+</button>
-                    </div>
-                </div>
-                <div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-                    <div style="display: flex; align-items: center; flex: 1;">
-                        <span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span>
-                        <select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
-                    </div>
-                </div>
+       <div id="venue-container">
+    <div class="issue-item venue-item" style="border-bottom-color: #90caf9;">
+        <div class="issue-row">
+            <select class="venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select>
+            <select class="venue-problem" style="flex: 1.5;"></select>
+        </div>
+        <div class="venue-location-container">
+            <div class="issue-row venue-loc-row" style="margin-top: 5px;">
+                <input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5;">
+                <button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px; font-size: 14px;" onclick="addVenueLocation(this)">+</button>
             </div>
         </div>
-        <button type="button" class="btn-add" style="background: #1976d2;" onclick="addVenueRow()">+ 新增場面問題</button>
+        <div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; flex: 1;">
+                <span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span>
+                <select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
+            </div>
+        </div>
     </div>
+</div>
 
     <label>負責跟進人 (可多選)：</label>
     <div class="checkbox-group" style="display:block;">
@@ -339,17 +337,7 @@ function autoFillTable(el) {
 }
 
 function transformInputs() {
-    document.querySelectorAll('.prefix').forEach(sel => {
-        sel.style.display = 'none'; 
-        if (!sel.nextElementSibling || !sel.nextElementSibling.classList.contains('note-input')) {
-            let note = document.createElement('input');
-            note.type = 'text';
-            note.className = 'note-input';
-            note.placeholder = '備註(選填)';
-            note.style.cssText = 'flex: 1.5; padding: 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 13px; margin-left: 5px;';
-            sel.parentNode.insertBefore(note, sel.nextSibling);
-        }
-    });
+    // 只要幫台號輸入框加返自動識別魔法就得
     document.querySelectorAll('.table-num, .venue-location').forEach(inp => {
         inp.placeholder = '輸入數字(如0201)';
         inp.setAttribute('oninput', 'autoFillTable(this)');
@@ -449,7 +437,25 @@ function addNfcRow() {
 }
 
 function addVenueRow() {
-    let html = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="prefix venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select><select class="prefix venue-problem" style="flex: 1.5;"></select></div><div class="venue-location-container"><div class="issue-row venue-loc-row" style="margin-top: 5px;"><input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5;"><button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px; font-size: 14px;" onclick="addVenueLocation(this)">+</button></div></div><div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; align-items: center; flex: 1;"><span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span><select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="待處理">待處理</option></select></div><button type="button" class="btn-remove" style="position: static; margin-left: 10px;" onclick="this.parentElement.parentElement.remove()">X</button></div></div>`;
+    let html = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;">
+        <div class="issue-row">
+            <select class="venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select>
+            <select class="venue-problem" style="flex: 1.5;"></select>
+        </div>
+        <div class="venue-location-container">
+            <div class="issue-row venue-loc-row" style="margin-top: 5px;">
+                <input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5;">
+                <button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px; font-size: 14px;" onclick="addVenueLocation(this)">+</button>
+            </div>
+        </div>
+        <div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; flex: 1;">
+                <span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span>
+                <select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
+            </div>
+            <button type="button" class="btn-remove" style="position: static; margin-left: 10px;" onclick="this.parentElement.parentElement.remove()">X</button>
+        </div>
+    </div>`;
     document.getElementById('venue-container').insertAdjacentHTML('beforeend', html);
     initVenueCategory(document.querySelector('.venue-item:last-child .venue-category'));
     transformInputs();
