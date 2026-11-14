@@ -75,7 +75,6 @@ def admin():
 def get_configs():
     conn = get_db_connection()
     c = conn.cursor()
-    # 🌟 強制自訂排序
     c.execute("""SELECT category, problem FROM venue_configs 
                  ORDER BY 
                  CASE 
@@ -153,6 +152,7 @@ def get_pending_issues():
                 part = part.split('【早前未處理】')[0]
             for line in part.split('\n'):
                 if line.strip(): 
+                    # 🌟 強制洗走狀態，並轉做大楷，完美解決 hall1 / HALL1 重複問題
                     clean_line = re.sub(r'\[狀態:.*?\]', '', line).strip().upper()
                     done_items.add(clean_line)
 
