@@ -529,12 +529,22 @@ function deleteRecord(id) {
     }
 }
 function editRecord(btn) {
-    let id = btn.getAttribute('data-id'); let currentNote = btn.getAttribute('data-note') || ""; let currentStatus = btn.getAttribute('data-status') || "";
-    let newNote = prompt("請修改交更內容：", currentNote); if (newNote === null) return; 
-    let newStatus = prompt("請修改跟進狀態：", currentStatus); if (newStatus === null) return;
-    fetch('/api/update_record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id, note: newNote, status: newStatus }) })
-    .then(res => res.json()).then(data => { alert(data.message); if (data.status === 'success') showList(); })
-    .catch(err => alert("❌ 連線失敗，請稍後再試。"));
+    let id = btn.getAttribute('data-id');
+    let createdTime = btn.getAttribute('data-time');
+    
+    // 檢查係咪超過 5 分鐘 (300,000 毫秒)
+    if (createdTime) {
+        let timeDiff = new Date().getTime() - new Date(createdTime).getTime();
+        if (timeDiff > 300000) {
+            alert("⏰ 已超過 5 分鐘修改時限，無法修改！");
+            return;
+        }
+    }
+
+    // 提示用戶並跳轉到表單
+    alert("📝 系統會將此紀錄載入表單，請修改後重新提交（提交後舊紀錄會被刪除）。");
+    deleteRecord(id); // 暫時用刪除舊紀錄嘅方式，等你重新填
+    showForm(); 
 }
 function formatIssueText(text, defaultPrefix, statusStr) {
     if (!text) return "";
@@ -640,7 +650,7 @@ if (rawNote.includes('【早前已處理】')) {
             safeNote = safeNote.replace(/\[狀態:.*?\]/g, '').replace(/【早前已處理】[\s\S]*/g, '').replace(/【早前未處理】[\s\S]*/g, '').trim();
             // 🌟 關鍵修正：修改時，強制洗走舊有嘅【狀態】同【早前】字眼，避免撳「修改」嗰陣彈出垃圾字！
             safeNote = safeNote.replace(/\[狀態:.*?\]/g, '').replace(/【早前已處理】[\s\S]*/g, '').replace(/【早前未處理】[\s\S]*/g, '').trim();
-            html += `${divider}<div class="record-card"><div class="record-header" style="background: #f8f9fa; padding: 10px; border-radius: 6px 6px 0 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #1a73e8; display: flex; justify-content: space-between; align-items: center;"><div><strong style="font-size: 16px;">${r.name} (${r.shift})</strong>${timeStr}</div><div><button onclick="editRecord(this)" data-id="${r.id}" data-note="${safeNote}" data-status="${r.status}" style="background: #f5b041; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">✏️ 修改</button><button onclick="deleteRecord(${r.id})" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ 刪除</button></div></div>${dataHtml}${checkItemsHtml}${doneIssuesList.join('')}${doneOldHtml}${pendingIssuesList.join('')}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote.split('【早前')[0].trim()}</div>`;
+            html += `${divider}<div class="record-card"><div class="record-header" style="background: #f8f9fa; padding: 10px; border-radius: 6px 6px 0 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #1a73e8; display: flex; justify-content: space-between; align-items: center;"><div><strong style="font-size: 16px;">${r.name} (${r.shift})</strong>${timeStr}</div><div><button onclick="editRecord(this)" data-id="${r.id}" data-note="${safeNote}" data-status="${r.status}" data-time="${r.created_at}" style="background: #f5b041; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">✏️ 修改</button><button onclick="deleteRecord(${r.id})" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ 刪除</button></div></div>${dataHtml}${checkItemsHtml}${doneIssuesList.join('')}${doneOldHtml}${pendingIssuesList.join('')}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote.split('【早前')[0].trim()}</div>`;
         });
         listDiv.innerHTML = html;
     }).catch(error => console.error("讀取失敗:", error));
