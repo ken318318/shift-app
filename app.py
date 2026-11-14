@@ -23,6 +23,7 @@ def init_pool():
         print("連線池建立成功！")
     except Exception as e:
         print("連線池建立失敗:", e)
+
 init_pool()
 
 def get_db_connection():
@@ -88,7 +89,8 @@ def get_configs():
     release_db_connection(conn)
     configs = {}
     for row in rows:
-        if row[0] not in configs: configs[row[0]] = []
+        if row[0] not in configs: 
+            configs[row[0]] = []
         configs[row[0]].append(row[1])
     return jsonify(configs)
 
@@ -117,8 +119,9 @@ def submit():
     conn.commit()
     release_db_connection(conn)
     return jsonify({"message": "交更成功！", "status": "success"})
-    @app.route('/api/overwrite_record', methods=['POST'])
-    def overwrite_record():
+
+@app.route('/api/overwrite_record', methods=['POST'])
+def overwrite_record():
     data = request.json
     old_id = data.get('old_id')
     
@@ -191,7 +194,6 @@ def get_pending_issues():
                 part = part.split('【早前未處理】')[0]
             for line in part.split('\n'):
                 if line.strip(): 
-                    # 🌟 強制洗走狀態，並轉做大楷，完美解決 hall1 / HALL1 重複問題
                     clean_line = re.sub(r'\[狀態:.*?\]', '', line).strip().upper()
                     done_items.add(clean_line)
 
@@ -204,7 +206,6 @@ def get_pending_issues():
                  ORDER BY id DESC""")
     rows = c.fetchall()
     release_db_connection(conn)
-    
     pending = []
     for row in rows:
         pending.append({
@@ -217,10 +218,11 @@ def get_pending_issues():
 @app.route('/api/delete_record', methods=['POST'])
 def delete_record():
     if session.get('role') != 'admin':
-        return jsonify({"status": "error", "message": "⚠️ 權限不足！"})
+        return jsonify({"status": "error", "message": "⚠️ 權限不足！只有管理員可以刪除紀錄。"})
+    data = request.json
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("DELETE FROM records WHERE id = %s", (request.json.get('id'),))
+    c.execute("DELETE FROM records WHERE id = %s", (data.get('id'),))
     conn.commit()
     release_db_connection(conn)
     return jsonify({"status": "success", "message": "✅ 紀錄已成功刪除！"})
