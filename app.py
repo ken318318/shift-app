@@ -107,18 +107,25 @@ def add_config():
 @app.route('/api/submit', methods=['POST'])
 def submit():
     data = request.json
-    conn = get_db_connection()
-    c = conn.cursor()
-    now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
-    c.execute("""INSERT INTO records 
-                 (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, created_at) 
-                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
-              (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
-               data.get('checklist'), data.get('status'), data.get('follower'), data.get('note'),
-               data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'), now_macau))
-    conn.commit()
-    release_db_connection(conn)
-    return jsonify({"message": "交更成功！", "status": "success"})
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
+        c.execute("""INSERT INTO records 
+                     (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, created_at) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+                  (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
+                   data.get('checklist'), data.get('status'), data.get('follower'), data.get('note'),
+                   data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'), now_macau))
+        conn.commit()
+        return jsonify({"message": "交更成功！", "status": "success"})
+    except Exception as e:
+        print("Submit Error:", e)
+        return jsonify({"status": "error", "message": "❌ 數據庫連線超時，請重新整理後再試！"})
+    finally:
+        if conn:
+            release_db_connection(conn)
 
 @app.route('/api/overwrite_record', methods=['POST'])
 def overwrite_record():
@@ -195,7 +202,6 @@ def get_pending_issues():
             for line in part.split('\n'):
                 if line.strip(): 
                     clean_line = re.sub(r'\[狀態:.*?\]', '', line).strip().upper()
-                    # 如果包含多個位置，幫佢逐個拆開存入黑名單，避免 LAYOUT 疊加
                     if '位置:' in clean_line and (',' in clean_line or '，' in clean_line):
                         parts = clean_line.split('位置:')
                         if len(parts) == 2:
