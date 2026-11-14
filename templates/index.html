@@ -323,13 +323,20 @@ function loadPendingIssues() {
         container.style.display = 'block'; let html = ""; let totalItems = 0; let seenItems = new Set(); window.globalGroupedItems = {}; 
         issues.forEach(issue => {
             let timeStr = issue.created_at ? new Date(issue.created_at).toLocaleString('zh-HK') : '';
-            let addItem = (type, text, forceShow = false) => {
+            let addItem = (type, text, recordId) => {
                 if (!text) return;
-                if (type === '場面' && text.includes('位置:')) { let parts = text.split('位置:'); if (parts.length === 2) { let beforePos = parts[0]; let afterPos = parts[1]; let statusMatch = afterPos.match(/\[狀態:.*?\]/); let statusStr = statusMatch ? statusMatch[0] : ''; let tablesStr = afterPos.replace(/\[狀態:.*?\]/g, '').trim(); if (tablesStr.includes(',') || tablesStr.includes('，')) { let tables = tablesStr.split(/[,，]/).map(t => t.trim()).filter(Boolean); if (tables.every(t => /^[A-Za-z]{2,4}\d+$/i.test(t))) { tables.forEach(table => addItem(type, `${beforePos}位置: ${table} ${statusStr}`.trim(), forceShow)); return; } } } }
+                if (type === '場面' && text.includes('位置:')) { let parts = text.split('位置:'); if (parts.length === 2) { let beforePos = parts[0]; let afterPos = parts[1]; let statusMatch = afterPos.match(/\[狀態:.*?\]/); let statusStr = statusMatch ? statusMatch[0] : ''; let tablesStr = afterPos.replace(/\[狀態:.*?\]/g, '').trim(); if (tablesStr.includes(',') || tablesStr.includes('，')) { let tables = tablesStr.split(/[,，]/).map(t => t.trim()).filter(Boolean); if (tables.every(t => /^[A-Za-z]{2,4}\d+$/i.test(t))) { tables.forEach(table => addItem(type, `${beforePos}位置: ${table} ${statusStr}`.trim(), recordId)); return; } } } }
                 let statusMatch = text.match(/\[狀態:(.*?)\]/); let currentStatus = statusMatch ? statusMatch[1] : '待處理'; if (currentStatus === '已處理') return; 
                 let clean = text.replace(/\[狀態:.*?\]/g, '').replace('⚠️', '').replace('✅', '').trim(); if (!clean) return;
                 let checkText = `${type} - ${clean}`.toUpperCase(); let dataText = `${type} - ${clean} [狀態:${currentStatus}]`;
-                if (!forceShow) { if (doneSet.includes(checkText)) { if (issue.id !== issues[0].id && issue.created_at !== issues[0].created_at) { return; } } if (seenItems.has(checkText)) return; }
+                
+                // 1. 本輪去重（同一筆紀錄如果有重複字眼，只留一個）
+                if (seenItems.has(checkText)) return; 
+                
+                // 2. 黑名單比對（如果以前處理過，且唔係最新嗰筆，就唔好顯示）
+                let inDoneSet = doneSet.includes(checkText);
+                if (inDoneSet && recordId !== issues[0].id) { return; }
+                
                 seenItems.add(checkText);
                 let badgeColor = currentStatus === '已 Send mail' ? '#9c27b0' : (currentStatus === '已通知相關部門跟進' ? '#e67c73' : '#f5b041');
                 let itemHtml = `<div class="pending-item-row" data-text="${dataText}" style="display:flex; align-items:center; background:#ffebee; padding:10px; margin-bottom:5px; border-radius:6px; border: 1px solid #ffcdd2;"><input type="checkbox" class="pending-checkbox" data-text="${dataText}" style="width:20px; height:20px; margin-right:10px;"><div style="font-size:13px; color:#d32f2f; flex:1; line-height: 1.5; padding: 5px 0;"><strong>⚠️ ${type} - ${clean}</strong><span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:5px; display: inline-block; white-space: nowrap;">${currentStatus}</span><br><span style="font-size:11px; color:#888;">交更時間: ${timeStr}</span></div></div>`;
@@ -337,10 +344,20 @@ function loadPendingIssues() {
                 if (!window.globalGroupedItems[cat]) window.globalGroupedItems[cat] = [];
                 window.globalGroupedItems[cat].push(`<div style="margin-bottom:8px;"><div style="font-size:11px; color:#856404; margin-bottom:3px;">👤 ${issue.name}</div>${itemHtml}</div>`); totalItems++;
             };
-            if (issue.lux_issue) addItem('Lux', issue.lux_issue, true); if (issue.temp_issue) addItem('溫度', issue.temp_issue, true); if (issue.db_issue) addItem('分貝', issue.db_issue, true);
-            if (issue.checklist && issue.checklist.includes('NFC異常:')) { let nfcText = issue.checklist.split('NFC異常: ')[1]; if (nfcText) addItem('NFC', nfcText.trim(), true); }
-            if (issue.note && issue.note.includes('【場面問題】')) { let venueStr = issue.note.split('【場面問題】')[1].split('【早前')[0].trim(); venueStr.split('\n').forEach(line => { if (line.trim()) addItem('場面', line, true); }); }
-            if (issue.note && issue.note.includes('【早前未處理】')) { let oldStr = issue.note.split('【早前未處理】')[1].trim(); oldStr.split('\n').forEach(line => { line = line.trim(); if (line && !line.includes('【') && !line.includes('】') && !line.startsWith('早前未處理:')) { let m = line.match(/^(Lux|溫度|分貝|NFC|場面)\s*-\s*/); let t = m ? m[1] : '場面'; let txt = m ? line.slice(m[0].length) : line; addItem(t, txt, true); } }); }
+            if (issue.lux_issue) addItem('Lux', issue.lux_issue, issue.id); 
+            if (issue.temp_issue) addItem('溫度', issue.temp_issue, issue.id); 
+            if (issue.db_issue) addItem('分貝', issue.db_issue, issue.id);
+            if (issue.checklist && issue.checklist.includes('NFC異常:')) { 
+                let parts = issue.checklist.split(' | ');
+                parts.forEach(part => {
+                    if (part.startsWith('NFC異常:')) {
+                        let nfcText = part.replace('NFC異常:', '').trim();
+                        if (nfcText) addItem('NFC', nfcText, issue.id);
+                    }
+                });
+            }
+            if (issue.note && issue.note.includes('【場面問題】')) { let venueStr = issue.note.split('【場面問題】')[1].split('【早前')[0].trim(); venueStr.split('\n').forEach(line => { if (line.trim()) addItem('場面', line, issue.id); }); }
+            if (issue.note && issue.note.includes('【早前未處理】')) { let oldStr = issue.note.split('【早前未處理】')[1].trim(); oldStr.split('\n').forEach(line => { line = line.trim(); if (line && !line.includes('【') && !line.includes('】') && !line.startsWith('早前未處理:')) { let m = line.match(/^(Lux|溫度|分貝|NFC|場面)\s*-\s*/); let t = m ? m[1] : '場面'; let txt = m ? line.slice(m[0].length) : line; addItem(t, txt, issue.id); } }); }
         });
         let finalHtml = ""; for (let cat in window.globalGroupedItems) finalHtml += `<div class="pending-card" style="border-left: 4px solid #ffa000; margin-bottom: 15px;"><details style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 5px;"><summary style="cursor: pointer; font-weight: bold; color: #856404; padding: 5px;">${cat} (${window.globalGroupedItems[cat].length} 項)</summary><div style="padding: 5px 0 0 0;">${window.globalGroupedItems[cat].join('')}</div></details></div>`;
         if (totalItems === 0) { container.style.display = 'none'; document.getElementById('home-pending-container').style.display = 'none'; } else { document.getElementById('pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開剔選)`; listDiv.innerHTML = finalHtml; document.getElementById('home-pending-container').style.display = 'block'; document.getElementById('home-pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開查看)`; document.getElementById('home-pending-list').innerHTML = finalHtml.replace(/<input type="checkbox"[^>]*>/g, ''); }
