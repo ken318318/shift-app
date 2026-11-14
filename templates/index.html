@@ -52,7 +52,7 @@
         .record-card { background: #fff; border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .record-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; font-size: 14px; }
         .record-data { font-size: 13px; color: #555; margin-bottom: 8px; background: #f4f6f8; padding: 8px; border-radius: 4px;}
-        .issue-data { font-size: 13px; margin-bottom: 8px; padding: 8px; border-radius: 4px; line-height: 1.5; display: flex; justify-content: space-between; align-items: center;}
+        .issue-data { font-size: 13px; margin-bottom: 8px; padding: 8px; border-radius: 4px; line-height: 1.5; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
         .record-note { font-size: 14px; white-space: pre-wrap; line-height: 1.5; color: #222;}
         .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; color: white; white-space: nowrap;}
         .status-pending { background: #e67c73; }
@@ -488,10 +488,15 @@ function loadPendingIssues() {
    let checkText = `${type} - ${clean}`.toUpperCase();
    let dataText = `${type} - ${clean} [狀態:${currentStatus}]`;
 
-    // 復發解鎖機制
-    if (doneSet.includes(checkText) && !seenItems.has(checkText)) {
-        if (issue.id === issues[0].id || issue.created_at === issues[0].created_at) { 
-            doneSet = doneSet.filter(item => item !== checkText); 
+   // 🌟 修正防重複：如果黑名單有，但佢係最新紀錄，強制放行！
+   if (doneSet.includes(checkText)) {
+   if (issue.id !== issues[0].id && issue.created_at !== issues[0].created_at) {
+        return; 
+    }
+}
+
+   if (seenItems.has(checkText)) return;
+     seenItems.add(checkText); 
         }
     }
     
