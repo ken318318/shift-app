@@ -501,12 +501,18 @@ function loadPendingIssues() {
                 if (issue.temp_issue) addItem('溫度', issue.temp_issue);
                 if (issue.db_issue) addItem('分貝', issue.db_issue);
 
+                // 🌟 新增：讀取 NFC 異常
+                if (issue.checklist && issue.checklist.includes('NFC異常:')) {
+                let nfcStr = issue.checklist.split('NFC異常: ')[1];
+                 addItem('NFC', nfcStr);
+           }
+
                 if (issue.note && issue.note.includes('【場面問題】')) {
                 let venueStr = issue.note.split('【場面問題】')[1].split('【早前')[0].trim();
-                    venueStr.split('\n').forEach(line => {
+                 venueStr.split('\n').forEach(line => {
                 if (line.trim()) addItem('場面', line);
-            });
-          }
+         });
+    }
 
                 if (issue.note && issue.note.includes('【早前未處理】')) {
                 let oldStr = issue.note.split('【早前未處理】')[1].trim();
