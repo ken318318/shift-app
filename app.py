@@ -195,7 +195,18 @@ def get_pending_issues():
             for line in part.split('\n'):
                 if line.strip(): 
                     clean_line = re.sub(r'\[狀態:.*?\]', '', line).strip().upper()
-                    done_items.add(clean_line)
+                    # 新增：如果包含多個位置，幫佢逐個拆開存入黑名單
+                    if '位置:' in clean_line and (',' in clean_line or '，' in clean_line):
+                        parts = clean_line.split('位置:')
+                        if len(parts) == 2:
+                            before = parts[0].strip()
+                            after = parts[1].strip()
+                            tables = re.split(r'[,，]', after)
+                            for t in tables:
+                                t = t.strip()
+                                if t: done_items.add(f"{before} 位置: {t}")
+                    else:
+                        done_items.add(clean_line)
 
     c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status, checklist,
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
