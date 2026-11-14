@@ -551,17 +551,73 @@ function editRecord(btn) {
         }
     }
 
-    // 2. 攞返舊紀錄嘅資料
+    // 2. 攞返舊資料
     let note = btn.getAttribute('data-note') || "";
+    let rawStatus = btn.getAttribute('data-status') || "待處理";
     
     // 3. 跳去表單
     showForm();
 
-    // 4. 自動填入舊資料 (去除【早前】字眼)
-    document.getElementById('notes').value = note.split('【早前')[0].trim();
-    
-    // 提示用戶
-    alert("📝 已為你載入原有資料。\n請喺下方修改後重新提交。");
+    // 4. 填入「詳細交更事項」同「跟進人」
+    let mainNote = note.split('【場面問題】')[0].split('【早前')[0].trim();
+    document.getElementById('notes').value = mainNote;
+
+    // 5. 逆向解析「場面問題」（還原下拉選單）
+    if (note.includes('【場面問題】')) {
+        let venueStr = note.split('【場面問題】')[1].split('【早前')[0].trim();
+        let lines = venueStr.split('\n');
+        
+        lines.forEach((line, index) => {
+            if (!line.trim()) return;
+            
+            // 拆解格式：[類別 - 問題] 位置: 台號 [狀態:XXX]
+            let match = line.match(/\[(.*?)\]\s*位置:\s*(.*?)\s*\[狀態:(.*?)\]/);
+            if (match) {
+                let catProb = match[1].split(' - ');
+                let cat = catProb[0] ? catProb[0].trim() : '';
+                let prob = catProb[1] ? catProb[1].trim() : '';
+                let loc = match[2].trim();
+                let status = match[3].trim();
+                
+                // 如果係第一行，用原本個空框，否則撳「新增」
+                if (index > 0 || (index === 0 && document.querySelector('.venue-loc-row input').value !== '')) {
+                    addVenueRow();
+                }
+                
+                // 填返入去最後生成嗰個框
+                let lastItem = document.querySelectorAll('.venue-item')[document.querySelectorAll('.venue-item').length - 1];
+                let catSelect = lastItem.querySelector('.venue-category');
+                let probSelect = lastItem.querySelector('.venue-problem');
+                
+                catSelect.value = cat;
+                updateVenueProblem(catSelect);
+                if (prob) probSelect.value = prob;
+                
+                let locInput = lastItem.querySelector('.venue-location');
+                if (locInput) locInput.value = loc;
+                
+                let statusSelect = lastItem.querySelector('.issue-status');
+                if (statusSelect) statusSelect.value = status;
+            }
+        });
+    }
+
+    // 6. 解析 Lux / 溫度 / 分貝 (如果有異常)
+    if (btn.getAttribute('data-lux')) {
+        document.getElementById('lux').value = btn.getAttribute('data-lux');
+        toggleIssue('lux');
+    }
+    if (btn.getAttribute('data-temp')) {
+        document.getElementById('temp').value = btn.getAttribute('data-temp');
+        toggleIssue('temp');
+    }
+    if (btn.getAttribute('data-bgm')) {
+        document.getElementById('bgm').value = btn.getAttribute('data-bgm');
+        toggleIssue('bgm');
+    }
+
+    // 7. 提示用戶
+    alert("📝 已為你載入原有資料。\n請喺下方修改後重新提交。\n\n⚠️ 注意：由於系統限制，提交後會建立新紀錄，舊紀錄請手動刪除。");
 }
 function formatIssueText(text, defaultPrefix, statusStr) {
     if (!text) return "";
