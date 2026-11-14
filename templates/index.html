@@ -28,7 +28,18 @@
         .issue-item { border-bottom: 1px dashed #e0c97e; padding-bottom: 8px; margin-bottom: 8px; position: relative;}
         .issue-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .issue-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px; align-items: center;}
-        .issue-row select, .issue-row input { padding: 8px; font-size: 13px; }
+        .issue-row select, .issue-row input { 
+            padding: 8px; 
+            font-size: 13px; 
+            height: 38px; /* 🌟 強制統一高度 */
+            box-sizing: border-box; 
+            margin: 0; 
+       }
+       .venue-category, .venue-problem { 
+            flex: 1 1 0px; /* 🌟 強制平分寬度 */
+            min-width: 0; 
+            width: 50%; 
+       }
         .issue-row .table-num { flex: 1.5; min-width: 70px; }
         .issue-row .value { flex: 1.5; min-width: 70px; background: #fff; border: 1px solid #f5b041;}
         .box-row { display: flex; gap: 5px; margin-top: 5px;}
