@@ -195,7 +195,7 @@ def get_pending_issues():
             for line in part.split('\n'):
                 if line.strip(): 
                     clean_line = re.sub(r'\[狀態:.*?\]', '', line).strip().upper()
-                    # 新增：如果包含多個位置，幫佢逐個拆開存入黑名單
+                    # 如果包含多個位置，幫佢逐個拆開存入黑名單，避免 LAYOUT 疊加
                     if '位置:' in clean_line and (',' in clean_line or '，' in clean_line):
                         parts = clean_line.split('位置:')
                         if len(parts) == 2:
