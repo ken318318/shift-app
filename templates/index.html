@@ -36,9 +36,9 @@
         .record-card { background: #fff; border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .record-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; font-size: 14px; }
         .record-data { font-size: 13px; color: #555; margin-bottom: 8px; background: #f4f6f8; padding: 8px; border-radius: 4px;}
-        .issue-data { font-size: 14px; margin-bottom: 8px; padding: 10px; border-radius: 4px; line-height: 1.5; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;}
-        .issue-data span:first-child { flex: 1 1 auto; word-break: break-word; }
-        .issue-data span:last-child { flex: 0 0 auto; margin-left: auto; }
+        .issue-data { font-size: 14px; margin-bottom: 8px; padding: 10px; border-radius: 4px; line-height: 1.5; display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 8px;}
+        .issue-data span:first-child { min-width: 0; word-break: break-word; }
+        .issue-data span:last-child { align-self: start; }
         .record-note { font-size: 14px; white-space: pre-wrap; line-height: 1.5; color: #222;}
         .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; color: white; white-space: nowrap;}
         .status-pending { background: #e67c73; }
@@ -340,7 +340,7 @@ function loadPendingIssues() {
             if (issue.lux_issue) addItem('Lux', issue.lux_issue, true); if (issue.temp_issue) addItem('溫度', issue.temp_issue, true); if (issue.db_issue) addItem('分貝', issue.db_issue, true);
             if (issue.checklist && issue.checklist.includes('NFC異常:')) { let nfcText = issue.checklist.split('NFC異常: ')[1]; if (nfcText) addItem('NFC', nfcText.trim(), true); }
             if (issue.note && issue.note.includes('【場面問題】')) { let venueStr = issue.note.split('【場面問題】')[1].split('【早前')[0].trim(); venueStr.split('\n').forEach(line => { if (line.trim()) addItem('場面', line, true); }); }
-            if (issue.note && issue.note.includes('【早前未處理】')) { let oldStr = issue.note.split('【早前未處理】')[1].trim(); oldStr.split('\n').forEach(line => { line = line.trim(); if (line && !line.includes('【') && !line.includes('】') && !line.startsWith('早前未處理:')) { addItem('場面', line, true); } }); }
+            if (issue.note && issue.note.includes('【早前未處理】')) { let oldStr = issue.note.split('【早前未處理】')[1].trim(); oldStr.split('\n').forEach(line => { line = line.trim(); if (line && !line.includes('【') && !line.includes('】') && !line.startsWith('早前未處理:')) { let m = line.match(/^(Lux|溫度|分貝|NFC|場面)\s*-\s*/); let t = m ? m[1] : '場面'; let txt = m ? line.slice(m[0].length) : line; addItem(t, txt, true); } }); }
         });
         let finalHtml = ""; for (let cat in window.globalGroupedItems) finalHtml += `<div class="pending-card" style="border-left: 4px solid #ffa000; margin-bottom: 15px;"><details style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 5px;"><summary style="cursor: pointer; font-weight: bold; color: #856404; padding: 5px;">${cat} (${window.globalGroupedItems[cat].length} 項)</summary><div style="padding: 5px 0 0 0;">${window.globalGroupedItems[cat].join('')}</div></details></div>`;
         if (totalItems === 0) { container.style.display = 'none'; document.getElementById('home-pending-container').style.display = 'none'; } else { document.getElementById('pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開剔選)`; listDiv.innerHTML = finalHtml; document.getElementById('home-pending-container').style.display = 'block'; document.getElementById('home-pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開查看)`; document.getElementById('home-pending-list').innerHTML = finalHtml.replace(/<input type="checkbox"[^>]*>/g, ''); }
