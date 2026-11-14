@@ -117,6 +117,45 @@ def submit():
     conn.commit()
     release_db_connection(conn)
     return jsonify({"message": "交更成功！", "status": "success"})
+    @app.route('/api/overwrite_record', methods=['POST'])
+    def overwrite_record():
+    data = request.json
+    old_id = data.get('old_id')
+    
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    if not old_id:
+        release_db_connection(conn)
+        return jsonify({"status": "error", "message": "❌ 系統錯誤：找不到要覆蓋的舊紀錄。"})
+
+    c.execute("SELECT created_at FROM records WHERE id = %s", (old_id,))
+    row = c.fetchone()
+    if not row:
+        release_db_connection(conn)
+        return jsonify({"status": "error", "message": "❌ 找不到該紀錄！"})
+
+    if session.get('role') != 'admin':
+        now = datetime.datetime.now(pytz.timezone('Asia/Macau'))
+        time_diff = now - row[0]
+        if time_diff.total_seconds() > 300: 
+            release_db_connection(conn)
+            return jsonify({"status": "error", "message": "⏰ 已超過 5 分鐘修改時限，無法修改！"})
+
+    c.execute("DELETE FROM records WHERE id = %s", (old_id,))
+
+    now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
+    c.execute("""INSERT INTO records 
+                 (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, created_at) 
+                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+              (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
+               data.get('checklist'), data.get('status'), data.get('follower'), data.get('note'),
+               data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'), now_macau))
+    
+    conn.commit()
+    release_db_connection(conn)
+    
+    return jsonify({"status": "success", "message": "✅ 紀錄已成功修改並覆蓋！"})
 
 @app.route('/api/records', methods=['GET'])
 def get_records():
