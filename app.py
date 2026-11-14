@@ -4,7 +4,7 @@ import psycopg2
 from psycopg2 import pool
 import os
 import re
-from datetime import datetime
+import datetime
 import pytz
 
 app = Flask(__name__)
@@ -39,12 +39,12 @@ def require_login():
 
 @app.route('/bf392e0c1abdaeb5d994c628262a24a2.txt')
 def verify_wechat():
-    return "3d858c8569ab9afadbbc62d5f31c30007c34f14b", 200, {'Content-Type': 'text/plain; charset=utf-8'}
+    return "3d858c8569ab9afadbbc62d5f31c30007c34f14b", 200, {'Content-Type': 'text/plain'}
 
 @app.route('/<path:filename>')
 def catch_all_txt(filename):
     if 'bf392e0c1abdaeb5d994c628262a24a2' in filename:
-        return "3d858c8569ab9afadbbc62d5f31c30007c34f14b", 200, {'Content-Type': 'text/plain; charset=utf-8'}
+        return "3d858c8569ab9afadbbc62d5f31c30007c34f14b", 200, {'Content-Type': 'text/plain'}
     return "Not Found", 404
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -57,7 +57,7 @@ def login():
             session['role'] = 'admin' if pwd == ADMIN_PASSWORD else 'staff'
             return redirect(url_for('index'))
         else:
-            error = "密碼錯誤，請再試一次！"
+            error = "密碼錯誤！"
     return render_template('login.html', error=error)
 
 @app.route('/logout')
@@ -68,14 +68,14 @@ def logout():
 @app.route('/admin')
 def admin():
     if session.get('role') != 'admin':
-        return "⚠️ 權限不足！請用管理員密碼登入。", 403
+        return "⚠️ 權限不足！", 403
     return render_template('admin.html')
 
 @app.route('/api/get_configs', methods=['GET'])
 def get_configs():
     conn = get_db_connection()
     c = conn.cursor()
-    # 🌟 已加入自訂排序邏輯
+    # 🌟 強制自訂排序
     c.execute("""SELECT category, problem FROM venue_configs 
                  ORDER BY 
                  CASE 
@@ -108,7 +108,7 @@ def submit():
     data = request.json
     conn = get_db_connection()
     c = conn.cursor()
-    now_macau = datetime.now(pytz.timezone('Asia/Macau'))
+    now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
     c.execute("""INSERT INTO records 
                  (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, created_at) 
                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
@@ -153,7 +153,6 @@ def get_pending_issues():
                 part = part.split('【早前未處理】')[0]
             for line in part.split('\n'):
                 if line.strip(): 
-                    # 🌟 強制洗走狀態並轉大楷，解決重複問題
                     clean_line = re.sub(r'\[狀態:.*?\]', '', line).strip().upper()
                     done_items.add(clean_line)
 
@@ -174,17 +173,15 @@ def get_pending_issues():
             "db_issue": row[4], "note": row[5], "overall_status": row[6],
             "created_at": str(row[7]) if row[7] else None
         })
-        
     return jsonify({"issues": pending, "done_items": list(done_items)})
 
 @app.route('/api/delete_record', methods=['POST'])
 def delete_record():
     if session.get('role') != 'admin':
-        return jsonify({"status": "error", "message": "⚠️ 權限不足！只有管理員可以刪除紀錄。"})
-    data = request.json
+        return jsonify({"status": "error", "message": "⚠️ 權限不足！"})
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("DELETE FROM records WHERE id = %s", (data.get('id'),))
+    c.execute("DELETE FROM records WHERE id = %s", (request.json.get('id'),))
     conn.commit()
     release_db_connection(conn)
     return jsonify({"status": "success", "message": "✅ 紀錄已成功刪除！"})
@@ -200,7 +197,6 @@ def update_record():
         release_db_connection(conn)
         return jsonify({"status": "error", "message": "❌ 找不到該紀錄！"})
     if session.get('role') != 'admin':
-        import datetime
         now = datetime.datetime.now(pytz.timezone('Asia/Macau'))
         time_diff = now - row[0]
         if time_diff.total_seconds() > 300: 
