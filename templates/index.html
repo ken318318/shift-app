@@ -538,6 +538,8 @@ function deleteRecord(id) {
         .catch(err => alert("❌ 連線失敗，請稍後再試。"));
     }
 }
+let editingRecordId = null; // 🌟 記錄而家修改緊邊條紀錄
+
 function editRecord(btn) {
     let id = btn.getAttribute('data-id');
     let createdTime = btn.getAttribute('data-time');
@@ -551,26 +553,22 @@ function editRecord(btn) {
         }
     }
 
-    // 2. 攞返舊資料
-    let note = btn.getAttribute('data-note') || "";
-    let rawStatus = btn.getAttribute('data-status') || "待處理";
-    
+    // 2. 記住 ID，提交時用嚟覆蓋
+    editingRecordId = id;
+
     // 3. 跳去表單
     showForm();
 
-    // 4. 填入「詳細交更事項」同「跟進人」
+    // 4. 填入「詳細交更事項」
+    let note = btn.getAttribute('data-note') || "";
     let mainNote = note.split('【場面問題】')[0].split('【早前')[0].trim();
     document.getElementById('notes').value = mainNote;
 
     // 5. 逆向解析「場面問題」（還原下拉選單）
     if (note.includes('【場面問題】')) {
         let venueStr = note.split('【場面問題】')[1].split('【早前')[0].trim();
-        let lines = venueStr.split('\n');
-        
-        lines.forEach((line, index) => {
+        venueStr.split('\n').forEach((line, index) => {
             if (!line.trim()) return;
-            
-            // 拆解格式：[類別 - 問題] 位置: 台號 [狀態:XXX]
             let match = line.match(/\[(.*?)\]\s*位置:\s*(.*?)\s*\[狀態:(.*?)\]/);
             if (match) {
                 let catProb = match[1].split(' - ');
@@ -579,45 +577,29 @@ function editRecord(btn) {
                 let loc = match[2].trim();
                 let status = match[3].trim();
                 
-                // 如果係第一行，用原本個空框，否則撳「新增」
                 if (index > 0 || (index === 0 && document.querySelector('.venue-loc-row input').value !== '')) {
                     addVenueRow();
                 }
-                
-                // 填返入去最後生成嗰個框
                 let lastItem = document.querySelectorAll('.venue-item')[document.querySelectorAll('.venue-item').length - 1];
                 let catSelect = lastItem.querySelector('.venue-category');
                 let probSelect = lastItem.querySelector('.venue-problem');
-                
                 catSelect.value = cat;
                 updateVenueProblem(catSelect);
                 if (prob) probSelect.value = prob;
-                
                 let locInput = lastItem.querySelector('.venue-location');
                 if (locInput) locInput.value = loc;
-                
                 let statusSelect = lastItem.querySelector('.issue-status');
                 if (statusSelect) statusSelect.value = status;
             }
         });
     }
 
-    // 6. 解析 Lux / 溫度 / 分貝 (如果有異常)
-    if (btn.getAttribute('data-lux')) {
-        document.getElementById('lux').value = btn.getAttribute('data-lux');
-        toggleIssue('lux');
-    }
-    if (btn.getAttribute('data-temp')) {
-        document.getElementById('temp').value = btn.getAttribute('data-temp');
-        toggleIssue('temp');
-    }
-    if (btn.getAttribute('data-bgm')) {
-        document.getElementById('bgm').value = btn.getAttribute('data-bgm');
-        toggleIssue('bgm');
-    }
+    // 6. 填入 Lux/Temp/BGM
+    if (btn.getAttribute('data-lux')) { document.getElementById('lux').value = btn.getAttribute('data-lux'); toggleIssue('lux'); }
+    if (btn.getAttribute('data-temp')) { document.getElementById('temp').value = btn.getAttribute('data-temp'); toggleIssue('temp'); }
+    if (btn.getAttribute('data-bgm')) { document.getElementById('bgm').value = btn.getAttribute('data-bgm'); toggleIssue('bgm'); }
 
-    // 7. 提示用戶
-    alert("📝 已為你載入原有資料。\n請喺下方修改後重新提交。\n\n⚠️ 注意：由於系統限制，提交後會建立新紀錄，舊紀錄請手動刪除。");
+    alert("📝 已為你載入原有資料。\n請喺下方修改後重新提交。\n\n系統會自動覆蓋舊紀錄。");
 }
 function formatIssueText(text, defaultPrefix, statusStr) {
     if (!text) return "";
@@ -809,7 +791,28 @@ if (rawNote.includes('【早前已處理】')) {
         if (rawNote === '' && venueIssues.length === 0 && luxIssue === '' && tempIssue === '' && dbIssue === '' && nfcDetails.length === 0 && doneOldItems.length === 0) {
             alert("請填寫交更事項，或者喺「未完成跟進項目」度撳圓點剔選已處理嘅嘢！"); return;
         }
-
+        
+        // 🌟 如果係修改模式，呼叫專屬覆蓋 API
+        if (editingRecordId) {
+           data.old_id = editingRecordId;
+         fetch('/api/overwrite_record', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.status === 'success') {
+            alert("✅ 修改成功！");
+            editingRecordId = null; // 清空狀態
+            showList(); // 返回歷史紀錄
+      } else {
+            alert(res.message); // 顯示超時等錯誤
+        }
+    })
+    .catch(err => alert("❌ 連線失敗！"));
+    return; // 截停原本嘅提交邏輯
+}
         fetch('/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
         .then(res => res.json()).then(res => { 
             alert("✅ " + data.name + " 交更成功！"); 
