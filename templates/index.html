@@ -24,7 +24,7 @@
         .issue-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .issue-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px; align-items: center; width: 100%;}
         .issue-row select, .issue-row input { padding: 8px; font-size: 13px; height: 38px; box-sizing: border-box; margin: 0; }
-        .venue-category, .venue-problem { flex: 1 1 0px; min-width: 0; width: 50%; height: 38px; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .venue-category, .venue-problem { flex: 1 1 0px; min-width: 0; width: 50%; height: 38px; box-sizing: border-box; }
         .issue-row .table-num { flex: 1.5; min-width: 70px; }
         .issue-row .value { flex: 1.5; min-width: 70px; background: #fff; border: 1px solid #f5b041;}
         .box-row { display: flex; gap: 5px; margin-top: 5px;}
@@ -36,8 +36,8 @@
         .record-card { background: #fff; border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .record-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; font-size: 14px; }
         .record-data { font-size: 13px; color: #555; margin-bottom: 8px; background: #f4f6f8; padding: 8px; border-radius: 4px;}
-        .issue-data { font-size: 14px; margin-bottom: 8px; padding: 10px; border-radius: 4px; line-height: 1.5; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center;}
-        .issue-data span:first-child { flex: 1 1 100%; margin-bottom: 8px; }
+        .issue-data { font-size: 14px; margin-bottom: 8px; padding: 10px; border-radius: 4px; line-height: 1.5; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px;}
+        .issue-data span:first-child { flex: 1 1 auto; word-break: break-word; }
         .issue-data span:last-child { flex: 0 0 auto; margin-left: auto; }
         .record-note { font-size: 14px; white-space: pre-wrap; line-height: 1.5; color: #222;}
         .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; color: white; white-space: nowrap;}
@@ -63,6 +63,7 @@
             </div>
         </div>
         <button class="submit-btn" onclick="showForm()" style="margin-top: 0; margin-bottom: 20px; background-color: #2ecc71;">📝 新增BS交更紀錄</button>
+        
         <div id="home-pending-container" style="display: none; background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 20px;">
             <div onclick="toggleHomePending()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
                 <h3 id="home-pending-title" style="margin: 0; font-size: 15px; color: #856404;">⚠️ 未完成跟進項目</h3>
@@ -76,6 +77,7 @@
     <div class="card" id="form-container" style="display: none;">
         <h2>📝 BS交更內容</h2>
         <button type="button" class="btn-add" style="background-color: #e67c73; width: 100%; margin-bottom: 15px; padding: 10px;" onclick="showList()">❌ 取消並返回紀錄</button>
+        
         <div class="row">
             <div>
                 <label>交更人：</label>
@@ -270,8 +272,10 @@
         <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Nam" class="follower-item"> Nam</label>
         <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Stella" class="follower-item"> Stella</label>
     </div>
+    
     <label>詳細交更事項：</label>
     <textarea id="notes" rows="4" placeholder="請輸入詳細問題、位置及跟進情況..."></textarea>
+    
     <div id="pending-container" style="display: none; background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 30px; margin-bottom: 20px;">
         <div onclick="togglePending()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
             <h3 id="pending-title" style="margin: 0; font-size: 15px; color: #856404;">⚠️ 未完成跟進項目</h3>
@@ -333,9 +337,9 @@ function loadPendingIssues() {
                 if (!window.globalGroupedItems[cat]) window.globalGroupedItems[cat] = [];
                 window.globalGroupedItems[cat].push(`<div style="margin-bottom:8px;"><div style="font-size:11px; color:#856404; margin-bottom:3px;">👤 ${issue.name}</div>${itemHtml}</div>`); totalItems++;
             };
-            if (issue.lux_issue) addItem('Lux', issue.lux_issue); if (issue.temp_issue) addItem('溫度', issue.temp_issue); if (issue.db_issue) addItem('分貝', issue.db_issue);
-            if (issue.checklist && issue.checklist.includes('NFC異常:')) { addItem('NFC', issue.checklist.split('NFC異常: ')[1]); }
-            if (issue.note && issue.note.includes('【場面問題】')) { let venueStr = issue.note.split('【場面問題】')[1].split('【早前')[0].trim(); venueStr.split('\n').forEach(line => { if (line.trim()) addItem('場面', line); }); }
+            if (issue.lux_issue) addItem('Lux', issue.lux_issue, true); if (issue.temp_issue) addItem('溫度', issue.temp_issue, true); if (issue.db_issue) addItem('分貝', issue.db_issue, true);
+            if (issue.checklist && issue.checklist.includes('NFC異常:')) { let nfcText = issue.checklist.split('NFC異常: ')[1]; if (nfcText) addItem('NFC', nfcText.trim(), true); }
+            if (issue.note && issue.note.includes('【場面問題】')) { let venueStr = issue.note.split('【場面問題】')[1].split('【早前')[0].trim(); venueStr.split('\n').forEach(line => { if (line.trim()) addItem('場面', line, true); }); }
             if (issue.note && issue.note.includes('【早前未處理】')) { let oldStr = issue.note.split('【早前未處理】')[1].trim(); oldStr.split('\n').forEach(line => { line = line.trim(); if (line && !line.includes('【') && !line.includes('】') && !line.startsWith('早前未處理:')) { addItem('場面', line, true); } }); }
         });
         let finalHtml = ""; for (let cat in window.globalGroupedItems) finalHtml += `<div class="pending-card" style="border-left: 4px solid #ffa000; margin-bottom: 15px;"><details style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 5px;"><summary style="cursor: pointer; font-weight: bold; color: #856404; padding: 5px;">${cat} (${window.globalGroupedItems[cat].length} 項)</summary><div style="padding: 5px 0 0 0;">${window.globalGroupedItems[cat].join('')}</div></details></div>`;
@@ -362,7 +366,8 @@ function loadPendingIssues() {
                 if (r.lux_issue) processIssue(r.lux_issue, 'Lux -'); if (r.temp_issue) processIssue(r.temp_issue, '溫度 -'); if (r.db_issue) processIssue(r.db_issue, '分貝 -');
                 let checkItemsHtml = ''; if (r.checklist) { let items = r.checklist.split(' | '); items.forEach(item => { if (item.includes('異常')) processIssue(item.replace('NFC異常: ', '').trim(), 'NFC -'); }); }
                 let doneOldHtml = ""; let mainNote = r.note || "";
-                if (r.note && r.note.includes('【早前已處理】')) { mainNote = mainNote.split('【早前已處理】')[0].trim(); let parts = r.note.split('【早前已處理】'); let doneStr = parts[1].split('【早前未處理】')[0].trim(); doneStr.split('\n').forEach(line => { if (line.trim()) doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 舊問題已處理: ${line.trim()}</span></div>`; }); }
+                if (r.note && r.note.includes('【場面問題】')) { let parts = mainNote.split('【場面問題】'); let venueStr = parts[1].split('【早前')[0].trim(); venueStr.split('\n').forEach(line => { line = line.trim(); if (line !== '' && !line.startsWith('⚠️') && !line.startsWith('✅')) { processIssue(line, '場面 -'); } }); mainNote = parts[0].trim(); }
+                if (r.note && r.note.includes('【早前已處理】')) { if(mainNote.includes('【早前已處理】')) mainNote = mainNote.split('【早前已處理】')[0].trim(); let parts = r.note.split('【早前已處理】'); let doneStr = parts[1].split('【早前未處理】')[0].trim(); doneStr.split('\n').forEach(line => { if (line.trim()) doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 舊問題已處理: ${line.trim()}</span></div>`; }); }
                 let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${new Date(r.created_at).toLocaleString('zh-HK')}</div>` : "";
                 let safeNote = r.note ? r.note.replace(/"/g, '&quot;').replace(/`/g, '&#96;').replace(/\$/g, '&#36;') : ''; safeNote = safeNote.replace(/\[狀態:.*?\]/g, '').replace(/【早前已處理】[\s\S]*/g, '').replace(/【早前未處理】[\s\S]*/g, '').trim();
                 let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : 'Lux數值大致在於450-650之間';
