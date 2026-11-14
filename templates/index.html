@@ -464,7 +464,7 @@ function loadPendingIssues() {
     if (!clean) return;
 
    // 🌟 防重複用乾淨字眼，顯示用連狀態字眼
-   let checkText = `${type} - ${clean}`; 
+   let checkText = `${type} - ${clean}`.toUpperCase();
    let dataText = `${type} - ${clean} [狀態:${currentStatus}]`;
 
     // 復發解鎖機制
