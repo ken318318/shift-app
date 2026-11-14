@@ -32,7 +32,7 @@
         .issue-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .issue-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px; align-items: center; width: 100%;}
         .issue-row select, .issue-row input { padding: 8px; font-size: 13px; height: 38px; box-sizing: border-box; margin: 0; }
-        .venue-category, .venue-problem { flex: 1 1 0px; min-width: 0; width: 50%; }
+        .venue-category, .venue-problem { flex: 1 1 0px; min-width: 0; width: 50%; height: 38px; box-sizing: border-box; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; /* 🌟 字太長會變 ... 唔會斷開 */}
         .issue-row .table-num { flex: 1.5; min-width: 70px; }
         .issue-row .value { flex: 1.5; min-width: 70px; background: #fff; border: 1px solid #f5b041;}
         .box-row { display: flex; gap: 5px; margin-top: 5px;}
@@ -613,9 +613,13 @@ function deleteRecord(id) {
                             </div>
                         </div>
                         ${dataHtml}
+                        ${checkItemsHtml}
+                        ${doneIssuesList.join('')}
                         ${doneOldHtml}
+                        ${pendingIssuesList.join('')}
+                        ${pendingOldHtml}
                         ${followerHtml}
-                        <div class="record-note" style="margin-top: 10px;">${mainNote.split('【早前')[0].trim()}</div>
+                    <div class="record-note" style="margin-top: 10px;">${mainNote.split('【早前')[0].trim()}</div>
                     </div>
                 `;
             });
