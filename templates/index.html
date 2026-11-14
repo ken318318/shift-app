@@ -467,8 +467,24 @@ function loadPendingIssues() {
         let data = { name: document.getElementById('staffName').value, shift: document.getElementById('shiftType').value, lux: document.getElementById('skip-lux').checked ? "" : document.getElementById('lux').value, temp: document.getElementById('skip-temp').checked ? "" : document.getElementById('temp').value, bgm: document.getElementById('skip-bgm').checked ? "" : document.getElementById('bgm').value, checklist: document.getElementById('skip-nfc').checked ? "" : checklistString, status: overallStatus, follower: Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無', note: finalNote, lux_issue: document.getElementById('skip-lux').checked ? "" : luxIssue, temp_issue: document.getElementById('skip-temp').checked ? "" : tempIssue, db_issue: document.getElementById('skip-bgm').checked ? "" : dbIssue };
         if (!data.name) { alert("請選擇交更人！"); return; }
         let rawNote = document.getElementById('notes').value.trim(); if (rawNote === '' && venueIssues.length === 0 && luxIssue === '' && tempIssue === '' && dbIssue === '' && nfcDetails.length === 0 && doneOldItems.length === 0) { alert("請填寫交更事項，或者喺「未完成跟進項目」度撳圓點剔選已處理嘅嘢！"); return; }
-        if (editingRecordId) { data.old_id = editingRecordId; fetch('/api/overwrite_record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json()).then(res => { if (res.status === 'success') { alert("✅ 修改成功！"); editingRecordId = null; showList(); } else { alert(res.message); } }).catch(err => alert("❌ 連線失敗！")); return; }
-        fetch('/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json()).then(res => { alert("✅ " + data.name + " 交更成功！"); resetForm(); showList(); }).catch(error => alert("❌ 連線失敗！"));
+        if (editingRecordId) { 
+            data.old_id = editingRecordId; 
+            fetch('/api/overwrite_record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+            .then(res => res.json())
+            .then(res => { 
+                if (res.status === 'success') { alert("✅ 修改成功！"); editingRecordId = null; showList(); } 
+                else { alert(res.message || "修改失敗"); } 
+            })
+            .catch(err => alert("❌ 修改連線失敗！\n可能係伺服器未準備好，請重新整理頁面再試。")); 
+            return; 
+        }
+        fetch('/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+        .then(res => res.json())
+        .then(res => { 
+            if (res.status === 'success') { alert("✅ " + data.name + " 交更成功！"); resetForm(); showList(); } 
+            else { alert(res.message || "提交失敗"); } 
+        })
+        .catch(error => alert("❌ 提交連線失敗！\n可能係 Render 伺服器正在喚醒（需時約 30 秒），或者微信網絡攔截。\n\n請稍等一陣，然後重新整理網頁再試一次，或者改用「在瀏覽器打開」。")); 
     }
     document.addEventListener("DOMContentLoaded", function() { showList(); fetch('/api/get_configs').then(res => res.json()).then(data => { venueCategories = data; let firstVenue = document.querySelector('.venue-category'); if(firstVenue) initVenueCategory(firstVenue); transformInputs(); }).catch(err => { console.error(err); transformInputs(); }); });
     </script>
