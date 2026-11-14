@@ -51,6 +51,16 @@
         .issue-status { padding: 6px; font-size: 12px; border-radius: 6px; border: 1px solid #ccc; background: #fff; color: #d32f2f; font-weight: bold;}
         .pending-card { background: #fff8e1; border-left: 4px solid #ffa000; padding: 10px; margin-bottom: 10px; border-radius: 4px; font-size: 13px;}
         .btn-remove { background: #ff4d4f; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; position: absolute; right: 0; top: 0;}
+     /* 🌟 手機版 UI 優化 */
+    @media (max-width: 500px) {
+    .card { padding: 12px !important; margin-bottom: 12px !important; }
+    h2 { font-size: 18px !important; margin-bottom: 10px !important; }
+    button.submit-btn { padding: 10px !important; font-size: 14px !important; }
+    .pending-card { padding: 8px !important; margin-bottom: 8px !important; font-size: 12px !important; }
+    #home-pending-title, #pending-title { font-size: 13px !important; line-height: 1.4 !important; }
+    .record-header { flex-direction: row !important; align-items: center !important; padding: 8px !important; }
+    .record-header button { padding: 4px 8px !important; font-size: 11px !important; }
+}
     </style>
 </head>
 <body>
@@ -532,7 +542,7 @@ function editRecord(btn) {
     let id = btn.getAttribute('data-id');
     let createdTime = btn.getAttribute('data-time');
     
-    // 檢查係咪超過 5 分鐘 (300,000 毫秒)
+    // 1. 檢查 5 分鐘限時
     if (createdTime) {
         let timeDiff = new Date().getTime() - new Date(createdTime).getTime();
         if (timeDiff > 300000) {
@@ -541,10 +551,17 @@ function editRecord(btn) {
         }
     }
 
-    // 提示用戶並跳轉到表單
-    alert("📝 系統會將此紀錄載入表單，請修改後重新提交（提交後舊紀錄會被刪除）。");
-    deleteRecord(id); // 暫時用刪除舊紀錄嘅方式，等你重新填
-    showForm(); 
+    // 2. 攞返舊紀錄嘅資料
+    let note = btn.getAttribute('data-note') || "";
+    
+    // 3. 跳去表單
+    showForm();
+
+    // 4. 自動填入舊資料 (去除【早前】字眼)
+    document.getElementById('notes').value = note.split('【早前')[0].trim();
+    
+    // 提示用戶
+    alert("📝 已為你載入原有資料。\n請喺下方修改後重新提交。");
 }
 function formatIssueText(text, defaultPrefix, statusStr) {
     if (!text) return "";
