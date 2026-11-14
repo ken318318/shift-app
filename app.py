@@ -164,23 +164,18 @@ def overwrite_record():
 def get_records():
     conn = get_db_connection()
     c = conn.cursor()
-        c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status, checklist,
+    c.execute("""SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, 
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
-                 FROM records 
-                 WHERE status NOT IN ('已處理') 
-                 AND (lux_issue != '' OR temp_issue != '' OR db_issue != '' 
-                      OR note LIKE '%【場面問題】%' OR note LIKE '%【早前未處理】%'
-                      OR checklist LIKE '%NFC異常%')
-                 ORDER BY id DESC""")
+                 FROM records ORDER BY id DESC""")
     rows = c.fetchall()
     release_db_connection(conn)
-    pending = []
+    records = []
     for row in rows:
-        pending.append({
-            "id": row[0], "name": row[1], "lux_issue": row[2], "temp_issue": row[3], 
-            "db_issue": row[4], "note": row[5], "overall_status": row[6],
-            "checklist": row[7],
-            "created_at": str(row[8]) if row[8] else None
+        records.append({
+            "id": row[0], "name": row[1], "shift": row[2], "lux": row[3], "temp": row[4], "bgm": row[5],
+            "checklist": row[6], "status": row[7], "follower": row[8], "note": row[9],
+            "lux_issue": row[10], "temp_issue": row[11], "db_issue": row[12],
+            "created_at": str(row[13]) if row[13] else None
         })
     return jsonify(records)
 
@@ -202,12 +197,13 @@ def get_pending_issues():
                     clean_line = re.sub(r'\[狀態:.*?\]', '', line).strip().upper()
                     done_items.add(clean_line)
 
-    c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status, 
+    c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status, checklist,
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
                  FROM records 
                  WHERE status NOT IN ('已處理') 
                  AND (lux_issue != '' OR temp_issue != '' OR db_issue != '' 
-                      OR note LIKE '%【場面問題】%' OR note LIKE '%【早前未處理】%')
+                      OR note LIKE '%【場面問題】%' OR note LIKE '%【早前未處理】%'
+                      OR checklist LIKE '%NFC異常%')
                  ORDER BY id DESC""")
     rows = c.fetchall()
     release_db_connection(conn)
@@ -216,7 +212,8 @@ def get_pending_issues():
         pending.append({
             "id": row[0], "name": row[1], "lux_issue": row[2], "temp_issue": row[3], 
             "db_issue": row[4], "note": row[5], "overall_status": row[6],
-            "created_at": str(row[7]) if row[7] else None
+            "checklist": row[7],
+            "created_at": str(row[8]) if row[8] else None
         })
     return jsonify({"issues": pending, "done_items": list(done_items)})
 
