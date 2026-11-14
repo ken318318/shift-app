@@ -166,8 +166,7 @@ def get_pending_issues():
             if '【早前未處理】' in part:
                 part = part.split('【早前未處理】')[0]
             for line in part.split('\n'):
-                if line.strip(): done_items.add(line.strip())
-
+    if line.strip(): done_items.add(line.strip())
     # 2. 搵出所有未完成嘅紀錄
     c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status, 
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
