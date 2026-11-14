@@ -488,7 +488,7 @@ function loadPendingIssues() {
    let checkText = `${type} - ${clean}`.toUpperCase();
    let dataText = `${type} - ${clean} [狀態:${currentStatus}]`;
 
-   // 🌟 修正防重複：如果黑名單有，但佢係最新紀錄，強制放行！
+  // 🌟 修正防重複：如果黑名單有，但佢係最新紀錄，強制放行！
    if (doneSet.includes(checkText)) {
    if (issue.id !== issues[0].id && issue.created_at !== issues[0].created_at) {
         return; 
@@ -496,12 +496,6 @@ function loadPendingIssues() {
 }
 
    if (seenItems.has(checkText)) return;
-     seenItems.add(checkText); 
-        }
-    }
-    
-    // 防重複
-    if (doneSet.includes(checkText) || seenItems.has(checkText)) return;
     seenItems.add(checkText);
 
     let badgeColor = currentStatus === '已 Send mail' ? '#9c27b0' : (currentStatus === '已通知相關部門跟進' ? '#e67c73' : '#f5b041');
