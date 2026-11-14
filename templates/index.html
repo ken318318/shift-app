@@ -300,7 +300,14 @@ const tableDict = {};
 rawTableList.split(',').forEach(item => { let str = item.trim(); if(str) tableDict[str.replace(/[^0-9]/g, '')] = str; });
 function autoFillTable(el) { let val = el.value.trim(); if (/^\d+$/.test(val)) { if (tableDict[val]) el.value = tableDict[val]; else if (val.length >= 4) el.value = 'NB' + val; } }
 function transformInputs() { document.querySelectorAll('.table-num, .venue-location').forEach(inp => { inp.placeholder = '輸入數字(如0201)'; inp.setAttribute('oninput', 'autoFillTable(this)'); }); }
-function showForm() { document.getElementById('list-container').style.display = 'none'; document.getElementById('form-container').style.display = 'block'; loadPendingIssues(); transformInputs(); window.scrollTo(0, 0); }
+function showForm(isNew = true) { 
+    if (isNew) resetForm(); 
+    document.getElementById('list-container').style.display = 'none'; 
+    document.getElementById('form-container').style.display = 'block'; 
+    loadPendingIssues(); 
+    transformInputs(); 
+    window.scrollTo(0, 0); 
+}
 function showList() { document.getElementById('form-container').style.display = 'none'; document.getElementById('list-container').style.display = 'block'; displayRecords(); loadPendingIssues(); transformInputs(); window.scrollTo(0, 0); }
 function togglePending() { let list = document.getElementById('pending-list'); let arrow = document.getElementById('pending-arrow'); if (list.style.display === 'none') { list.style.display = 'block'; arrow.innerHTML = '▲ 收起'; } else { list.style.display = 'none'; arrow.innerHTML = '▼ 展開'; } }
 function toggleHomePending() { let list = document.getElementById('home-pending-list'); let arrow = document.getElementById('home-pending-arrow'); if (list.style.display === 'none') { list.style.display = 'block'; arrow.innerHTML = '▲ 收起'; } else { list.style.display = 'none'; arrow.innerHTML = '▼ 展開'; } }
@@ -313,8 +320,34 @@ function addVenueLocation(btn) { let container = btn.parentElement.parentElement
 function addLuxRow() { document.getElementById('lux-container').insertAdjacentHTML('beforeend', `<div class="issue-item lux-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num lux-table" placeholder="輸入數字(如0201)"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="待處理">待處理</option></select></div></div>`); transformInputs(); }
 function addTempRow() { document.getElementById('temp-container').insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num temp-table" placeholder="輸入數字(如0201)"><input type="text" class="value temp-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="待處理">待處理</option></select></div></div>`); transformInputs(); }
 function addBgmRow() { document.getElementById('bgm-container').insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num bgm-table" placeholder="輸入數字(如0201)"><input type="text" class="value bgm-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="待處理">待處理</option></select></div></div>`); transformInputs(); }
-function addNfcRow() { document.getElementById('nfc-container').insertAdjacentHTML('beforeend', `<div class="issue-item nfc-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num nfc-table" placeholder="輸入數字(如0201)"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="待處理">待處理</option></select></div></div>`); transformInputs(); }
+function addNfcRow() { document.getElementById('nfc-container').insertAdjacentHTML('beforeend', `<div class="issue-item nfc-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num nfc-table" placeholder="輸入數字(如0201)"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="待處理">待處理</option></select></div></div>`); transformInputs(); }
 function addVenueRow() { let html = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="venue-category" onchange="updateVenueProblem(this)" style="flex: 1.5;"></select><select class="venue-problem" style="flex: 1.5;"></select></div><div class="venue-location-container"><div class="issue-row venue-loc-row" style="margin-top: 5px;"><input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5;"><button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px; font-size: 14px;" onclick="addVenueLocation(this)">+</button></div></div><div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; align-items: center; flex: 1;"><span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span><select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="待處理">待處理</option></select></div><button type="button" class="btn-remove" style="position: static; margin-left: 10px;" onclick="this.parentElement.parentElement.remove()">X</button></div></div>`; document.getElementById('venue-container').insertAdjacentHTML('beforeend', html); initVenueCategory(document.querySelector('.venue-item:last-child .venue-category')); transformInputs(); }
+
+function resetForm() {
+    document.getElementById('staffName').value = '';
+    document.getElementById('notes').value = '';
+    document.querySelectorAll('.follower-item').forEach(cb => cb.checked = false);
+    ['lux', 'temp', 'bgm', 'nfc'].forEach(type => { 
+        document.getElementById('skip-' + type).checked = false; 
+        document.getElementById(type + '-input-area').style.display = 'block'; 
+    });
+    document.getElementById('nfc-status').value = '無異常';
+    document.getElementById('nfc-issue-group').style.display = 'none';
+    document.getElementById('lux-issue-group').style.display = 'none';
+    document.getElementById('temp-issue-group').style.display = 'none';
+    document.getElementById('bgm-issue-group').style.display = 'none';
+    
+    // 強制重置所有動態輸入框，防止上一筆資料殘留
+    document.getElementById('lux-container').innerHTML = `<div class="issue-item lux-item"><div class="issue-row"><input type="text" class="table-num lux-table" placeholder="輸入數字(如0201)"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
+    document.getElementById('temp-container').innerHTML = `<div class="issue-item temp-item"><div class="issue-row"><input type="text" class="table-num temp-table" placeholder="輸入數字(如0201)"><input type="text" class="value temp-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
+    document.getElementById('bgm-container').innerHTML = `<div class="issue-item bgm-item"><div class="issue-row"><input type="text" class="table-num bgm-table" placeholder="輸入數字(如0201)"><input type="text" class="value bgm-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
+    document.getElementById('nfc-container').innerHTML = `<div class="issue-item nfc-item"><div class="issue-row"><input type="text" class="table-num nfc-table" placeholder="輸入數字(如0201)"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
+    document.getElementById('venue-container').innerHTML = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="venue-category" onchange="updateVenueProblem(this)"></select><select class="venue-problem"></select></div><div class="venue-location-container"><div class="issue-row venue-loc-row" style="margin-top: 5px;"><input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5;"><button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px;" onclick="addVenueLocation(this)">+</button></div></div><div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; align-items: center; flex: 1;"><span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span><select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div></div>`;
+    
+    let firstVenue = document.querySelector('.venue-category');
+    if(firstVenue) initVenueCategory(firstVenue);
+    transformInputs();
+}
 
 function loadPendingIssues() {
     fetch('/api/pending_issues').then(res => res.json()).then(data => {
@@ -330,10 +363,7 @@ function loadPendingIssues() {
                 let clean = text.replace(/\[狀態:.*?\]/g, '').replace('⚠️', '').replace('✅', '').trim(); if (!clean) return;
                 let checkText = `${type} - ${clean}`.toUpperCase(); let dataText = `${type} - ${clean} [狀態:${currentStatus}]`;
                 
-                // 1. 本輪去重（同一筆紀錄如果有重複字眼，只留一個）
                 if (seenItems.has(checkText)) return; 
-                
-                // 2. 黑名單比對（如果以前處理過，且唔係最新嗰筆，就唔好顯示）
                 let inDoneSet = doneSet.includes(checkText);
                 if (inDoneSet && recordId !== issues[0].id) { return; }
                 
@@ -403,8 +433,14 @@ function loadPendingIssues() {
     function editRecord(btn) {
         let id = btn.getAttribute('data-id'); let createdTime = btn.getAttribute('data-time');
         if (createdTime) { let timeDiff = new Date().getTime() - new Date(createdTime).getTime(); if (timeDiff > 300000) { alert("⏰ 已超過 5 分鐘修改時限，無法修改！"); return; } }
+        
+        resetForm();
+        document.getElementById('list-container').style.display = 'none'; 
+        document.getElementById('form-container').style.display = 'block'; 
+        loadPendingIssues();
+
         editingRecordId = id; let note = btn.getAttribute('data-note') || ""; let mainNote = note.split('【場面問題】')[0].split('【早前')[0].trim();
-        showForm(); document.getElementById('notes').value = mainNote;
+        document.getElementById('notes').value = mainNote;
         if (note.includes('【場面問題】')) { let venueStr = note.split('【場面問題】')[1].split('【早前')[0].trim(); venueStr.split('\n').forEach((line, index) => { if (!line.trim()) return; let match = line.match(/\[(.*?)\]\s*位置:\s*(.*?)\s*\[狀態:(.*?)\]/); if (match) { let catProb = match[1].split(' - '); let cat = catProb[0] ? catProb[0].trim() : ''; let prob = catProb[1] ? catProb[1].trim() : ''; let loc = match[2].trim(); let status = match[3].trim(); if (index > 0 || (index === 0 && document.querySelector('.venue-loc-row input').value !== '')) { addVenueRow(); } let lastItem = document.querySelectorAll('.venue-item')[document.querySelectorAll('.venue-item').length - 1]; let catSelect = lastItem.querySelector('.venue-category'); let probSelect = lastItem.querySelector('.venue-problem'); catSelect.value = cat; updateVenueProblem(catSelect); if (prob) probSelect.value = prob; let locInput = lastItem.querySelector('.venue-location'); if (locInput) locInput.value = loc; let statusSelect = lastItem.querySelector('.issue-status'); if (statusSelect) statusSelect.value = status; } }); }
         if (btn.getAttribute('data-lux')) { document.getElementById('lux').value = btn.getAttribute('data-lux'); toggleIssue('lux'); }
         if (btn.getAttribute('data-temp')) { document.getElementById('temp').value = btn.getAttribute('data-temp'); toggleIssue('temp'); }
@@ -432,7 +468,7 @@ function loadPendingIssues() {
         if (!data.name) { alert("請選擇交更人！"); return; }
         let rawNote = document.getElementById('notes').value.trim(); if (rawNote === '' && venueIssues.length === 0 && luxIssue === '' && tempIssue === '' && dbIssue === '' && nfcDetails.length === 0 && doneOldItems.length === 0) { alert("請填寫交更事項，或者喺「未完成跟進項目」度撳圓點剔選已處理嘅嘢！"); return; }
         if (editingRecordId) { data.old_id = editingRecordId; fetch('/api/overwrite_record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json()).then(res => { if (res.status === 'success') { alert("✅ 修改成功！"); editingRecordId = null; showList(); } else { alert(res.message); } }).catch(err => alert("❌ 連線失敗！")); return; }
-        fetch('/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json()).then(res => { alert("✅ " + data.name + " 交更成功！"); document.getElementById('staffName').value = ''; document.getElementById('notes').value = ''; document.querySelectorAll('.follower-item').forEach(cb => cb.checked = false); ['lux', 'temp', 'bgm', 'nfc'].forEach(type => { document.getElementById('skip-' + type).checked = false; document.getElementById(type + '-input-area').style.display = 'block'; }); showList(); }).catch(error => alert("❌ 連線失敗！"));
+        fetch('/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(res => res.json()).then(res => { alert("✅ " + data.name + " 交更成功！"); resetForm(); showList(); }).catch(error => alert("❌ 連線失敗！"));
     }
     document.addEventListener("DOMContentLoaded", function() { showList(); fetch('/api/get_configs').then(res => res.json()).then(data => { venueCategories = data; let firstVenue = document.querySelector('.venue-category'); if(firstVenue) initVenueCategory(firstVenue); transformInputs(); }).catch(err => { console.error(err); transformInputs(); }); });
     </script>
