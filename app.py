@@ -145,7 +145,6 @@ def overwrite_record():
             return jsonify({"status": "error", "message": "❌ 找不到該紀錄！"})
 
         if session.get('role') != 'admin':
-            # 終極修復：交由資料庫判斷時間，完美解決時差問題！
             c.execute("SELECT NOW() - created_at < interval '5 minutes' FROM records WHERE id = %s", (old_id,))
             is_within_5_mins = c.fetchone()[0]
             if not is_within_5_mins:
@@ -281,7 +280,9 @@ def update_record():
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    # 將是否為管理員的狀態傳給前端
+    is_admin = (session.get('role') == 'admin')
+    return render_template('index.html', is_admin=is_admin)
 
 if __name__ == '__main__':
     app.run()
