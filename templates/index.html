@@ -405,16 +405,17 @@ function loadPendingIssues() {
         let finalHtml = ""; for (let cat in window.globalGroupedItems) finalHtml += `<div class="pending-card" style="border-left: 4px solid #ffa000; margin-bottom: 15px;"><details style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 5px;"><summary style="cursor: pointer; font-weight: bold; color: #856404; padding: 5px;">${cat} (${window.globalGroupedItems[cat].length} 項)</summary><div style="padding: 5px 0 0 0;">${window.globalGroupedItems[cat].join('')}</div></details></div>`;
         if (totalItems === 0) { container.style.display = 'none'; document.getElementById('home-pending-container').style.display = 'none'; } else { document.getElementById('pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開剔選)`; listDiv.innerHTML = finalHtml; document.getElementById('home-pending-container').style.display = 'block'; document.getElementById('home-pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開查看)`; document.getElementById('home-pending-list').innerHTML = finalHtml.replace(/<input type="checkbox"[^>]*>/g, ''); }
 
-        // 如果是修改模式，自動勾選原本已標記為「早前已處理」的項目
+        // 完美還原「早前已處理」的勾選狀態
         if (editingRecordId) {
             let r = allRecords.find(x => x.id == editingRecordId);
             if (r && r.note && r.note.includes('【早前已處理】')) {
                 let doneStr = r.note.split('【早前已處理】')[1].split('【早前未處理】')[0].trim();
-                let doneLines = doneStr.split('\n').map(l => l.trim());
+                let doneLines = doneStr.split('\n').map(l => l.replace(/\[狀態:.*?\]/g, '').trim().toUpperCase()).filter(l=>l);
+                
                 document.querySelectorAll('.pending-checkbox').forEach(cb => {
                     let cbText = cb.getAttribute('data-text'); 
-                    let cleanCb = cbText.split(' [狀態:')[0].trim(); 
-                    if (doneLines.some(line => line.includes(cleanCb))) {
+                    let cleanCb = cbText.split(' [狀態:')[0].trim().toUpperCase(); 
+                    if (doneLines.some(line => line.includes(cleanCb) || cleanCb.includes(line))) {
                         cb.checked = true;
                     }
                 });
@@ -479,73 +480,106 @@ function editRecord(id) {
         document.querySelectorAll('.follower-item').forEach(cb => { if (names.includes(cb.value)) cb.checked = true; });
     }
 
-    if (r.lux_issue) {
+    // 1. 全場 Lux
+    if (!r.lux) {
+        document.getElementById('skip-lux').checked = true;
+        document.getElementById('lux-input-area').style.display = 'none';
+    } else {
+        document.getElementById('skip-lux').checked = false;
+        document.getElementById('lux-input-area').style.display = 'block';
         document.getElementById('lux').value = r.lux;
-        toggleIssue('lux');
-        let luxItems = r.lux_issue.split(' | ');
-        let container = document.getElementById('lux-container');
-        container.innerHTML = ''; 
-        luxItems.forEach(item => {
-            let match = item.match(/(.*?)\s*\((.*?)\)\s*\[狀態:(.*?)\]/);
-            if (match) {
-                let tableNum = match[1].trim();
-                let boxesStr = match[2];
-                let status = match[3].trim();
-                let b1 = '', b3 = '', b6 = '';
-                boxesStr.split(',').forEach(b => {
-                    if (b.includes('Box 1:')) b1 = b.replace('Box 1:', '').trim();
-                    if (b.includes('Box 3:')) b3 = b.replace('Box 3:', '').trim();
-                    if (b.includes('Box 6:')) b6 = b.replace('Box 6:', '').trim();
+        if (r.lux === '< 450' || r.lux === '> 650') {
+            document.getElementById('lux-issue-group').style.display = 'block';
+            if (r.lux_issue) {
+                let luxItems = r.lux_issue.split(' | ');
+                let container = document.getElementById('lux-container');
+                container.innerHTML = ''; 
+                luxItems.forEach(item => {
+                    let match = item.match(/(.*?)\s*\((.*?)\)\s*\[狀態:(.*?)\]/);
+                    if (match) {
+                        let tableNum = match[1].trim();
+                        let boxesStr = match[2];
+                        let status = match[3].trim();
+                        let b1 = '', b3 = '', b6 = '';
+                        boxesStr.split(',').forEach(b => {
+                            if (b.includes('Box 1:')) b1 = b.replace('Box 1:', '').trim();
+                            if (b.includes('Box 3:')) b3 = b.replace('Box 3:', '').trim();
+                            if (b.includes('Box 6:')) b6 = b.replace('Box 6:', '').trim();
+                        });
+                        container.insertAdjacentHTML('beforeend', `<div class="issue-item lux-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num lux-table" value="${tableNum}"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" value="${b1}"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" value="${b3}"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" value="${b6}"></div></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" ${status==='已處理'?'selected':''}>已處理</option><option value="已 Send mail" ${status==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${status==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${status==='待處理'?'selected':''}>待處理</option></select></div></div>`);
+                    }
                 });
-                container.insertAdjacentHTML('beforeend', `<div class="issue-item lux-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num lux-table" value="${tableNum}"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" value="${b1}"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" value="${b3}"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" value="${b6}"></div></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" ${status==='已處理'?'selected':''}>已處理</option><option value="已 Send mail" ${status==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${status==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${status==='待處理'?'selected':''}>待處理</option></select></div></div>`);
             }
-        });
-    } else if (r.lux !== '450-650') {
-        document.getElementById('lux').value = r.lux;
-        toggleIssue('lux');
+        } else {
+            document.getElementById('lux-issue-group').style.display = 'none';
+        }
     }
 
-    if (r.temp_issue) {
+    // 2. 溫度
+    if (!r.temp) {
+        document.getElementById('skip-temp').checked = true;
+        document.getElementById('temp-input-area').style.display = 'none';
+    } else {
+        document.getElementById('skip-temp').checked = false;
+        document.getElementById('temp-input-area').style.display = 'block';
         document.getElementById('temp').value = r.temp;
-        toggleIssue('temp');
-        let items = r.temp_issue.split(' | ');
-        let container = document.getElementById('temp-container');
-        container.innerHTML = '';
-        items.forEach(item => {
-            let match = item.match(/(.*?)\s*\(數值:\s*(.*?)\)\s*\[狀態:(.*?)\]/);
-            if (match) {
-                let tableNum = match[1].trim();
-                let val = match[2].trim();
-                let status = match[3].trim();
-                container.insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num temp-table" value="${tableNum}"><input type="text" class="value temp-value" value="${val}"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" ${status==='已處理'?'selected':''}>已處理</option><option value="已 Send mail" ${status==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${status==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${status==='待處理'?'selected':''}>待處理</option></select></div></div>`);
+        if (r.temp.includes('偏低') || r.temp.includes('偏高')) {
+            document.getElementById('temp-issue-group').style.display = 'block';
+            if (r.temp_issue) {
+                let items = r.temp_issue.split(' | ');
+                let container = document.getElementById('temp-container');
+                container.innerHTML = '';
+                items.forEach(item => {
+                    let match = item.match(/(.*?)\s*\(數值:\s*(.*?)\)\s*\[狀態:(.*?)\]/);
+                    if (match) {
+                        let tableNum = match[1].trim();
+                        let val = match[2].trim();
+                        let status = match[3].trim();
+                        container.insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num temp-table" value="${tableNum}"><input type="text" class="value temp-value" value="${val}"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" ${status==='已處理'?'selected':''}>已處理</option><option value="已 Send mail" ${status==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${status==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${status==='待處理'?'selected':''}>待處理</option></select></div></div>`);
+                    }
+                });
             }
-        });
-    } else if (!r.temp.includes('正常')) {
-        document.getElementById('temp').value = r.temp;
-        toggleIssue('temp');
+        } else {
+            document.getElementById('temp-issue-group').style.display = 'none';
+        }
     }
 
-    if (r.db_issue) {
+    // 3. BGM 分貝
+    if (!r.bgm) {
+        document.getElementById('skip-bgm').checked = true;
+        document.getElementById('bgm-input-area').style.display = 'none';
+    } else {
+        document.getElementById('skip-bgm').checked = false;
+        document.getElementById('bgm-input-area').style.display = 'block';
         document.getElementById('bgm').value = r.bgm;
-        toggleIssue('bgm');
-        let items = r.db_issue.split(' | ');
-        let container = document.getElementById('bgm-container');
-        container.innerHTML = '';
-        items.forEach(item => {
-            let match = item.match(/(.*?)\s*\(數值:\s*(.*?)\)\s*\[狀態:(.*?)\]/);
-            if (match) {
-                let tableNum = match[1].trim();
-                let val = match[2].trim();
-                let status = match[3].trim();
-                container.insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num bgm-table" value="${tableNum}"><input type="text" class="value bgm-value" value="${val}"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" ${status==='已處理'?'selected':''}>已處理</option><option value="已 Send mail" ${status==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${status==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${status==='待處理'?'selected':''}>待處理</option></select></div></div>`);
+        if (r.bgm.includes('偏低') || r.bgm.includes('偏高')) {
+            document.getElementById('bgm-issue-group').style.display = 'block';
+            if (r.db_issue) {
+                let items = r.db_issue.split(' | ');
+                let container = document.getElementById('bgm-container');
+                container.innerHTML = '';
+                items.forEach(item => {
+                    let match = item.match(/(.*?)\s*\(數值:\s*(.*?)\)\s*\[狀態:(.*?)\]/);
+                    if (match) {
+                        let tableNum = match[1].trim();
+                        let val = match[2].trim();
+                        let status = match[3].trim();
+                        container.insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num bgm-table" value="${tableNum}"><input type="text" class="value bgm-value" value="${val}"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" ${status==='已處理'?'selected':''}>已處理</option><option value="已 Send mail" ${status==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${status==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${status==='待處理'?'selected':''}>待處理</option></select></div></div>`);
+                    }
+                });
             }
-        });
-    } else if (!r.bgm.includes('正常')) {
-        document.getElementById('bgm').value = r.bgm;
-        toggleIssue('bgm');
+        } else {
+            document.getElementById('bgm-issue-group').style.display = 'none';
+        }
     }
 
-    if (r.checklist) {
+    // 4. NFC 檢測
+    if (!r.checklist) {
+        document.getElementById('skip-nfc').checked = true;
+        document.getElementById('nfc-input-area').style.display = 'none';
+    } else {
+        document.getElementById('skip-nfc').checked = false;
+        document.getElementById('nfc-input-area').style.display = 'block';
         let parts = r.checklist.split(' | ');
         let hallStr = parts.find(p => p.includes('NFC正常:'));
         let issueStr = parts.find(p => p.includes('NFC異常:'));
@@ -555,7 +589,8 @@ function editRecord(id) {
         }
         if (issueStr) {
             document.getElementById('nfc-status').value = '有異常';
-            toggleNfcIssue();
+            document.getElementById('nfc-issue-group').style.display = 'block';
+            
             let nfcItemsStr = issueStr.replace('NFC異常:', '').trim();
             let items = nfcItemsStr.split(', ');
             let container = document.getElementById('nfc-container');
@@ -571,9 +606,14 @@ function editRecord(id) {
                     container.insertAdjacentHTML('beforeend', `<div class="issue-item nfc-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num nfc-table" value="${tableNum}"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;">${chkHtml}</div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" ${status==='已處理'?'selected':''}>已處理</option><option value="已 Send mail" ${status==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${status==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${status==='待處理'?'selected':''}>待處理</option></select></div></div>`);
                 }
             });
+        } else {
+            document.getElementById('nfc-status').value = '無異常';
+            document.getElementById('nfc-issue-group').style.display = 'none';
+            document.getElementById('nfc-container').innerHTML = `<div class="issue-item nfc-item"><div class="issue-row"><input type="text" class="table-num nfc-table" placeholder="輸入數字(如0201)"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
         }
     }
 
+    // 5. 場面問題 & 備註
     let note = r.note || "";
     let mainNote = note.split('【場面問題】')[0].split('【早前')[0].trim();
     document.getElementById('notes').value = mainNote;
