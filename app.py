@@ -145,13 +145,10 @@ def overwrite_record():
             return jsonify({"status": "error", "message": "❌ 找不到該紀錄！"})
 
         if session.get('role') != 'admin':
-            now = datetime.datetime.now(pytz.timezone('Asia/Macau')).replace(tzinfo=None)
-            row_time = row[0]
-            if hasattr(row_time, 'tzinfo') and row_time.tzinfo is not None:
-                row_time = row_time.astimezone(pytz.timezone('Asia/Macau')).replace(tzinfo=None)
-            
-            time_diff = now - row_time
-            if time_diff.total_seconds() > 300: 
+            # 終極修復：交由資料庫判斷時間，完美解決 8 小時時差問題！
+            c.execute("SELECT NOW() - created_at < interval '5 minutes' FROM records WHERE id = %s", (old_id,))
+            is_within_5_mins = c.fetchone()[0]
+            if not is_within_5_mins:
                 return jsonify({"status": "error", "message": "⏰ 已超過 5 分鐘修改時限，無法修改！"})
 
         c.execute("DELETE FROM records WHERE id = %s", (old_id,))
@@ -169,7 +166,7 @@ def overwrite_record():
     except Exception as e:
         print("Overwrite Error:", e)
         if conn: conn.rollback()
-        return jsonify({"status": "error", "message": "❌ 修改失敗，系統發生錯誤，請重新整理再試。"})
+        return jsonify({"status": "error", "message": f"❌ 修改失敗：{str(e)}"})
     finally:
         if conn:
             release_db_connection(conn)
@@ -266,13 +263,10 @@ def update_record():
             return jsonify({"status": "error", "message": "❌ 找不到該紀錄！"})
             
         if session.get('role') != 'admin':
-            now = datetime.datetime.now(pytz.timezone('Asia/Macau')).replace(tzinfo=None)
-            row_time = row[0]
-            if hasattr(row_time, 'tzinfo') and row_time.tzinfo is not None:
-                row_time = row_time.astimezone(pytz.timezone('Asia/Macau')).replace(tzinfo=None)
-            
-            time_diff = now - row_time
-            if time_diff.total_seconds() > 300: 
+            # 同樣交由資料庫判斷時間
+            c.execute("SELECT NOW() - created_at < interval '5 minutes' FROM records WHERE id = %s", (data.get('id'),))
+            is_within_5_mins = c.fetchone()[0]
+            if not is_within_5_mins: 
                 return jsonify({"status": "error", "message": "⏰ 已超過 5 分鐘修改時限，無法修改！"})
                 
         c.execute("UPDATE records SET note = %s, status = %s WHERE id = %s", (data.get('note'), data.get('status'), data.get('id')))
