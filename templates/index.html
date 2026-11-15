@@ -24,7 +24,7 @@
         .issue-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
         .issue-row { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 5px; align-items: center; width: 100%;}
         .issue-row select, .issue-row input { padding: 8px; font-size: 13px; height: 38px; box-sizing: border-box; margin: 0; }
-        .venue-category, .venue-problem { flex: 1 1 0px; min-width: 0; width: 50%; height: 38px; box-sizing: border-box; }
+        .venue-category, .venue-problem { flex: 1 1 0px; min-width: 0; width: 50%; height: 38px; box-sizing: border-box; text-overflow: ellipsis; }
         .issue-row .table-num { flex: 1.5; min-width: 70px; }
         .issue-row .value { flex: 1.5; min-width: 70px; background: #fff; border: 1px solid #f5b041;}
         .box-row { display: flex; gap: 5px; margin-top: 5px;}
@@ -34,10 +34,7 @@
         .btn-add { background: #f5b041; color: white; border: none; border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; margin-top: 5px; display: inline-block; font-weight: bold;}
         button.submit-btn { width: 100%; padding: 14px; margin-top: 25px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold;}
         .record-card { background: #fff; border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        
-        /* 調整頂部排版，確保按鈕靠右 */
         .record-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; font-size: 14px; gap: 10px; }
-        
         .record-data { font-size: 13px; color: #555; margin-bottom: 8px; background: #f4f6f8; padding: 8px; border-radius: 4px;}
         .issue-data { font-size: 14px; margin-bottom: 8px; padding: 10px; border-radius: 4px; line-height: 1.5; display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 8px;}
         .issue-data span:first-child { min-width: 0; word-break: break-word; }
@@ -49,7 +46,6 @@
         .issue-status { padding: 6px; font-size: 12px; border-radius: 6px; border: 1px solid #ccc; background: #fff; color: #d32f2f; font-weight: bold;}
         .pending-card { background: #fff8e1; border-left: 4px solid #ffa000; padding: 10px; margin-bottom: 10px; border-radius: 4px; font-size: 13px;}
         .btn-remove { background: #ff4d4f; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; position: absolute; right: 0; top: 0;}
-        
         @media (max-width: 500px) {
             .card { padding: 12px !important; }
             .record-header { padding: 8px !important; }
@@ -381,7 +377,13 @@
     function loadPendingIssues() {
         fetch('/api/pending_issues').then(res => res.json()).then(data => {
             let issues = data.issues; let doneSet = data.done_items || []; let container = document.getElementById('pending-container'); let listDiv = document.getElementById('pending-list');
-            if (issues.length === 0) { container.style.display = 'none'; document.getElementById('home-pending-container').style.display = 'none'; return; }
+            if (issues.length === 0) { 
+                container.style.display = 'none'; 
+                document.getElementById('home-pending-container').style.display = 'none'; 
+                listDiv.innerHTML = ''; // 清空幽靈項目
+                document.getElementById('home-pending-list').innerHTML = ''; 
+                return; 
+            }
             
             let editingRecordData = editingRecordId ? allRecords.find(x=>x.id==editingRecordId) : null;
             let doneItemsInEditing = [];
@@ -443,7 +445,18 @@
                 if (issue.note && issue.note.includes('【早前未處理】')) { let oldStr = issue.note.split('【早前未處理】')[1].trim(); oldStr.split('\n').forEach(line => { line = line.trim(); if (line && !line.includes('【') && !line.includes('】') && !line.startsWith('早前未處理:')) { let m = line.match(/^(Lux|溫度|分貝|NFC|場面)\s*-\s*/); let t = m ? m[1] : '場面'; let txt = m ? line.slice(m[0].length) : line; addItem(t, txt, issue.id); } }); }
             });
             let finalHtml = ""; for (let cat in window.globalGroupedItems) finalHtml += `<div class="pending-card" style="border-left: 4px solid #ffa000; margin-bottom: 15px;"><details style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 5px;"><summary style="cursor: pointer; font-weight: bold; color: #856404; padding: 5px;">${cat} (${window.globalGroupedItems[cat].length} 項)</summary><div style="padding: 5px 0 0 0;">${window.globalGroupedItems[cat].join('')}</div></details></div>`;
-            if (totalItems === 0) { container.style.display = 'none'; document.getElementById('home-pending-container').style.display = 'none'; } else { document.getElementById('pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開剔選)`; listDiv.innerHTML = finalHtml; document.getElementById('home-pending-container').style.display = 'block'; document.getElementById('home-pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開查看)`; document.getElementById('home-pending-list').innerHTML = finalHtml.replace(/<input type="checkbox"[^>]*>/g, ''); }
+            if (totalItems === 0) { 
+                container.style.display = 'none'; 
+                listDiv.innerHTML = ''; // 確保清空
+                document.getElementById('home-pending-container').style.display = 'none'; 
+                document.getElementById('home-pending-list').innerHTML = '';
+            } else { 
+                document.getElementById('pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開剔選)`; 
+                listDiv.innerHTML = finalHtml; 
+                document.getElementById('home-pending-container').style.display = 'block'; 
+                document.getElementById('home-pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開查看)`; 
+                document.getElementById('home-pending-list').innerHTML = finalHtml.replace(/<input type="checkbox"[^>]*>/g, ''); 
+            }
 
             // 完美還原「早前已處理」的勾選狀態
             if (editingRecordId) {
@@ -739,11 +752,27 @@
     function deleteRecord(id) { if (confirm("⚠️ 你確定要刪除這條交更紀錄嗎？刪除後無法復原！")) { fetch('/api/delete_record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) }).then(res => res.json()).then(data => { alert(data.message); if (data.status === 'success') showList(); }).catch(err => alert("❌ 連線失敗，請稍後再試。")); } }
 
     function submitForm() {
-        let pendingCheckboxes = document.querySelectorAll('.pending-checkbox'); let hasUnresolved = false; pendingCheckboxes.forEach(cb => { if (!cb.checked) hasUnresolved = true; });
-        if (hasUnresolved) { let isConfirmed = document.getElementById('confirm-pending').checked; if (!isConfirmed) { alert("⚠️ 請注意：仲有未完成嘅跟進項目！\n\n如果你確定呢啲問題仍然未處理，請喺最底撳『我確定未打勾的項目仍然未處理』個格仔，然後再提交。"); return; } }
+        let isPendingVisible = document.getElementById('pending-container').style.display !== 'none';
+        let hasUnresolved = false; 
+        
+        if (isPendingVisible) {
+            let pendingCheckboxes = document.querySelectorAll('.pending-checkbox'); 
+            pendingCheckboxes.forEach(cb => { if (!cb.checked) hasUnresolved = true; });
+        }
+
+        if (hasUnresolved) { 
+            let isConfirmed = document.getElementById('confirm-pending').checked; 
+            if (!isConfirmed) { 
+                alert("⚠️ 請注意：仲有未完成嘅跟進項目！\n\n如果你確定呢啲問題仍然未處理，請喺最底撳『我確定未打勾的項目仍然未處理』個格仔，然後再提交。"); 
+                return; 
+            } 
+        }
         
         let finalNote = document.getElementById('notes').value; let doneOldItems = []; let pendingOldItems = [];
-        pendingCheckboxes.forEach(cb => { let text = cb.getAttribute('data-text'); if (cb.checked) doneOldItems.push(text); else pendingOldItems.push(text); });
+        if (isPendingVisible) {
+            document.querySelectorAll('.pending-checkbox').forEach(cb => { let text = cb.getAttribute('data-text'); if (cb.checked) doneOldItems.push(text); else pendingOldItems.push(text); });
+        }
+        
         if (doneOldItems.length > 0) finalNote += `\n\n【早前已處理】\n` + doneOldItems.join('\n');
         if (pendingOldItems.length > 0) finalNote += `\n\n【早前未處理】\n` + pendingOldItems.join('\n');
         
