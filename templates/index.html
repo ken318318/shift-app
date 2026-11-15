@@ -759,13 +759,23 @@
     function deleteRecord(id) { if (confirm("⚠️ 你確定要刪除這條交更紀錄嗎？刪除後無法復原！")) { fetch('/api/delete_record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) }).then(res => res.json()).then(data => { alert(data.message); if (data.status === 'success') showList(); }).catch(err => alert("❌ 連線失敗，請稍後再試。")); } }
 
     function submitForm() {
-        let isPendingVisible = document.getElementById('pending-container').style.display !== 'none';
+        // 終極修復：只檢查真正顯示在畫面上的 Checkbox，隱藏咗嘅幽靈元素絕對唔干擾提交
+        let pendingCheckboxes = document.querySelectorAll('.pending-checkbox'); 
         let hasUnresolved = false; 
+        let doneOldItems = []; 
+        let pendingOldItems = [];
         
-        if (isPendingVisible) {
-            let pendingCheckboxes = document.querySelectorAll('.pending-checkbox'); 
-            pendingCheckboxes.forEach(cb => { if (!cb.checked) hasUnresolved = true; });
-        }
+        pendingCheckboxes.forEach(cb => { 
+            if (cb.offsetParent !== null) { // 確保只處理畫面上可見的元素
+                let text = cb.getAttribute('data-text'); 
+                if (cb.checked) {
+                    doneOldItems.push(text); 
+                } else {
+                    pendingOldItems.push(text); 
+                    hasUnresolved = true; 
+                }
+            }
+        });
 
         if (hasUnresolved) { 
             let isConfirmed = document.getElementById('confirm-pending').checked; 
@@ -775,11 +785,7 @@
             } 
         }
         
-        let finalNote = document.getElementById('notes').value; let doneOldItems = []; let pendingOldItems = [];
-        if (isPendingVisible) {
-            document.querySelectorAll('.pending-checkbox').forEach(cb => { let text = cb.getAttribute('data-text'); if (cb.checked) doneOldItems.push(text); else pendingOldItems.push(text); });
-        }
-        
+        let finalNote = document.getElementById('notes').value; 
         if (doneOldItems.length > 0) finalNote += `\n\n【早前已處理】\n` + doneOldItems.join('\n');
         if (pendingOldItems.length > 0) finalNote += `\n\n【早前未處理】\n` + pendingOldItems.join('\n');
         
