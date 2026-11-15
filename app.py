@@ -131,41 +131,49 @@ def submit():
 def overwrite_record():
     data = request.json
     old_id = data.get('old_id')
-    
-    conn = get_db_connection()
-    c = conn.cursor()
-    
-    if not old_id:
-        release_db_connection(conn)
-        return jsonify({"status": "error", "message": "❌ 系統錯誤：找不到要覆蓋的舊紀錄。"})
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        if not old_id:
+            return jsonify({"status": "error", "message": "❌ 系統錯誤：找不到要覆蓋的舊紀錄。"})
 
-    c.execute("SELECT created_at FROM records WHERE id = %s", (old_id,))
-    row = c.fetchone()
-    if not row:
-        release_db_connection(conn)
-        return jsonify({"status": "error", "message": "❌ 找不到該紀錄！"})
+        c.execute("SELECT created_at FROM records WHERE id = %s", (old_id,))
+        row = c.fetchone()
+        if not row:
+            return jsonify({"status": "error", "message": "❌ 找不到該紀錄！"})
 
-    if session.get('role') != 'admin':
-        now = datetime.datetime.now(pytz.timezone('Asia/Macau'))
-        time_diff = now - row[0]
-        if time_diff.total_seconds() > 300: 
+        if session.get('role') != 'admin':
+            # 修復時區相減崩潰問題
+            now = datetime.datetime.now(pytz.timezone('Asia/Macau')).replace(tzinfo=None)
+            row_time = row[0]
+            if hasattr(row_time, 'tzinfo') and row_time.tzinfo is not None:
+                row_time = row_time.astimezone(pytz.timezone('Asia/Macau')).replace(tzinfo=None)
+            
+            time_diff = now - row_time
+            if time_diff.total_seconds() > 300: 
+                return jsonify({"status": "error", "message": "⏰ 已超過 5 分鐘修改時限，無法修改！"})
+
+        c.execute("DELETE FROM records WHERE id = %s", (old_id,))
+
+        now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
+        c.execute("""INSERT INTO records 
+                     (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, created_at) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+                  (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
+                   data.get('checklist'), data.get('status'), data.get('follower'), data.get('note'),
+                   data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'), now_macau))
+        
+        conn.commit()
+        return jsonify({"status": "success", "message": "✅ 紀錄已成功修改並覆蓋！"})
+    except Exception as e:
+        print("Overwrite Error:", e)
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "message": "❌ 修改失敗，系統發生錯誤，請重新整理再試。"})
+    finally:
+        if conn:
             release_db_connection(conn)
-            return jsonify({"status": "error", "message": "⏰ 已超過 5 分鐘修改時限，無法修改！"})
-
-    c.execute("DELETE FROM records WHERE id = %s", (old_id,))
-
-    now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
-    c.execute("""INSERT INTO records 
-                 (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, created_at) 
-                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
-              (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
-               data.get('checklist'), data.get('status'), data.get('follower'), data.get('note'),
-               data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'), now_macau))
-    
-    conn.commit()
-    release_db_connection(conn)
-    
-    return jsonify({"status": "success", "message": "✅ 紀錄已成功修改並覆蓋！"})
 
 @app.route('/api/records', methods=['GET'])
 def get_records():
@@ -249,23 +257,35 @@ def delete_record():
 @app.route('/api/update_record', methods=['POST'])
 def update_record():
     data = request.json
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT created_at FROM records WHERE id = %s", (data.get('id'),))
-    row = c.fetchone()
-    if not row:
-        release_db_connection(conn)
-        return jsonify({"status": "error", "message": "❌ 找不到該紀錄！"})
-    if session.get('role') != 'admin':
-        now = datetime.datetime.now(pytz.timezone('Asia/Macau'))
-        time_diff = now - row[0]
-        if time_diff.total_seconds() > 300: 
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT created_at FROM records WHERE id = %s", (data.get('id'),))
+        row = c.fetchone()
+        if not row:
+            return jsonify({"status": "error", "message": "❌ 找不到該紀錄！"})
+            
+        if session.get('role') != 'admin':
+            now = datetime.datetime.now(pytz.timezone('Asia/Macau')).replace(tzinfo=None)
+            row_time = row[0]
+            if hasattr(row_time, 'tzinfo') and row_time.tzinfo is not None:
+                row_time = row_time.astimezone(pytz.timezone('Asia/Macau')).replace(tzinfo=None)
+            
+            time_diff = now - row_time
+            if time_diff.total_seconds() > 300: 
+                return jsonify({"status": "error", "message": "⏰ 已超過 5 分鐘修改時限，無法修改！"})
+                
+        c.execute("UPDATE records SET note = %s, status = %s WHERE id = %s", (data.get('note'), data.get('status'), data.get('id')))
+        conn.commit()
+        return jsonify({"status": "success", "message": "✅ 紀錄已成功更新！"})
+    except Exception as e:
+        print("Update Error:", e)
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "message": "❌ 更新失敗，請稍後再試。"})
+    finally:
+        if conn:
             release_db_connection(conn)
-            return jsonify({"status": "error", "message": "⏰ 已超過 5 分鐘修改時限，無法修改！"})
-    c.execute("UPDATE records SET note = %s, status = %s WHERE id = %s", (data.get('note'), data.get('status'), data.get('id')))
-    conn.commit()
-    release_db_connection(conn)
-    return jsonify({"status": "success", "message": "✅ 紀錄已成功更新！"})
 
 @app.route('/')
 def index():
