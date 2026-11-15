@@ -309,7 +309,15 @@ function showForm(isNew = true) {
     transformInputs(); 
     window.scrollTo(0, 0); 
 }
-function showList() { document.getElementById('form-container').style.display = 'none'; document.getElementById('list-container').style.display = 'block'; displayRecords(); loadPendingIssues(); transformInputs(); window.scrollTo(0, 0); }
+function showList() { 
+    editingRecordId = null;
+    document.getElementById('form-container').style.display = 'none'; 
+    document.getElementById('list-container').style.display = 'block'; 
+    displayRecords(); 
+    loadPendingIssues(); 
+    transformInputs(); 
+    window.scrollTo(0, 0); 
+}
 function togglePending() { let list = document.getElementById('pending-list'); let arrow = document.getElementById('pending-arrow'); if (list.style.display === 'none') { list.style.display = 'block'; arrow.innerHTML = '▲ 收起'; } else { list.style.display = 'none'; arrow.innerHTML = '▼ 展開'; } }
 function toggleHomePending() { let list = document.getElementById('home-pending-list'); let arrow = document.getElementById('home-pending-arrow'); if (list.style.display === 'none') { list.style.display = 'block'; arrow.innerHTML = '▲ 收起'; } else { list.style.display = 'none'; arrow.innerHTML = '▼ 展開'; } }
 function toggleIssue(type) { let selectEl = document.getElementById(type); let groupEl = document.getElementById(type + '-issue-group'); if (type === 'lux') { if (selectEl.value === '< 450' || selectEl.value === '> 650') groupEl.style.display = 'block'; else groupEl.style.display = 'none'; } else { if (selectEl.value.includes('偏高') || selectEl.value.includes('偏低')) groupEl.style.display = 'block'; else groupEl.style.display = 'none'; } }
@@ -366,6 +374,21 @@ function loadPendingIssues() {
     fetch('/api/pending_issues').then(res => res.json()).then(data => {
         let issues = data.issues; let doneSet = data.done_items || []; let container = document.getElementById('pending-container'); let listDiv = document.getElementById('pending-list');
         if (issues.length === 0) { container.style.display = 'none'; document.getElementById('home-pending-container').style.display = 'none'; return; }
+        
+        let editingRecordData = editingRecordId ? allRecords.find(x=>x.id==editingRecordId) : null;
+        let doneItemsInEditing = [];
+        let pendingItemsInEditing = [];
+        if (editingRecordData && editingRecordData.note) {
+            if (editingRecordData.note.includes('【早前已處理】')) {
+                let str = editingRecordData.note.split('【早前已處理】')[1].split('【早前未處理】')[0];
+                doneItemsInEditing = str.split('\n').map(s=>s.trim()).filter(s=>s).map(s => s.replace(/\[狀態:.*?\]/g, '').trim().toUpperCase());
+            }
+            if (editingRecordData.note.includes('【早前未處理】')) {
+                let str = editingRecordData.note.split('【早前未處理】')[1];
+                pendingItemsInEditing = str.split('\n').map(s=>s.trim()).filter(s=>s).map(s => s.replace(/\[狀態:.*?\]/g, '').trim().toUpperCase());
+            }
+        }
+
         container.style.display = 'block'; let html = ""; let totalItems = 0; let seenItems = new Set(); window.globalGroupedItems = {}; 
         issues.forEach(issue => {
             let timeStr = issue.created_at ? new Date(issue.created_at).toLocaleString('zh-HK') : '';
@@ -377,8 +400,17 @@ function loadPendingIssues() {
                 let checkText = `${type} - ${clean}`.toUpperCase(); let dataText = `${type} - ${clean} [狀態:${currentStatus}]`;
                 
                 if (seenItems.has(checkText)) return; 
+                
+                let isEditing = (editingRecordId !== null);
                 let inDoneSet = doneSet.includes(checkText);
-                if (inDoneSet) { return; }
+                
+                if (isEditing) {
+                    let isInEditingDone = doneItemsInEditing.some(l => l.includes(checkText) || checkText.includes(l));
+                    let isInEditingPending = pendingItemsInEditing.some(l => l.includes(checkText) || checkText.includes(l));
+                    if (!isInEditingDone && !isInEditingPending) { return; }
+                } else {
+                    if (inDoneSet) { return; }
+                }
                 
                 seenItems.add(checkText);
                 let badgeColor = currentStatus === '已 Send mail' ? '#9c27b0' : (currentStatus === '已通知相關部門跟進' ? '#e67c73' : '#f5b041');
@@ -624,9 +656,27 @@ function editRecord(id) {
             if (!line.trim()) return;
             let match = line.match(/\[(.*?)\]\s*位置:\s*(.*?)\s*\[狀態:(.*?)\]/);
             if (match) {
-                let catProb = match[1].split(' - ');
-                let cat = catProb[0] ? catProb[0].trim() : '';
-                let prob = catProb[1] ? catProb[1].trim() : '';
+                // 完美拆解包含 '-' 的分類名
+                let catProbStr = match[1];
+                let cat = '';
+                let prob = '';
+                for (let key in venueCategories) {
+                    if (catProbStr.startsWith(key + ' - ')) {
+                        cat = key;
+                        prob = catProbStr.replace(key + ' - ', '').trim();
+                        break;
+                    }
+                }
+                if (!cat) {
+                    let lastDash = catProbStr.lastIndexOf(' - ');
+                    if (lastDash !== -1) {
+                        cat = catProbStr.substring(0, lastDash).trim();
+                        prob = catProbStr.substring(lastDash + 3).trim();
+                    } else {
+                        cat = catProbStr; prob = '';
+                    }
+                }
+
                 let locsStr = match[2].trim();
                 let status = match[3].trim();
                 
