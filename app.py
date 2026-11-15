@@ -145,7 +145,7 @@ def overwrite_record():
             return jsonify({"status": "error", "message": "❌ 找不到該紀錄！"})
 
         if session.get('role') != 'admin':
-            # 終極修復：交由資料庫判斷時間，完美解決 8 小時時差問題！
+            # 終極修復：交由資料庫判斷時間，完美解決時差問題！
             c.execute("SELECT NOW() - created_at < interval '5 minutes' FROM records WHERE id = %s", (old_id,))
             is_within_5_mins = c.fetchone()[0]
             if not is_within_5_mins:
@@ -263,7 +263,6 @@ def update_record():
             return jsonify({"status": "error", "message": "❌ 找不到該紀錄！"})
             
         if session.get('role') != 'admin':
-            # 同樣交由資料庫判斷時間
             c.execute("SELECT NOW() - created_at < interval '5 minutes' FROM records WHERE id = %s", (data.get('id'),))
             is_within_5_mins = c.fetchone()[0]
             if not is_within_5_mins: 
