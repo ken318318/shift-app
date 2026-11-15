@@ -145,7 +145,6 @@ def overwrite_record():
             return jsonify({"status": "error", "message": "❌ 找不到該紀錄！"})
 
         if session.get('role') != 'admin':
-            # 修復時區相減崩潰問題
             now = datetime.datetime.now(pytz.timezone('Asia/Macau')).replace(tzinfo=None)
             row_time = row[0]
             if hasattr(row_time, 'tzinfo') and row_time.tzinfo is not None:
