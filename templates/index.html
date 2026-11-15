@@ -303,7 +303,35 @@
     rawTableList.split(',').forEach(item => { let str = item.trim(); if(str) tableDict[str.replace(/[^0-9]/g, '')] = str; });
     function autoFillTable(el) { let val = el.value.trim(); if (/^\d+$/.test(val)) { if (tableDict[val]) el.value = tableDict[val]; else if (val.length >= 4) el.value = 'NB' + val; } }
     function transformInputs() { document.querySelectorAll('.table-num, .venue-location').forEach(inp => { inp.placeholder = '輸入數字(如0201)'; inp.setAttribute('oninput', 'autoFillTable(this)'); }); }
-    
+
+    // 終極解析：精準拆解所有區塊，保證唔會漏「限紅柱」
+    function parseNote(noteText) {
+        let result = { main: "", venue: "", doneOld: "", pendingOld: "" };
+        if (!noteText) return result;
+        let text = noteText;
+        
+        let venueMatch = text.match(/【場面問題】([\s\S]*?)(?=【|$)/);
+        if (venueMatch) {
+            result.venue = venueMatch[1].trim();
+            text = text.replace(venueMatch[0], '');
+        }
+        
+        let doneMatch = text.match(/【早前已處理】([\s\S]*?)(?=【|$)/);
+        if (doneMatch) {
+            result.doneOld = doneMatch[1].trim();
+            text = text.replace(doneMatch[0], '');
+        }
+
+        let pendingMatch = text.match(/【早前未處理】([\s\S]*?)(?=【|$)/);
+        if (pendingMatch) {
+            result.pendingOld = pendingMatch[1].trim();
+            text = text.replace(pendingMatch[0], '');
+        }
+        
+        result.main = text.trim();
+        return result;
+    }
+
     function showForm(isNew = true) { 
         if (isNew) resetForm(); 
         document.getElementById('list-container').style.display = 'none'; 
@@ -379,7 +407,7 @@
             if (issues.length === 0) { 
                 container.style.display = 'none'; 
                 document.getElementById('home-pending-container').style.display = 'none'; 
-                listDiv.innerHTML = ''; // 清空幽靈項目
+                listDiv.innerHTML = ''; 
                 document.getElementById('home-pending-list').innerHTML = ''; 
                 return; 
             }
@@ -388,13 +416,12 @@
             let doneItemsInEditing = [];
             let pendingItemsInEditing = [];
             if (editingRecordData && editingRecordData.note) {
-                if (editingRecordData.note.includes('【早前已處理】')) {
-                    let str = editingRecordData.note.split('【早前已處理】')[1].split('【早前未處理】')[0].split('【場面問題】')[0];
-                    doneItemsInEditing = str.split('\n').map(s=>s.trim()).filter(s=>s).map(s => s.replace(/\[狀態:.*?\]/g, '').trim().toUpperCase());
+                let parsedEdit = parseNote(editingRecordData.note);
+                if (parsedEdit.doneOld) {
+                    doneItemsInEditing = parsedEdit.doneOld.split('\n').map(s=>s.trim()).filter(s=>s).map(s => s.replace(/\[狀態:.*?\]/g, '').trim().toUpperCase());
                 }
-                if (editingRecordData.note.includes('【早前未處理】')) {
-                    let str = editingRecordData.note.split('【早前未處理】')[1].split('【場面問題】')[0];
-                    pendingItemsInEditing = str.split('\n').map(s=>s.trim()).filter(s=>s).map(s => s.replace(/\[狀態:.*?\]/g, '').trim().toUpperCase());
+                if (parsedEdit.pendingOld) {
+                    pendingItemsInEditing = parsedEdit.pendingOld.split('\n').map(s=>s.trim()).filter(s=>s).map(s => s.replace(/\[狀態:.*?\]/g, '').trim().toUpperCase());
                 }
             }
 
@@ -441,15 +468,25 @@
                     });
                 }
                 
-                // 關鍵修復：如果係修改模式，絕對唔可以將佢自己本身嘅【場面問題】放入黃色框，避免重複計數！
-                if (issue.note && issue.note.includes('【場面問題】')) { 
+                let parsedIssue = parseNote(issue.note || "");
+                
+                if (parsedIssue.venue) {
                     if (issue.id !== editingRecordId) {
-                        let venueStr = issue.note.split('【場面問題】')[1].split('【早前')[0].trim(); 
-                        venueStr.split('\n').forEach(line => { if (line.trim()) addItem('場面', line, issue.id); }); 
+                        parsedIssue.venue.split('\n').forEach(line => { if (line.trim()) addItem('場面', line, issue.id); });
                     }
                 }
                 
-                if (issue.note && issue.note.includes('【早前未處理】')) { let oldStr = issue.note.split('【早前未處理】')[1].trim(); oldStr.split('\n').forEach(line => { line = line.trim(); if (line && !line.includes('【') && !line.includes('】') && !line.startsWith('早前未處理:')) { let m = line.match(/^(Lux|溫度|分貝|NFC|場面)\s*-\s*/); let t = m ? m[1] : '場面'; let txt = m ? line.slice(m[0].length) : line; addItem(t, txt, issue.id); } }); }
+                if (parsedIssue.pendingOld) {
+                    parsedIssue.pendingOld.split('\n').forEach(line => {
+                        line = line.trim();
+                        if (line) {
+                            let m = line.match(/^(Lux|溫度|分貝|NFC|場面)\s*-\s*/); 
+                            let t = m ? m[1] : '場面'; 
+                            let txt = m ? line.slice(m[0].length) : line; 
+                            addItem(t, txt, issue.id);
+                        }
+                    });
+                }
             });
             let finalHtml = ""; for (let cat in window.globalGroupedItems) finalHtml += `<div class="pending-card" style="border-left: 4px solid #ffa000; margin-bottom: 15px;"><details style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 5px;"><summary style="cursor: pointer; font-weight: bold; color: #856404; padding: 5px;">${cat} (${window.globalGroupedItems[cat].length} 項)</summary><div style="padding: 5px 0 0 0;">${window.globalGroupedItems[cat].join('')}</div></details></div>`;
             if (totalItems === 0) { 
@@ -465,12 +502,11 @@
                 document.getElementById('home-pending-list').innerHTML = finalHtml.replace(/<input type="checkbox"[^>]*>/g, ''); 
             }
 
-            // 完美還原「早前已處理」的勾選狀態
             if (editingRecordId) {
                 let r = allRecords.find(x => x.id == editingRecordId);
                 if (r && r.note && r.note.includes('【早前已處理】')) {
-                    let doneStr = r.note.split('【早前已處理】')[1].split('【早前未處理】')[0].split('【場面問題】')[0].trim();
-                    let doneLines = doneStr.split('\n').map(l => l.replace(/\[狀態:.*?\]/g, '').trim().toUpperCase()).filter(l=>l);
+                    let parsedEdit = parseNote(r.note);
+                    let doneLines = parsedEdit.doneOld.split('\n').map(l => l.replace(/\[狀態:.*?\]/g, '').trim().toUpperCase()).filter(l=>l);
                     
                     document.querySelectorAll('.pending-checkbox').forEach(cb => {
                         let cbText = cb.getAttribute('data-text'); 
@@ -501,7 +537,7 @@
             let html = "";
             records.forEach((r, index) => {
                 let doneIssuesList = []; let pendingIssuesList = [];
-                let doneOldHtml = ""; let pendingOldHtml = "";
+                let doneOldHtml = ""; 
                 
                 let processIssue = (text, defaultPrefix) => { if (!text) return; let match = text.match(/\[狀態:(.*?)\]/); let status = match ? match[1] : '待處理'; let cleanText = text.replace(/\[狀態:.*?\]/g, '').trim(); if (status === '已處理') { doneIssuesList.push(formatIssueText(cleanText, defaultPrefix, status)); } else { pendingIssuesList.push(formatIssueText(cleanText, defaultPrefix, status)); } };
                 if (r.lux_issue) processIssue(r.lux_issue, 'Lux -'); 
@@ -515,42 +551,29 @@
                     }); 
                 }
                 
-                let mainNote = r.note || "";
+                let parsedNote = parseNote(r.note || "");
+                let mainNote = parsedNote.main;
                 
-                // 1. 處理【場面問題】
-                if (mainNote.includes('【場面問題】')) { 
-                    let parts = mainNote.split('【場面問題】'); 
-                    let venueStr = parts[1].split('【早前')[0].trim(); 
-                    venueStr.split('\n').forEach(line => { 
-                        line = line.trim(); 
-                        if (line !== '' && !line.startsWith('⚠️') && !line.startsWith('✅')) { 
-                            processIssue(line, ''); 
-                        } 
-                    }); 
-                    mainNote = parts[0].trim(); 
-                }
-                
-                // 2. 處理【早前已處理】
-                if (mainNote.includes('【早前已處理】')) { 
-                    let parts = mainNote.split('【早前已處理】'); 
-                    let doneStr = parts[1].split('【早前未處理】')[0].split('【場面問題】')[0].trim(); 
-                    doneStr.split('\n').forEach(line => { 
-                        if (line.trim()) doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 舊問題已處理: ${line.trim()}</span></div>`; 
-                    }); 
-                    mainNote = mainNote.split('【早前已處理】')[0].trim();
-                }
-
-                // 3. 處理【早前未處理】
-                if (mainNote.includes('【早前未處理】')) {
-                    let parts = mainNote.split('【早前未處理】');
-                    let pendingStr = parts[1].split('【場面問題】')[0].trim();
-                    pendingStr.split('\n').forEach(line => {
+                if (parsedNote.venue) {
+                    parsedNote.venue.split('\n').forEach(line => {
                         line = line.trim();
-                        if (line && !line.startsWith('早前未處理:')) {
-                            pendingIssuesList.push(formatIssueText(line, '', '未處理'));
+                        if (line && !line.startsWith('⚠️') && !line.startsWith('✅')) {
+                            processIssue(line, '場面 -');
                         }
                     });
-                    mainNote = mainNote.split('【早前未處理】')[0].trim();
+                }
+                
+                if (parsedNote.doneOld) {
+                    parsedNote.doneOld.split('\n').forEach(line => {
+                        if (line.trim()) doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 舊問題已處理: ${line.trim()}</span></div>`;
+                    });
+                }
+
+                if (parsedNote.pendingOld) {
+                    parsedNote.pendingOld.split('\n').forEach(line => {
+                        line = line.trim();
+                        if (line) pendingIssuesList.push(formatIssueText(line, '', '未處理'));
+                    });
                 }
 
                 let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${new Date(r.created_at).toLocaleString('zh-HK')}</div>` : "";
@@ -575,7 +598,7 @@
                             ${buttonsHtml}
                         </div>
                     </div>
-                    ${dataHtml}${checkItemsHtml}${doneIssuesList.join('')}${doneOldHtml}${pendingIssuesList.join('')}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote.split('【早前')[0].trim()}</div></div>`;
+                    ${dataHtml}${checkItemsHtml}${doneIssuesList.join('')}${doneOldHtml}${pendingIssuesList.join('')}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div></div>`;
             });
             listDiv.innerHTML = html;
         }).catch(error => console.error("讀取失敗:", error));
@@ -728,13 +751,11 @@
             }
         }
 
-        let note = r.note || "";
-        let mainNote = note.split('【場面問題】')[0].split('【早前')[0].trim();
-        document.getElementById('notes').value = mainNote;
+        let parsedNote = parseNote(r.note || "");
+        document.getElementById('notes').value = parsedNote.main;
         
-        if (note.includes('【場面問題】')) {
-            let venueStr = note.split('【場面問題】')[1].split('【早前')[0].trim();
-            venueStr.split('\n').forEach((line, index) => {
+        if (parsedNote.venue) {
+            parsedNote.venue.split('\n').forEach((line, index) => {
                 if (!line.trim()) return;
                 let match = line.match(/\[(.*?)\]\s*位置:\s*(.*?)\s*\[狀態:(.*?)\]/);
                 if (match) {
