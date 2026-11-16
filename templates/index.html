@@ -723,12 +723,37 @@
     }
 
     function toggleSelectAll(cb) {
-        let card = cb.closest('.pending-card');
-        if (!card) return;
-        card.querySelectorAll('.pending-checkbox').forEach(c => {
-            if (c.offsetParent !== null) c.checked = cb.checked;
-        });
+    let card = cb.closest('.pending-card');
+    if (!card) return;
+    card.querySelectorAll('.pending-checkbox').forEach(c => {
+        if (c.offsetParent !== null) c.checked = cb.checked;
+    });
+    updatePendingCardState(card);
+}
+
+function updatePendingCardState(card) {
+    if (!card) return;
+    let headerCb = card.querySelector('.select-all-cb');
+    if (!headerCb) return;
+    let visibleCbs = Array.from(card.querySelectorAll('.pending-checkbox')).filter(c => c.offsetParent !== null);
+    if (visibleCbs.length === 0) {
+        headerCb.checked = false;
+        headerCb.indeterminate = false;
+        return;
     }
+    let checkedCount = visibleCbs.filter(c => c.checked).length;
+    if (checkedCount === 0) {
+        headerCb.checked = false;
+        headerCb.indeterminate = false;
+    } else if (checkedCount === visibleCbs.length) {
+        headerCb.checked = true;
+        headerCb.indeterminate = false;
+    } else {
+        headerCb.checked = false;
+        headerCb.indeterminate = true;
+    }
+}
+
 
     function loadPendingIssues() {
         fetch('/api/pending_issues').then(res => res.json()).then(data => {
@@ -882,6 +907,16 @@
             } else { 
                 document.getElementById('pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開剔選)`; 
                 listDiv.innerHTML = finalHtml; 
+                            listDiv.innerHTML = finalHtml;
+            
+            // ★ 新增：為每個子項目 checkbox 綁定 change 事件，自動更新頂層全選狀態
+            listDiv.querySelectorAll('.pending-checkbox').forEach(cb => {
+                cb.addEventListener('change', function() {
+                    let card = this.closest('.pending-card');
+                    updatePendingCardState(card);
+                });
+            });
+
                 document.getElementById('home-pending-container').style.display = 'block'; 
                 document.getElementById('home-pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開查看)`; 
                 document.getElementById('home-pending-list').innerHTML = finalHtml.replace(/<input type="checkbox"[^>]*>/g, ''); 
@@ -900,6 +935,16 @@
                             cb.checked = true;
                         }
                     });
+                                        document.querySelectorAll('.pending-checkbox').forEach(cb => {
+                        let cbText = cb.getAttribute('data-text'); 
+                        let cleanCb = cbText.split(' [狀態:')[0].trim().toUpperCase(); 
+                        if (doneLines.some(line => line.includes(cleanCb) || cleanCb.includes(line))) {
+                            cb.checked = true;
+                        }
+                    });
+                    // ★ 新增：編輯模式手動勾完之後，更新每個分類頂層嘅半選狀態
+                    document.querySelectorAll('#pending-list .pending-card').forEach(card => updatePendingCardState(card));
+
                 }
             }
         }).catch(err => console.error(err));
