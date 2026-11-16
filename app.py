@@ -5,6 +5,7 @@ from psycopg2 import pool
 import os
 import re
 import datetime
+import time
 import pytz
 
 app = Flask(__name__)
@@ -32,10 +33,143 @@ def get_db_connection():
 def release_db_connection(conn):
     DB_POOL.putconn(conn)
 
+
+# ---------- 系統設定 / 稽核（自動建表，唔需要手動改資料庫） ----------
+def ensure_tables():
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""CREATE TABLE IF NOT EXISTS app_settings (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL,
+                        updated_at TIMESTAMPTZ DEFAULT NOW()
+                     )""")
+        c.execute("""CREATE TABLE IF NOT EXISTS audit_logs (
+                        id BIGSERIAL PRIMARY KEY,
+                        actor TEXT,
+                        action TEXT,
+                        detail TEXT,
+                        created_at TIMESTAMPTZ DEFAULT NOW()
+                     )""")
+        conn.commit()
+        print("系統資料表檢查完成（app_settings / audit_logs）")
+    except Exception as e:
+        print("系統資料表檢查失敗:", e)
+        if conn:
+            try: conn.rollback()
+            except Exception: pass
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+
+def get_setting(key, default=None):
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT value FROM app_settings WHERE key = %s", (key,))
+        row = c.fetchone()
+        return row[0] if row else default
+    except Exception as e:
+        print("讀取設定失敗:", e)
+        return default
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+
+def set_setting(key, value):
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""INSERT INTO app_settings (key, value, updated_at) VALUES (%s, %s, NOW())
+                     ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()""",
+                  (key, value))
+        conn.commit()
+        return True
+    except Exception as e:
+        print("寫入設定失敗:", e)
+        if conn:
+            try: conn.rollback()
+            except Exception: pass
+        return False
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+
+def log_action(action, detail=""):
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("INSERT INTO audit_logs (actor, action, detail) VALUES (%s, %s, %s)",
+                  (session.get('role', 'unknown'), action, detail))
+        conn.commit()
+    except Exception as e:
+        print("寫入稽核紀錄失敗:", e)
+        if conn:
+            try: conn.rollback()
+            except Exception: pass
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+
+# ---------- 強制登出（session 版本控制） ----------
+_EPOCH_CACHE = {'staff': (0.0, None), 'admin': (0.0, None)}
+EPOCH_TTL = 10  # 秒；即係改密碼後最多 10 秒內所有舊 session 失效
+
+
+def get_epoch(role, force=False):
+    role = 'admin' if role == 'admin' else 'staff'
+    ts, val = _EPOCH_CACHE.get(role, (0.0, None))
+    now = time.time()
+    if not force and val is not None and (now - ts) < EPOCH_TTL:
+        return val
+    val = get_setting(f"{role}_epoch", '') or ''
+    _EPOCH_CACHE[role] = (now, val)
+    return val
+
+
+def bump_epoch(role):
+    """更新版本號 → 該角色所有已登入 session 於下次請求即失效。"""
+    role = 'admin' if role == 'admin' else 'staff'
+    val = str(int(time.time() * 1000))
+    ok = set_setting(f"{role}_epoch", val)
+    if ok:
+        _EPOCH_CACHE[role] = (time.time(), val)
+    return ok
+
+
+ensure_tables()
+
 @app.before_request
 def require_login():
     allowed_routes = ['login', 'static', 'verify_wechat', 'catch_all_txt']
-    if 'logged_in' not in session and request.endpoint not in allowed_routes:
+    endpoint = request.endpoint
+
+    if 'logged_in' not in session:
+        if endpoint in allowed_routes:
+            return
+        return redirect(url_for('login'))
+
+    # 密碼被更改 / 被管理員強制登出 → 舊 session 一律失效
+    role = session.get('role', 'staff')
+    if session.get('epoch', '') != get_epoch(role):
+        session.clear()
+        if endpoint in allowed_routes:
+            return
+        if request.path.startswith('/api/'):
+            return jsonify({"status": "error", "kick": True,
+                            "message": "⏰ 你嘅登入已失效（密碼已被更改），請重新登入。"}), 401
         return redirect(url_for('login'))
 
 @app.route('/bf392e0c1abdaeb5d994c628262a24a2.txt')
@@ -52,10 +186,21 @@ def catch_all_txt(filename):
 def login():
     error = None
     if request.method == 'POST':
-        pwd = request.form.get('password')
-        if pwd == STAFF_PASSWORD or pwd == ADMIN_PASSWORD:
+        pwd = (request.form.get('password') or '').strip()
+        staff_pwd = get_setting('staff_password', STAFF_PASSWORD) or STAFF_PASSWORD
+        admin_pwd = get_setting('admin_password', ADMIN_PASSWORD) or ADMIN_PASSWORD
+
+        if pwd and pwd == admin_pwd:
             session['logged_in'] = True
-            session['role'] = 'admin' if pwd == ADMIN_PASSWORD else 'staff'
+            session['role'] = 'admin'
+            session['epoch'] = get_epoch('admin', force=True)
+            log_action('登入', '管理員登入')
+            return redirect(url_for('index'))
+        elif pwd and pwd == staff_pwd:
+            session['logged_in'] = True
+            session['role'] = 'staff'
+            session['epoch'] = get_epoch('staff', force=True)
+            log_action('登入', '同事登入')
             return redirect(url_for('index'))
         else:
             error = "密碼錯誤！"
@@ -96,13 +241,130 @@ def get_configs():
 
 @app.route('/api/add_config', methods=['POST'])
 def add_config():
-    data = request.json
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("INSERT INTO venue_configs (category, problem) VALUES (%s, %s)", (data.get('category'), data.get('problem')))
-    conn.commit()
-    release_db_connection(conn)
-    return jsonify({"status": "success", "message": "新增成功！"})
+    data = request.json or {}
+    category = (data.get('category') or '').strip()
+    problem = (data.get('problem') or '').strip()
+
+    if not category or not problem:
+        return jsonify({"status": "error", "message": "❌ 類別同問題內容都必須填寫。"})
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT 1 FROM venue_configs WHERE category = %s AND problem = %s", (category, problem))
+        if c.fetchone():
+            return jsonify({"status": "error", "message": "⚠️ 呢個選項已經存在。"})
+
+        c.execute("INSERT INTO venue_configs (category, problem) VALUES (%s, %s)", (category, problem))
+        conn.commit()
+        log_action('新增選項', f"{category} / {problem}")
+        return jsonify({"status": "success", "message": "✅ 新增成功！"})
+    except Exception as e:
+        print("Add Config Error:", e)
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "message": "❌ 新增失敗，請稍後再試。"})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/delete_config', methods=['POST'])
+def delete_config():
+    """
+    刪除場面問題選項（任何已登入嘅同事都可以用）。
+    problem 有值 → 只刪該類別下嘅該個選項；
+    problem 留空 → 刪除整個類別（連同該類別底下所有選項）。
+    已提交嘅舊紀錄唔受影響（紀錄係存文字，唔係存 id）。
+    """
+    data = request.json or {}
+    category = (data.get('category') or '').strip()
+    problem = (data.get('problem') or '').strip()
+
+    if not category:
+        return jsonify({"status": "error", "message": "❌ 缺少類別資料。"})
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        if problem:
+            c.execute("DELETE FROM venue_configs WHERE category = %s AND problem = %s", (category, problem))
+        else:
+            c.execute("DELETE FROM venue_configs WHERE category = %s", (category,))
+
+        deleted = c.rowcount
+        conn.commit()
+
+        if deleted == 0:
+            return jsonify({"status": "error", "message": "⚠️ 搵唔到要刪除嘅選項（可能已經被其他人刪除）。"})
+
+        log_action('刪除選項', f"{category} / {problem or '整個類別'}（共 {deleted}）")
+        return jsonify({"status": "success", "message": f"✅ 已刪除 {deleted} 個選項。", "deleted": deleted})
+    except Exception as e:
+        print("Delete Config Error:", e)
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "message": "❌ 刪除失敗，請稍後再試。"})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+@app.route('/api/rename_config', methods=['POST'])
+def rename_config():
+    """修改類別名稱或問題名稱（任何已登入同事都可用）。"""
+    data = request.json or {}
+    rtype = (data.get('type') or '').strip()
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+
+        if rtype == 'category':
+            old_cat = (data.get('old_category') or '').strip()
+            new_cat = (data.get('new_category') or '').strip()
+            if not old_cat or not new_cat:
+                return jsonify({"status": "error", "message": "❌ 類別名稱不可空白。"})
+            if old_cat == new_cat:
+                return jsonify({"status": "success", "message": "✅ 名稱相同，無需修改。", "updated": 0})
+            c.execute("SELECT 1 FROM venue_configs WHERE category = %s LIMIT 1", (new_cat,))
+            if c.fetchone():
+                return jsonify({"status": "error", "message": "⚠️ 已存在同名類別，請用其他名稱。"})
+            c.execute("UPDATE venue_configs SET category = %s WHERE category = %s", (new_cat, old_cat))
+
+        elif rtype == 'problem':
+            category = (data.get('category') or '').strip()
+            old_prob = (data.get('old_problem') or '').strip()
+            new_prob = (data.get('new_problem') or '').strip()
+            if not category or not old_prob or not new_prob:
+                return jsonify({"status": "error", "message": "❌ 資料不完整。"})
+            if old_prob == new_prob:
+                return jsonify({"status": "success", "message": "✅ 名稱相同，無需修改。", "updated": 0})
+            c.execute("SELECT 1 FROM venue_configs WHERE category = %s AND problem = %s", (category, new_prob))
+            if c.fetchone():
+                return jsonify({"status": "error", "message": "⚠️ 該類別已有同名問題，請用其他名稱。"})
+            c.execute("UPDATE venue_configs SET problem = %s WHERE category = %s AND problem = %s",
+                      (new_prob, category, old_prob))
+
+        else:
+            return jsonify({"status": "error", "message": "❌ 未知的修改類型。"})
+
+        updated = c.rowcount
+        conn.commit()
+
+        if updated == 0:
+            return jsonify({"status": "error", "message": "⚠️ 搵唔到要修改嘅資料。"})
+
+        log_action('修改選項名稱', f"{rtype} / 更新 {updated} 筆")
+        return jsonify({"status": "success", "message": f"✅ 已更新 {updated} 筆。", "updated": updated})
+    except Exception as e:
+        print("Rename Config Error:", e)
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "message": "❌ 修改失敗，請稍後再試。"})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
 
 @app.route('/api/submit', methods=['POST'])
 def submit():
@@ -161,6 +423,7 @@ def overwrite_record():
                    data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'), now_macau))
         
         conn.commit()
+        log_action('修改紀錄', f"舊紀錄 ID {old_id}")
         return jsonify({"status": "success", "message": "✅ 紀錄已成功修改並覆蓋！"})
     except Exception as e:
         print("Overwrite Error:", e)
@@ -247,6 +510,7 @@ def delete_record():
     c.execute("DELETE FROM records WHERE id = %s", (data.get('id'),))
     conn.commit()
     release_db_connection(conn)
+    log_action('刪除紀錄', f"紀錄 ID {data.get('id')}")
     return jsonify({"status": "success", "message": "✅ 紀錄已成功刪除！"})
 
 @app.route('/api/update_record', methods=['POST'])
@@ -277,6 +541,133 @@ def update_record():
     finally:
         if conn:
             release_db_connection(conn)
+
+@app.route('/api/get_auth_status', methods=['GET'])
+def get_auth_status():
+    if session.get('role') != 'admin':
+        return jsonify({"status": "error", "message": "⚠️ 權限不足！"})
+    staff_pwd = get_setting('staff_password', STAFF_PASSWORD) or STAFF_PASSWORD
+    admin_pwd = get_setting('admin_password', ADMIN_PASSWORD) or ADMIN_PASSWORD
+    return jsonify({
+        "status": "success",
+        "role": session.get('role'),
+        "staff_custom": get_setting('staff_password') is not None,
+        "admin_custom": get_setting('admin_password') is not None,
+        "staff_len": len(staff_pwd),
+        "admin_len": len(admin_pwd)
+    })
+
+
+@app.route('/api/change_password', methods=['POST'])
+def change_password():
+    if session.get('role') != 'admin':
+        return jsonify({"status": "error", "message": "⚠️ 只有管理員可以改密碼。"})
+
+    data = request.json or {}
+    target = data.get('target')
+    new_pwd = (data.get('new_password') or '').strip()
+    cur_admin = get_setting('admin_password', ADMIN_PASSWORD) or ADMIN_PASSWORD
+
+    if (data.get('current_admin_password') or '') != cur_admin:
+        return jsonify({"status": "error", "message": "❌ 目前管理員密碼不正確。"})
+    if target not in ('staff', 'admin'):
+        return jsonify({"status": "error", "message": "❌ 目標帳號不正確。"})
+    if len(new_pwd) < 4:
+        return jsonify({"status": "error", "message": "❌ 新密碼最少 4 個字元。"})
+
+    key = 'staff_password' if target == 'staff' else 'admin_password'
+    if not set_setting(key, new_pwd):
+        return jsonify({"status": "error", "message": "❌ 儲存失敗，請稍後再試。"})
+
+    # 令舊 session 全部失效
+    bump_epoch('staff' if target == 'staff' else 'admin')
+
+    if target == 'admin':
+        # 保持目前呢個管理員 session 有效，唔會自己踢自己
+        session['epoch'] = get_epoch('admin', force=True)
+        msg = "✅ 管理員密碼已更新（其他已登入嘅管理員會被強制登出）。"
+    else:
+        msg = "✅ 同事密碼已更新，所有已登入嘅同事已被強制登出（最多 10 秒內生效）。"
+
+    log_action('更改密碼', '帳號：' + ('同事' if target == 'staff' else '管理員'))
+    return jsonify({"status": "success", "message": msg})
+
+
+@app.route('/api/kick_sessions', methods=['POST'])
+def kick_sessions():
+    """唔改密碼，直接踢走所有已登入嘅同事（適合有人離職）。"""
+    if session.get('role') != 'admin':
+        return jsonify({"status": "error", "message": "⚠️ 只有管理員可以強制登出。"})
+
+    data = request.json or {}
+    target = data.get('target') or 'staff'
+    if target not in ('staff', 'admin'):
+        return jsonify({"status": "error", "message": "❌ 目標帳號不正確。"})
+
+    if not bump_epoch(target):
+        return jsonify({"status": "error", "message": "❌ 執行失敗，請稍後再試。"})
+
+    if target == 'admin':
+        session['epoch'] = get_epoch('admin', force=True)
+        label = '管理員（你本人不受影響）'
+    else:
+        label = '同事'
+
+    log_action('強制登出', '目標：' + label)
+    return jsonify({"status": "success",
+                    "message": f"✅ 已強制登出所有{label} session（最多 10 秒內生效）。"})
+
+
+@app.route('/api/audit_logs', methods=['GET'])
+def audit_logs():
+    if session.get('role') != 'admin':
+        return jsonify({"status": "error", "message": "⚠️ 權限不足！", "logs": []})
+
+    try:
+        limit = max(1, min(int(request.args.get('limit', 100)), 500))
+    except Exception:
+        limit = 100
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""SELECT id, actor, action, detail,
+                            created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau'
+                     FROM audit_logs ORDER BY id DESC LIMIT %s""", (limit,))
+        rows = c.fetchall()
+        logs = [{"id": r[0], "actor": r[1], "action": r[2], "detail": r[3],
+                 "created_at": str(r[4]) if r[4] else None} for r in rows]
+        return jsonify({"status": "success", "logs": logs})
+    except Exception as e:
+        print("讀取稽核紀錄失敗:", e)
+        return jsonify({"status": "error", "message": "❌ 讀取失敗。", "logs": []})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/clear_audit_logs', methods=['POST'])
+def clear_audit_logs():
+    if session.get('role') != 'admin':
+        return jsonify({"status": "error", "message": "⚠️ 只有管理員可以清理。"})
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("DELETE FROM audit_logs WHERE created_at < NOW() - interval '90 days'")
+        deleted = c.rowcount
+        conn.commit()
+        return jsonify({"status": "success", "message": f"✅ 已清理 {deleted} 條（90 日前）紀錄。", "deleted": deleted})
+    except Exception as e:
+        print("清理稽核紀錄失敗:", e)
+        if conn: conn.rollback()
+        return jsonify({"status": "error", "message": "❌ 清理失敗。"})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
 
 @app.route('/')
 def index():
