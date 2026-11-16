@@ -1010,6 +1010,24 @@ function updatePendingCardState(card) {
                     }); 
                 }
                 
+                // ===== 顯示本更檢測範圍（Hall）及四大項目完成情況 =====
+                let hallInfoHtml = '';
+                if (r.checklist) {
+                    let hallSeg = r.checklist.split(' | ').find(s => s.includes('NFC正常'));
+                    if (hallSeg) {
+                        let hallName = hallSeg.replace(/^NFC正常[:：]\s*/, '').trim();
+                        if (hallName) {
+                            let hasNfcIssue = r.checklist.includes('NFC異常');
+                            let chip = (label, ok) => `<span style="display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap; background:${ok ? '#e6f4ea' : '#f1f3f4'}; color:${ok ? '#137333' : '#5f6368'}; border:1px solid ${ok ? '#b7e1cd' : '#dadce0'};">${ok ? '✅' : '—'} ${label}</span>`;
+                            hallInfoHtml = `<div class="record-data" style="background:#e8f0fe; color:#174ea6; font-size:13px; line-height:1.6;">
+                                <div style="font-weight:bold; word-break:break-word; margin-bottom:6px;">🛰️ 本更檢測 Hall：${hallName} <span style="background:#1a73e8; color:#fff; padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap; margin-left:4px;">✅ 已完成</span></div>
+                                <div style="display:flex; flex-wrap:wrap; gap:5px;">${chip('Lux', !!r.lux)}${chip('溫度', !!r.temp)}${chip('分貝', !!r.bgm)}${chip('NFC', true)}</div>
+                                ${hasNfcIssue ? `<div style="font-size:11px; color:#856404; margin-top:6px;">※ 以下只列出 ${hallName} 內發現異常嘅個別台號，並非全個 Hall 都異常。</div>` : ''}
+                            </div>`;
+                        }
+                    }
+                }
+
                 let parsedNote = parseNote(r.note || "");
                 let mainNote = parsedNote.main;
                 
@@ -1067,7 +1085,7 @@ function updatePendingCardState(card) {
                             ${buttonsHtml}
                         </div>
                     </div>
-                    ${dataHtml}${checkItemsHtml}${doneIssuesList.join('')}${doneOldHtml}${pendingIssuesList.join('')}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div></div>`;
+                    ${dataHtml}${hallInfoHtml}${checkItemsHtml}${doneIssuesList.join('')}${doneOldHtml}${pendingIssuesList.join('')}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div></div>`;
             });
             listDiv.innerHTML = html;
         }).catch(error => console.error("讀取失敗:", error));
