@@ -304,7 +304,6 @@
     function autoFillTable(el) { let val = el.value.trim(); if (/^\d+$/.test(val)) { if (tableDict[val]) el.value = tableDict[val]; else if (val.length >= 4) el.value = 'NB' + val; } }
     function transformInputs() { document.querySelectorAll('.table-num, .venue-location').forEach(inp => { inp.placeholder = '輸入數字(如0201)'; inp.setAttribute('oninput', 'autoFillTable(this)'); }); }
 
-    // 終極解析：精準拆解所有區塊，保證唔會漏「限紅柱」
     function parseNote(noteText) {
         let result = { main: "", venue: "", doneOld: "", pendingOld: "" };
         if (!noteText) return result;
@@ -414,14 +413,10 @@
             
             let editingRecordData = editingRecordId ? allRecords.find(x=>x.id==editingRecordId) : null;
             let doneItemsInEditing = [];
-            let pendingItemsInEditing = [];
             if (editingRecordData && editingRecordData.note) {
                 let parsedEdit = parseNote(editingRecordData.note);
                 if (parsedEdit.doneOld) {
                     doneItemsInEditing = parsedEdit.doneOld.split('\n').map(s=>s.trim()).filter(s=>s).map(s => s.replace(/\[狀態:.*?\]/g, '').trim().toUpperCase());
-                }
-                if (parsedEdit.pendingOld) {
-                    pendingItemsInEditing = parsedEdit.pendingOld.split('\n').map(s=>s.trim()).filter(s=>s).map(s => s.replace(/\[狀態:.*?\]/g, '').trim().toUpperCase());
                 }
             }
 
@@ -439,14 +434,10 @@
                     
                     let isEditing = (editingRecordId !== null);
                     let inDoneSet = doneSet.includes(checkText);
+                    let isInEditingDone = doneItemsInEditing.some(l => l.includes(checkText) || checkText.includes(l));
                     
-                    if (isEditing) {
-                        let isInEditingDone = doneItemsInEditing.some(l => l.includes(checkText) || checkText.includes(l));
-                        let isInEditingPending = pendingItemsInEditing.some(l => l.includes(checkText) || checkText.includes(l));
-                        if (!isInEditingDone && !isInEditingPending) { return; }
-                    } else {
-                        if (inDoneSet) { return; }
-                    }
+                    // 修正邏輯：只有當該項目已被處理，且不是當前正在修改的這筆記錄所勾選的，才隱藏。
+                    if (inDoneSet && !isInEditingDone) { return; }
                     
                     seenItems.add(checkText);
                     let badgeColor = currentStatus === '已 Send mail' ? '#9c27b0' : (currentStatus === '已通知相關部門跟進' ? '#e67c73' : '#f5b041');
