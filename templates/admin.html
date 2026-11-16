@@ -5,83 +5,1003 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>系統設定 - BS交更系統</title>
     <style>
-        body { font-family: sans-serif; background: #f0f2f5; padding: 15px; margin: 0; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 500px; margin: auto; margin-bottom: 20px;}
-        h2 { text-align: center; color: #333; margin-top: 0; }
-        label { display: block; margin-top: 15px; font-weight: bold; font-size: 14px; color: #444; }
-        input[type="text"] { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
-        button { width: 100%; padding: 14px; margin-top: 25px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
-        button:active { background: #1557b0; }
-        .back-btn { background: #e67c73; margin-top: 0; margin-bottom: 20px; padding: 10px; font-size: 14px; }
-        #result { margin-top: 20px; text-align: center; font-weight: bold; color: #2ecc71; }
+        * { box-sizing: border-box; }
+        body { font-family: sans-serif; background: #f0f2f5; padding: 15px; margin: 0; color: #222; }
+        .card { background: #fff; padding: 16px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); max-width: 560px; margin: 0 auto 16px; }
+        h2 { text-align: center; color: #333; margin: 0 0 14px 0; font-size: 20px; }
+        .tabs { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+        .tab { flex: 1 1 auto; min-width: 74px; padding: 9px 6px; border-radius: 8px; border: 1px solid #dfe3e8; background: #f7f8fa; font-size: 13px; font-weight: bold; color: #555; cursor: pointer; }
+        .tab.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+        label { display: block; margin-top: 12px; font-weight: bold; font-size: 13px; color: #444; }
+        input[type="text"], input[type="date"], input[type="password"], select, textarea { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; }
+        .btn { padding: 10px 12px; border: none; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; color: #fff; background: #1a73e8; }
+        .btn-gray { background: #eceff1; color: #455a64; }
+        .btn-red { background: #e67c73; }
+        .btn-green { background: #2ecc71; }
+        .btn-purple { background: #7b1fa2; }
+        .btn-outline { background: #fff; color: #1a73e8; border: 1px solid #1a73e8; }
+        .btn-sm { padding: 5px 9px; font-size: 12px; }
+        .back-btn { width: 100%; margin-top: 12px; padding: 11px; background: #e67c73; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
+        .row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .row > * { flex: 1; min-width: 120px; }
+        .muted { font-size: 12px; color: #888; }
+        .stat-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .stat { flex: 1 1 70px; background: #f7f9fc; border: 1px solid #e8eef7; border-radius: 10px; padding: 10px; text-align: center; }
+        .stat b { display: block; font-size: 20px; color: #1a73e8; }
+        .stat span { font-size: 11px; color: #666; }
+        .ctl { display: flex; align-items: center; gap: 8px; background: #fafbfc; border: 1px solid #eceff1; border-radius: 10px; padding: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .ctl .name { flex: 1; min-width: 120px; font-weight: bold; font-size: 14px; word-break: break-word; }
+        .opt-row { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #f0f2f5; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
+        .opt-row span { flex: 1; font-size: 13px; word-break: break-word; }
+        .cat-box { border: 1px solid #e3e8ef; border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+        .cat-head { display: flex; align-items: center; gap: 8px; padding: 10px; background: #f7f9fc; }
+        .cat-head .name { flex: 1; font-weight: bold; font-size: 14px; word-break: break-word; }
+        .cat-body { padding: 10px; }
+        .rec { border: 1px solid #e8ecf1; border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+        .rec-head { display: flex; gap: 8px; align-items: flex-start; }
+        .rec-head .who { flex: 1; min-width: 0; }
+        .rec-head .who b { font-size: 14px; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; color: #fff; white-space: nowrap; }
+        .b-done { background: #2ecc71; }
+        .b-pending { background: #e67c73; }
+        .b-info { background: #1a73e8; }
+        .b-gray { background: #9e9e9e; }
+        .hall-chip { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; background: #e8f0fe; color: #174ea6; border: 1px solid #c6dafc; margin: 1px 3px 1px 0; white-space: nowrap; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #eef1f5; font-size: 12px; vertical-align: top; }
+        th { color: #666; font-size: 11px; background: #fafbfc; }
+        .detail { background: #f8f9fb; border-radius: 8px; padding: 10px; margin-top: 8px; font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+        .empty { text-align: center; color: #999; font-size: 13px; padding: 18px 0; }
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; padding: 16px; overflow-y: auto; }
+        .modal { background: #fff; border-radius: 12px; max-width: 420px; margin: 50px auto; padding: 18px; }
+        .modal h3 { margin: 0 0 10px 0; font-size: 16px; }
+        .msg { font-size: 12px; margin-top: 8px; min-height: 16px; }
+        .hide { display: none !important; }
     </style>
 </head>
 <body>
     <div class="card">
         <h2>⚙️ 系統設定</h2>
+        <div class="tabs">
+            <button class="tab active" data-tab="options" onclick="switchTab('options')">選項管理</button>
+            <button class="tab" data-tab="records" onclick="switchTab('records')">紀錄管理</button>
+            <button class="tab" data-tab="progress" onclick="switchTab('progress')">檢查進度</button>
+            <button class="tab" data-tab="export" onclick="switchTab('export')">匯出</button>
+            <button class="tab" data-tab="stats" onclick="switchTab('stats')">統計</button>
+            <button class="tab" data-tab="account" onclick="switchTab('account')">帳號</button>
+        </div>
         <button class="back-btn" onclick="window.location.href='/'">❌ 返回交更系統</button>
+    </div>
 
-        <label>類別 (例如：賭檯 - 新系統)：</label>
-        <input type="text" id="categoryInput" placeholder="請輸入大類別" list="category-list">
-        <datalist id="category-list">
-            <!-- JS 會自動填入現有類別 -->
-        </datalist>
+    <!-- ================= 選項管理 ================= -->
+    <div class="card" id="panel-options">
+        <div class="row" style="margin-bottom:6px;">
+            <div style="flex:1 1 100%;">
+                <label style="margin-top:0;">新增選項</label>
+                <div class="row">
+                    <select id="opt-category"></select>
+                    <input type="text" id="opt-new-cat" placeholder="新類別名稱（選「＋ 新增類別」時填）" class="hide" style="flex:1 1 100%;">
+                </div>
+                <input type="text" id="opt-problem" placeholder="問題內容，例如：甩漆 / 沒有畫面">
+                <button class="btn btn-green" style="width:100%; margin-top:8px;" onclick="addOption()">＋ 新增選項</button>
+                <div class="msg" id="opt-msg"></div>
+            </div>
+        </div>
+        <div class="stat-grid" id="opt-stats"></div>
+        <div id="opt-list" style="margin-top:14px;"></div>
+    </div>
 
-        <label>問題 (例如：當機)：</label>
-        <input type="text" id="problemInput" placeholder="請輸入具體問題">
+    <!-- ================= 紀錄管理 ================= -->
+    <div class="card hide" id="panel-records">
+        <label style="margin-top:0;">快速篩選</label>
+        <div class="row">
+            <input type="date" id="f-from">
+            <input type="date" id="f-to">
+        </div>
+        <div class="row" style="margin-top:8px;">
+            <select id="f-staff"><option value="">全部交更人</option></select>
+            <select id="f-hall"><option value="">全部 Hall</option></select>
+        </div>
+        <div class="row" style="margin-top:8px;">
+            <select id="f-status">
+                <option value="">全部狀態</option>
+                <option value="pending">有未處理項目</option>
+                <option value="done">全部已處理</option>
+            </select>
+            <input type="text" id="f-kw" placeholder="搜尋關鍵字（台號／問題）">
+        </div>
+        <div class="row" style="margin-top:10px;">
+            <button class="btn" onclick="applyRecordFilters()">🔍 套用篩選</button>
+            <button class="btn btn-gray" onclick="resetRecordFilters()">重設</button>
+        </div>
+        <div class="muted" id="rec-count" style="margin-top:10px;"></div>
+        <div id="rec-list" style="margin-top:10px;"></div>
+    </div>
 
-        <button onclick="addConfig()">➕ 新增選項</button>
-        <div id="result"></div>
+    <!-- ================= 檢查進度 ================= -->
+    <div class="card hide" id="panel-progress">
+        <label style="margin-top:0;">統計期間</label>
+        <select id="p-range" onchange="renderProgress()">
+            <option value="7">最近 7 日</option>
+            <option value="14" selected>最近 14 日</option>
+            <option value="30">最近 30 日</option>
+        </select>
+        <div class="muted" style="margin-top:8px;">※ 依紀錄實際填寫嘅「無需檢測」判斷，不會預設任何星期規則。</div>
+        <div class="stat-grid" id="p-stats"></div>
+        <div id="p-table" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- ================= 匯出 ================= -->
+    <div class="card hide" id="panel-export">
+        <label style="margin-top:0;">日期範圍（留空＝全部）</label>
+        <div class="row">
+            <input type="date" id="e-from">
+            <input type="date" id="e-to">
+        </div>
+        <button class="btn btn-green" style="width:100%; margin-top:12px;" onclick="exportRecords()">⬇️ 匯出交更紀錄 CSV</button>
+        <button class="btn btn-outline" style="width:100%; margin-top:8px;" onclick="exportOptions()">⬇️ 匯出選項清單 CSV</button>
+        <button class="btn btn-green" style="width:100%; margin-top:8px;" onclick="exportRecordsExcel()">⬇️ 匯出交更紀錄（Excel .xls）</button>
+        <button class="btn btn-outline" style="width:100%; margin-top:8px;" onclick="exportOptionsExcel()">⬇️ 匯出選項清單（Excel .xls）</button>
+        <div class="muted" style="margin-top:10px;">CSV 已加入 UTF-8 BOM，Excel 直接打開唔會亂碼。</div>
+        <div class="msg" id="exp-msg"></div>
+    </div>
+
+
+    <!-- ================= 統計 ================= -->
+    <div class="card hide" id="panel-stats">
+        <div class="stat-grid" id="stat-top"></div>
+        <h3 style="font-size:14px; margin:16px 0 8px 0; color:#444;">📈 近 6 個月異常項目數</h3>
+        <div id="stat-months"></div>
+        <h3 style="font-size:14px; margin:16px 0 8px 0; color:#444;">👥 交更次數（Top 8）</h3>
+        <div id="stat-staff"></div>
+        <h3 style="font-size:14px; margin:16px 0 8px 0; color:#444;">🛠️ 最常出現問題類別（Top 5）</h3>
+        <div id="stat-cats"></div>
+        <h3 style="font-size:14px; margin:16px 0 8px 0; color:#444;">📡 NFC 異常台號（Top 5）</h3>
+        <div id="stat-nfc"></div>
+    </div>
+
+    <!-- ================= 帳號 ================= -->
+    <div class="card hide" id="panel-account">
+        <h3 style="font-size:15px; margin:0 0 8px 0; color:#333;">🔑 帳號密碼</h3>
+        <div class="muted" id="auth-status">載入中…</div>
+
+        <label>目標帳號</label>
+        <select id="auth-target">
+            <option value="staff">同事（BS 帳號）</option>
+            <option value="admin">管理員（老細帳號）</option>
+        </select>
+
+        <label>目前管理員密碼（確認身份）</label>
+        <input type="password" id="auth-cur" placeholder="輸入目前管理員密碼">
+
+        <label>新密碼（最少 4 個字元）</label>
+        <input type="password" id="auth-new" placeholder="新密碼">
+
+        <label>再輸入一次新密碼</label>
+        <input type="password" id="auth-new2" placeholder="確認新密碼">
+
+        <button class="btn btn-green" style="width:100%; margin-top:12px;" onclick="changePassword()">💾 更新密碼</button>
+        <div class="msg" id="auth-msg"></div>
+
+        <button class="btn btn-red" style="width:100%; margin-top:18px;" onclick="kickSessions('staff')">⚠️ 強制登出所有同事</button>
+        <div class="muted" style="margin-top:6px;">唔使改密碼，直接令所有已登入嘅同事 session 失效（最多 10 秒內生效）。有人離職時用呢個。</div>
+        <div class="msg" id="kick-msg"></div>
+
+        <hr style="border:none; border-top:1px solid #eef1f5; margin:20px 0;">
+
+        <h3 style="font-size:15px; margin:0 0 8px 0; color:#333;">📜 操作紀錄</h3>
+        <div class="muted">最近 100 條（登入、新增／刪除選項、刪除及修改紀錄、改密碼）</div>
+        <div class="row" style="margin-top:10px;">
+            <button class="btn btn-gray" onclick="loadAuditLogs()">🔄 重新載入</button>
+            <button class="btn btn-red" onclick="clearAuditLogs()">清理 90 日前</button>
+        </div>
+        <div id="audit-list" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- ================= 通用彈窗 ================= -->
+    <div class="overlay" id="overlay">
+        <div class="modal">
+            <h3 id="md-title">標題</h3>
+            <div id="md-body"></div>
+            <div class="row" style="margin-top:14px;">
+                <button class="btn btn-gray" onclick="closeModal()">取消</button>
+                <button class="btn" id="md-ok" onclick="modalOk()">確定</button>
+            </div>
+            <div class="msg" id="md-msg"></div>
+        </div>
     </div>
 
     <script>
-        // 載入現有類別，方便你打錯字或者重用
-        fetch('/api/get_configs')
-            .then(res => res.json())
-            .then(data => {
-                let datalist = document.getElementById('category-list');
-                for (let cat in data) {
-                    let option = document.createElement('option');
-                    option.value = cat;
-                    datalist.appendChild(option);
+        // ===== 登入失效（密碼被更改 / 被強制登出）自動踢回登入頁 =====
+        (function () {
+            const origFetch = window.fetch.bind(window);
+            window.fetch = async function (...args) {
+                const res = await origFetch(...args);
+                if (res.status === 401) {
+                    let isKick = false;
+                    try {
+                        const data = await res.clone().json();
+                        isKick = !!(data && data.kick);
+                    } catch (e) { /* ignore */ }
+                    if (isKick) {
+                        alert('⏰ 你嘅登入已失效（密碼已被更改），請重新登入。');
+                        window.location.href = '/login';
+                        throw new Error('kicked');
+                    }
                 }
+                return res;
+            };
+        })();
+        let configs = {};
+        let allRecords = [];
+        let currentTab = 'options';
+        let modalHandler = null;
+
+        /* ================= 共用 ================= */
+        function esc(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function switchTab(name) {
+            currentTab = name;
+            document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+            ['options', 'records', 'progress', 'export', 'stats', 'account'].forEach(k => {
+                document.getElementById('panel-' + k).classList.toggle('hide', k !== name);
             });
+            if (name === 'records') loadRecords();
+            if (name === 'progress') loadRecords().then(renderProgress);
+            if (name === 'stats') loadRecords().then(renderStats);
+            if (name === 'account') { loadAuthStatus(); loadAuditLogs(); }
+        }
 
-        function addConfig() {
-            let cat = document.getElementById('categoryInput').value.trim();
-            let prob = document.getElementById('problemInput').value.trim();
-            let resultDiv = document.getElementById('result');
+        function openModal(title, bodyHtml, handler) {
+            document.getElementById('md-title').textContent = title;
+            document.getElementById('md-body').innerHTML = bodyHtml;
+            document.getElementById('md-msg').textContent = '';
+            document.getElementById('md-ok').onclick = modalOk;
+            modalHandler = handler;
+            document.getElementById('overlay').style.display = 'block';
+        }
 
-            if (!cat || !prob) {
-                resultDiv.style.color = '#e74c3c';
-                resultDiv.innerHTML = "請填寫類別同問題！";
+        function closeModal() {
+            document.getElementById('overlay').style.display = 'none';
+            modalHandler = null;
+        }
+
+        function modalOk() {
+            if (typeof modalHandler === 'function') modalHandler();
+        }
+
+        async function fetchConfigs() {
+            configs = await (await fetch('/api/get_configs')).json();
+            return configs;
+        }
+
+        async function loadRecords() {
+            allRecords = await (await fetch('/api/records')).json();
+            return allRecords;
+        }
+
+        /* ================= 選項管理 ================= */
+        function renderOptionSelect(prefer) {
+            let sel = document.getElementById('opt-category');
+            let keys = Object.keys(configs);
+            sel.innerHTML = keys.map(k => `<option value="${esc(k)}">${esc(k)}</option>`).join('')
+                + '<option value="__NEW__">＋ 新增類別…</option>';
+            if (prefer && configs[prefer]) sel.value = prefer;
+            else if (keys.length) sel.value = keys[0];
+            else sel.value = '__NEW__';
+            toggleNewCatInput();
+        }
+
+        function toggleNewCatInput() {
+            let isNew = document.getElementById('opt-category').value === '__NEW__';
+            document.getElementById('opt-new-cat').classList.toggle('hide', !isNew);
+        }
+
+        async function renderOptions() {
+            await fetchConfigs();
+            renderOptionSelect(document.getElementById('opt-category').value);
+            document.getElementById('opt-category').onchange = toggleNewCatInput;
+
+            let keys = Object.keys(configs);
+            let total = keys.reduce((n, k) => n + configs[k].length, 0);
+            document.getElementById('opt-stats').innerHTML =
+                `<div class="stat"><b>${keys.length}</b><span>類別</span></div>
+                 <div class="stat"><b>${total}</b><span>選項總數</span></div>`;
+
+            if (keys.length === 0) {
+                document.getElementById('opt-list').innerHTML = '<div class="empty">尚未有任何類別，請先新增。</div>';
                 return;
             }
 
-            resultDiv.style.color = '#333';
-            resultDiv.innerHTML = "處理中...";
+            document.getElementById('opt-list').innerHTML = keys.map(cat => `
+                <div class="cat-box">
+                    <div class="cat-head">
+                        <div class="name">${esc(cat)}</div>
+                        <span class="badge b-info">${configs[cat].length} 項</span>
+                        <button class="btn btn-gray btn-sm" data-act="rencat" data-cat="${esc(cat)}">改名</button>
+                        <button class="btn btn-red btn-sm" data-act="delcat" data-cat="${esc(cat)}">刪除</button>
+                    </div>
+                    <div class="cat-body">
+                        ${configs[cat].map(p => `
+                            <div class="opt-row">
+                                <span>${esc(p)}</span>
+                                <button class="btn btn-gray btn-sm" data-act="renprob" data-cat="${esc(cat)}" data-prob="${esc(p)}">改名</button>
+                                <button class="btn btn-red btn-sm" data-act="delprob" data-cat="${esc(cat)}" data-prob="${esc(p)}">刪除</button>
+                            </div>`).join('') || '<div class="muted">此類別未有問題選項</div>'}
+                    </div>
+                </div>`).join('');
 
-            fetch('/api/add_config', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ category: cat, problem: prob })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    resultDiv.style.color = '#2ecc71';
-                    resultDiv.innerHTML = "✅ 新增成功！";
-                    document.getElementById('problemInput').value = ''; // 清空問題輸入框
-                } else {
-                    resultDiv.style.color = '#e74c3c';
-                    resultDiv.innerHTML = "❌ 失敗：" + data.message;
-                }
-            })
-            .catch(err => {
-                resultDiv.style.color = '#e74c3c';
-                resultDiv.innerHTML = "❌ 連線失敗！";
+            document.querySelectorAll('#opt-list [data-act]').forEach(btn => {
+                btn.onclick = () => {
+                    let act = btn.dataset.act, cat = btn.dataset.cat, prob = btn.dataset.prob;
+                    if (act === 'rencat') askRenameCategory(cat);
+                    if (act === 'delcat') askDeleteCategory(cat);
+                    if (act === 'renprob') askRenameProblem(cat, prob);
+                    if (act === 'delprob') askDeleteProblem(cat, prob);
+                };
             });
         }
+
+        function optMsg(text, color) {
+            let el = document.getElementById('opt-msg');
+            el.style.color = color || '#666';
+            el.textContent = text || '';
+        }
+
+        async function addOption() {
+            let selVal = document.getElementById('opt-category').value;
+            let category = selVal === '__NEW__'
+                ? document.getElementById('opt-new-cat').value.trim()
+                : selVal;
+            let problem = document.getElementById('opt-problem').value.trim();
+            if (!category) { optMsg('⚠️ 請填寫類別名稱', '#d32f2f'); return; }
+            if (!problem) { optMsg('⚠️ 請填寫問題內容', '#d32f2f'); return; }
+            if ((configs[category] || []).some(p => String(p).trim() === problem)) {
+                optMsg('⚠️ 呢個選項已經存在', '#d32f2f'); return;
+            }
+            if (!confirm('確定新增？\n\n類別：' + category + '\n問題：' + problem)) return;
+
+            optMsg('處理中…', '#666');
+            try {
+                let res = await fetch('/api/add_config', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: category, problem: problem })
+                });
+                let data = await res.json();
+                if (data.status !== 'success') { optMsg(data.message || '❌ 新增失敗', '#d32f2f'); return; }
+                document.getElementById('opt-problem').value = '';
+                await renderOptions();
+                optMsg('✅ 已新增「' + problem + '」到「' + category + '」', '#2e7d32');
+            } catch (e) {
+                optMsg('❌ 連線失敗，請稍後再試', '#d32f2f');
+            }
+        }
+
+        function askDeleteProblem(cat, prob) {
+            if (!confirm('確定刪除？\n\n類別：' + cat + '\n問題：' + prob + '\n\n刪除後不可復原，但舊交更紀錄不受影響。')) return;
+            doDeleteConfig({ category: cat, problem: prob }, cat);
+        }
+
+        function askDeleteCategory(cat) {
+            if (!confirm('確定刪除整個類別？\n\n類別：' + cat + '\n選項數：' + (configs[cat] || []).length + '\n\n刪除後不可復原，但舊交更紀錄不受影響。')) return;
+            doDeleteConfig({ category: cat, problem: '' }, '');
+        }
+
+        async function doDeleteConfig(body, keepCat) {
+            optMsg('刪除中…', '#666');
+            try {
+                let res = await fetch('/api/delete_config', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                let data = await res.json();
+                if (data.status !== 'success') { optMsg(data.message || '❌ 刪除失敗', '#d32f2f'); return; }
+                await renderOptions();
+                if (keepCat && configs[keepCat]) renderOptionSelect(keepCat);
+                optMsg(data.message || '✅ 已刪除', '#2e7d32');
+            } catch (e) {
+                optMsg('❌ 連線失敗，請稍後再試', '#d32f2f');
+            }
+        }
+
+        function askRenameCategory(cat) {
+            openModal('✏️ 修改類別名稱',
+                `<label style="margin-top:0;">原類別</label>
+                 <input type="text" value="${esc(cat)}" disabled>
+                 <label>新名稱</label>
+                 <input type="text" id="md-input" value="${esc(cat)}">`,
+                () => doRename('category', cat, document.getElementById('md-input').value.trim()));
+        }
+
+        function askRenameProblem(cat, prob) {
+            openModal('✏️ 修改問題內容',
+                `<label style="margin-top:0;">所屬類別</label>
+                 <input type="text" value="${esc(cat)}" disabled>
+                 <label>原問題</label>
+                 <input type="text" value="${esc(prob)}" disabled>
+                 <label>新問題名稱</label>
+                 <input type="text" id="md-input" value="${esc(prob)}">`,
+                () => doRename('problem', cat, document.getElementById('md-input').value.trim(), prob));
+        }
+
+        async function doRename(type, cat, newName, oldProb) {
+            let msg = document.getElementById('md-msg');
+            if (!newName) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 名稱不可空白'; return; }
+            if (type === 'category' && newName === cat) { closeModal(); return; }
+            if (type === 'problem' && newName === oldProb) { closeModal(); return; }
+            if (type === 'category' && configs[newName]) {
+                msg.style.color = '#d32f2f';
+                msg.textContent = '⚠️ 已存在同名類別';
+                return;
+            }
+            msg.style.color = '#666';
+            msg.textContent = '處理中…';
+            try {
+                let payload = type === 'category'
+                    ? { type: 'category', old_category: cat, new_category: newName }
+                    : { type: 'problem', category: cat, old_problem: oldProb, new_problem: newName };
+                let res = await fetch('/api/rename_config', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                let data = await res.json();
+                if (data.status !== 'success') {
+                    msg.style.color = '#d32f2f';
+                    msg.textContent = data.message || '❌ 修改失敗';
+                    return;
+                }
+                closeModal();
+                await renderOptions();
+                renderOptionSelect(type === 'category' ? newName : cat);
+                optMsg('✅ 已修改', '#2e7d32');
+            } catch (e) {
+                msg.style.color = '#d32f2f';
+                msg.textContent = '❌ 連線失敗';
+            }
+        }
+
+        /* ================= 紀錄管理 ================= */
+        function hallOf(checklist) {
+            if (!checklist) return '';
+            let seg = String(checklist).split(' | ').find(s => s.includes('NFC正常'));
+            return seg ? seg.replace(/^NFC正常[:：]\s*/, '').trim() : '';
+        }
+
+        function pendingCountOf(r) {
+            let n = 0;
+            const scan = (txt) => {
+                if (!txt) return;
+                String(txt).split(/\s\|\s/).forEach(part => {
+                    let m = part.match(/\[狀態:(.*?)\]/);
+                    let st = m ? m[1] : '待處理';
+                    if (st !== '已處理') n++;
+                });
+            };
+            if (r.lux_issue) scan(r.lux_issue);
+            if (r.temp_issue) scan(r.temp_issue);
+            if (r.db_issue) scan(r.db_issue);
+            if (r.checklist && r.checklist.includes('NFC異常')) {
+                String(r.checklist).split(' | ').forEach(seg => {
+                    if (!seg.includes('NFC異常')) return;
+                    let m = seg.match(/\[狀態:(.*?)\]/);
+                    let st = m ? m[1] : '待處理';
+                    if (st !== '已處理') n++;
+                });
+            }
+            return n;
+        }
+
+        async function applyRecordFilters() {
+            await loadRecords();
+            fillFilterOptions();
+            renderRecords();
+        }
+
+        function resetRecordFilters() {
+            ['f-from', 'f-to', 'f-kw'].forEach(id => document.getElementById(id).value = '');
+            ['f-staff', 'f-hall', 'f-status'].forEach(id => document.getElementById(id).value = '');
+            renderRecords();
+        }
+
+        function fillFilterOptions() {
+            let staffSel = document.getElementById('f-staff');
+            let hallSel = document.getElementById('f-hall');
+            let curStaff = staffSel.value, curHall = hallSel.value;
+            let staffs = [...new Set(allRecords.map(r => r.name).filter(Boolean))].sort();
+            let halls = [...new Set(allRecords.map(r => hallOf(r.checklist)).filter(Boolean))].sort();
+            staffSel.innerHTML = '<option value="">全部交更人</option>' + staffs.map(s => `<option value="${esc(s)}">${esc(s)}</option>`).join('');
+            hallSel.innerHTML = '<option value="">全部 Hall</option>' + halls.map(h => `<option value="${esc(h)}">${esc(h)}</option>`).join('');
+            staffSel.value = curStaff; hallSel.value = curHall;
+        }
+
+        function filteredRecords() {
+            let from = document.getElementById('f-from').value;
+            let to = document.getElementById('f-to').value;
+            let staff = document.getElementById('f-staff').value;
+            let hall = document.getElementById('f-hall').value;
+            let status = document.getElementById('f-status').value;
+            let kw = document.getElementById('f-kw').value.trim().toUpperCase();
+
+            return allRecords.filter(r => {
+                let d = (r.created_at || '').slice(0, 10);
+                if (from && d < from) return false;
+                if (to && d > to) return false;
+                if (staff && r.name !== staff) return false;
+                if (hall && hallOf(r.checklist) !== hall) return false;
+                if (status === 'pending' && pendingCountOf(r) === 0) return false;
+                if (status === 'done' && pendingCountOf(r) > 0) return false;
+                if (kw) {
+                    let blob = [r.name, r.shift, r.checklist, r.note, r.lux_issue, r.temp_issue, r.db_issue].join(' ').toUpperCase();
+                    if (blob.indexOf(kw) === -1) return false;
+                }
+                return true;
+            });
+        }
+
+        function renderRecords() {
+            let list = filteredRecords();
+            document.getElementById('rec-count').textContent = '共 ' + list.length + ' 筆紀錄';
+            if (list.length === 0) {
+                document.getElementById('rec-list').innerHTML = '<div class="empty">冇符合條件嘅紀錄</div>';
+                return;
+            }
+            document.getElementById('rec-list').innerHTML = list.map(r => {
+                let pend = pendingCountOf(r);
+                let hall = hallOf(r.checklist);
+                let statusBadge = pend > 0
+                    ? `<span class="badge b-pending">${pend} 項未處理</span>`
+                    : `<span class="badge b-done">全部已處理</span>`;
+                return `<div class="rec">
+                    <div class="rec-head">
+                        <div class="who">
+                            <b>${esc(r.name || '未填')}</b> <span class="muted">(${esc(r.shift || '')})</span><br>
+                            <span class="muted">🕒 ${esc(r.created_at || '')}</span><br>
+                            ${hall ? `<span class="hall-chip">🛰️ ${esc(hall)}</span>` : '<span class="badge b-gray">無需檢測 Hall</span>'}
+                            ${statusBadge}
+                        </div>
+                        <div style="display:flex; flex-direction:column; gap:6px;">
+                            <button class="btn btn-gray btn-sm" data-view="${r.id}">詳情</button>
+                            <button class="btn btn-red btn-sm" data-del="${r.id}">刪除</button>
+                        </div>
+                    </div>
+                    <div class="detail hide" id="detail-${r.id}">${esc(r.checklist || '')}${r.note ? '\n\n' + esc(r.note) : ''}</div>
+                </div>`;
+            }).join('');
+
+            document.querySelectorAll('#rec-list [data-view]').forEach(btn => {
+                btn.onclick = () => {
+                    let el = document.getElementById('detail-' + btn.dataset.view);
+                    el.classList.toggle('hide');
+                };
+            });
+            document.querySelectorAll('#rec-list [data-del]').forEach(btn => {
+                btn.onclick = () => deleteRecordById(btn.dataset.del);
+            });
+        }
+
+        async function deleteRecordById(id) {
+            let r = allRecords.find(x => String(x.id) === String(id));
+            let label = r ? (r.name + ' / ' + r.created_at) : ('ID ' + id);
+            if (!confirm('確定刪除此紀錄？\n\n' + label + '\n\n刪除後不可復原。')) return;
+            try {
+                let res = await fetch('/api/delete_record', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: Number(id) })
+                });
+                let data = await res.json();
+                if (data.status !== 'success') { alert(data.message || '刪除失敗'); return; }
+                await loadRecords();
+                renderRecords();
+                alert('✅ 已刪除');
+            } catch (e) {
+                alert('❌ 連線失敗');
+            }
+        }
+
+        /* ================= 檢查進度 ================= */
+        function weekdayName(dateStr) {
+            let p = dateStr.split('-');
+            if (p.length !== 3) return '';
+            let d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+            return ['日', '一', '二', '三', '四', '五', '六'][d.getDay()];
+        }
+
+        function renderProgress() {
+            let days = Number(document.getElementById('p-range').value || 14);
+            let map = {};
+            allRecords.forEach(r => {
+                let d = (r.created_at || '').slice(0, 10);
+                if (!d) return;
+                if (!map[d]) map[d] = { halls: new Set(), noNeed: false, staff: new Set(), count: 0 };
+                map[d].count++;
+                if (r.name) map[d].staff.add(r.name);
+                let h = hallOf(r.checklist);
+                if (h) map[d].halls.add(h);
+                else map[d].noNeed = true;
+            });
+
+            let today = new Date();
+            let rows = [];
+            let checkedDays = 0, noNeedDays = 0, missingDays = 0;
+            for (let i = 0; i < days; i++) {
+                let d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+                let key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                let info = map[key];
+                let hallHtml = '', state = '';
+                if (!info) { state = 'no-record'; hallHtml = '<span class="badge b-gray">未有交更</span>'; }
+                else if (info.halls.size > 0) {
+                    state = 'checked';
+                    hallHtml = [...info.halls].sort().map(h => `<span class="hall-chip">${esc(h)}</span>`).join('');
+                } else { state = 'no-need'; hallHtml = '<span class="badge b-info">無需檢測</span>'; }
+
+                if (state === 'checked') checkedDays++;
+                if (state === 'no-need') noNeedDays++;
+                if (state === 'no-record') missingDays++;
+
+                rows.push(`<tr>
+                    <td>${d.getMonth() + 1}/${d.getDate()}</td>
+                    <td>${weekdayName(key)}</td>
+                    <td>${hallHtml}</td>
+                    <td>${info ? esc([...info.staff].join('、')) + (info.count > 1 ? ` <span class="muted">(${info.count} 筆)</span>` : '') : '—'}</td>
+                </tr>`);
+            }
+
+            document.getElementById('p-stats').innerHTML =
+                `<div class="stat"><b>${checkedDays}</b><span>已檢查 Hall</span></div>
+                 <div class="stat"><b>${noNeedDays}</b><span>無需檢測</span></div>
+                 <div class="stat"><b>${missingDays}</b><span>未有交更</span></div>`;
+
+            document.getElementById('p-table').innerHTML = `<table>
+                <thead><tr><th>日期</th><th>星期</th><th>檢測 Hall</th><th>交更人</th></tr></thead>
+                <tbody>${rows.join('')}</tbody></table>`;
+        }
+
+        /* ================= 匯出 ================= */
+        function csvEscape(v) {
+            let s = String(v == null ? '' : v).replace(/"/g, '""');
+            return '"' + s + '"';
+        }
+
+        function downloadCsv(filename, rows) {
+            let csv = '\uFEFF' + rows.map(r => r.map(csvEscape).join(',')).join('\r\n');
+            let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            let a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        }
+
+        async function exportRecords() {
+            let msg = document.getElementById('exp-msg');
+            msg.style.color = '#666'; msg.textContent = '準備中…';
+            if (allRecords.length === 0) await loadRecords();
+            let from = document.getElementById('e-from').value;
+            let to = document.getElementById('e-to').value;
+            let list = allRecords.filter(r => {
+                let d = (r.created_at || '').slice(0, 10);
+                if (from && d < from) return false;
+                if (to && d > to) return false;
+                return true;
+            });
+            if (list.length === 0) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 範圍內冇紀錄'; return; }
+            let rows = [['日期時間', '交更人', '更份', '檢測Hall', 'Lux', '溫度', '分貝', '狀態', 'Checklist', '詳細事項']];
+            list.forEach(r => {
+                rows.push([r.created_at, r.name, r.shift, hallOf(r.checklist), r.lux, r.temp, r.bgm, r.status, r.checklist, r.note]);
+            });
+            downloadCsv('BS交更紀錄_' + new Date().toISOString().slice(0, 10) + '.csv', rows);
+            msg.style.color = '#2e7d32';
+            msg.textContent = '✅ 已匯出 ' + list.length + ' 筆紀錄';
+        }
+
+        function exportOptions() {
+            let rows = [['類別', '問題']];
+            Object.keys(configs).forEach(cat => configs[cat].forEach(p => rows.push([cat, p])));
+            if (rows.length === 1) { document.getElementById('exp-msg').textContent = '⚠️ 未有選項可匯出'; return; }
+            downloadCsv('BS選項清單_' + new Date().toISOString().slice(0, 10) + '.csv', rows);
+            document.getElementById('exp-msg').style.color = '#2e7d32';
+            document.getElementById('exp-msg').textContent = '✅ 已匯出 ' + (rows.length - 1) + ' 個選項';
+        }
+
+
+        /* ================= 統計 ================= */
+        function issueItemsOf(r) {
+            let items = [];
+            const push = (txt) => {
+                if (!txt) return;
+                String(txt).split(/\s\|\s/).forEach(p => { if (p.trim()) items.push(p.trim()); });
+            };
+            push(r.lux_issue); push(r.temp_issue); push(r.db_issue);
+            if (r.checklist) {
+                String(r.checklist).split(' | ').forEach(seg => {
+                    if (!seg.includes('NFC異常')) return;
+                    let body = seg.replace(/^NFC異常[:：]\s*/, '');
+                    body.split(/,\s*(?=[A-Za-z]{0,6}\d{1,6}\s*\()/).forEach(x => { if (x.trim()) items.push(x.trim()); });
+                });
+            }
+            return items;
+        }
+
+        function barRow(label, value, max, color) {
+            let pct = max > 0 ? Math.round(value / max * 100) : 0;
+            return '<div style="margin-bottom:9px;">' +
+                '<div style="display:flex; justify-content:space-between; font-size:12px; color:#555; margin-bottom:3px; gap:8px;">' +
+                '<span style="word-break:break-word;">' + esc(label) + '</span>' +
+                '<b style="color:#1a73e8; white-space:nowrap;">' + value + '</b></div>' +
+                '<div style="background:#eef1f5; border-radius:6px; height:8px; overflow:hidden;">' +
+                '<div style="width:' + pct + '%; height:8px; background:' + (color || '#1a73e8') + ';"></div></div></div>';
+        }
+
+        function emptyBlock(text) {
+            return '<div class="empty" style="padding:10px 0;">' + text + '</div>';
+        }
+
+        function renderStats() {
+            if (!allRecords || allRecords.length === 0) {
+                document.getElementById('stat-top').innerHTML = '';
+                ['stat-months', 'stat-staff', 'stat-cats', 'stat-nfc'].forEach(id => {
+                    document.getElementById(id).innerHTML = emptyBlock('暫時未有資料');
+                });
+                return;
+            }
+
+            let now = new Date();
+            let thisMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+            let totalIssues = 0, thisMonthRecords = 0;
+            allRecords.forEach(r => {
+                totalIssues += issueItemsOf(r).length;
+                if ((r.created_at || '').slice(0, 7) === thisMonth) thisMonthRecords++;
+            });
+
+            document.getElementById('stat-top').innerHTML =
+                '<div class="stat"><b>' + allRecords.length + '</b><span>總紀錄</span></div>' +
+                '<div class="stat"><b>' + thisMonthRecords + '</b><span>本月紀錄</span></div>' +
+                '<div class="stat"><b>' + totalIssues + '</b><span>異常項目總數</span></div>';
+
+            // 近 6 個月
+            let months = [];
+            for (let i = 5; i >= 0; i--) {
+                let d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                months.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+            }
+            let monthCount = {};
+            months.forEach(m => monthCount[m] = 0);
+            let staffCount = {}, catCount = {}, nfcCount = {};
+
+            allRecords.forEach(r => {
+                let mk = (r.created_at || '').slice(0, 7);
+                if (mk in monthCount) monthCount[mk] += issueItemsOf(r).length;
+
+                let who = r.name || '未填';
+                staffCount[who] = (staffCount[who] || 0) + 1;
+
+                // 場面問題類別（優先用已設定嘅類別名做前綴比對，避免「賭檯 - 賭檯木紋」被拆成「賭檯」）
+                if (r.note) {
+                    const catKeys = Object.keys(configs || {}).sort((a, b) => b.length - a.length);
+                    String(r.note).split('\n').forEach(line => {
+                        let m = line.match(/\[([^\]]+)\]/);
+                        if (!m) return;
+                        let content = m[1].trim();
+                        if (!content) return;
+                        let cat = '';
+                        for (const k of catKeys) {
+                            if (content.indexOf(k) === 0) { cat = k; break; }
+                        }
+                        if (!cat) {
+                            let pos = content.lastIndexOf(' - ');
+                            cat = pos > 0 ? content.slice(0, pos).trim() : content;
+                        }
+                        catCount[cat] = (catCount[cat] || 0) + 1;
+                    });
+                }
+
+                // NFC 台號
+                if (r.checklist) {
+                    String(r.checklist).split(' | ').forEach(seg => {
+                        if (!seg.includes('NFC異常')) return;
+                        let body = seg.replace(/^NFC異常[:：]\s*/, '');
+                        body.split(/,\s*(?=[A-Za-z]{0,6}\d{1,6}\s*\()/).forEach(x => {
+                            let t = x.replace(/\(.*$/, '').trim();
+                            if (t) nfcCount[t] = (nfcCount[t] || 0) + 1;
+                        });
+                    });
+                }
+            });
+
+            let maxMonth = Math.max(1, ...months.map(m => monthCount[m]));
+            document.getElementById('stat-months').innerHTML =
+                months.map(m => barRow(m, monthCount[m], maxMonth, '#e67c73')).join('');
+
+            let staffSorted = Object.keys(staffCount).sort((a, b) => staffCount[b] - staffCount[a]).slice(0, 8);
+            let maxStaff = staffSorted.length ? staffCount[staffSorted[0]] : 1;
+            document.getElementById('stat-staff').innerHTML = staffSorted.length
+                ? staffSorted.map(s => barRow(s, staffCount[s], maxStaff, '#2ecc71')).join('')
+                : emptyBlock('暫時未有資料');
+
+            let catSorted = Object.keys(catCount).sort((a, b) => catCount[b] - catCount[a]).slice(0, 5);
+            let maxCat = catSorted.length ? catCount[catSorted[0]] : 1;
+            document.getElementById('stat-cats').innerHTML = catSorted.length
+                ? catSorted.map(c => barRow(c, catCount[c], maxCat, '#f5b041')).join('')
+                : emptyBlock('暫時未有場面問題資料');
+
+            let nfcSorted = Object.keys(nfcCount).sort((a, b) => nfcCount[b] - nfcCount[a]).slice(0, 5);
+            let maxNfc = nfcSorted.length ? nfcCount[nfcSorted[0]] : 1;
+            document.getElementById('stat-nfc').innerHTML = nfcSorted.length
+                ? nfcSorted.map(n => barRow(n, nfcCount[n], maxNfc, '#7b1fa2')).join('')
+                : emptyBlock('暫時未有 NFC 異常資料');
+        }
+
+        /* ================= 帳號 / 稽核 ================= */
+        async function loadAuthStatus() {
+            let el = document.getElementById('auth-status');
+            el.textContent = '載入中…';
+            try {
+                let data = await (await fetch('/api/get_auth_status')).json();
+                if (data.status !== 'success') { el.textContent = data.message || '讀取失敗'; return; }
+                el.innerHTML = '同事密碼：' + (data.staff_custom ? '已自訂（' + data.staff_len + ' 字元）' : '預設值')
+                    + ' ｜ 管理員密碼：' + (data.admin_custom ? '已自訂（' + data.admin_len + ' 字元）' : '預設值');
+            } catch (e) {
+                el.textContent = '❌ 讀取失敗';
+            }
+        }
+
+        async function changePassword() {
+            let msg = document.getElementById('auth-msg');
+            let target = document.getElementById('auth-target').value;
+            let cur = document.getElementById('auth-cur').value;
+            let p1 = document.getElementById('auth-new').value;
+            let p2 = document.getElementById('auth-new2').value;
+
+            if (!cur) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 請輸入目前管理員密碼'; return; }
+            if (p1.length < 4) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 新密碼最少 4 個字元'; return; }
+            if (p1 !== p2) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 兩次輸入嘅新密碼不一致'; return; }
+            if (!confirm('確定更新密碼？\n\n帳號：' + (target === 'admin' ? '管理員' : '同事') + '\n\n請記住新密碼，忘記後需要改 app.py。')) return;
+
+            msg.style.color = '#666';
+            msg.textContent = '更新中…';
+            try {
+                let res = await fetch('/api/change_password', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target: target, current_admin_password: cur, new_password: p1 })
+                });
+                let data = await res.json();
+                if (data.status !== 'success') {
+                    msg.style.color = '#d32f2f';
+                    msg.textContent = data.message || '❌ 更新失敗';
+                    return;
+                }
+                document.getElementById('auth-cur').value = '';
+                document.getElementById('auth-new').value = '';
+                document.getElementById('auth-new2').value = '';
+                msg.style.color = '#2e7d32';
+                msg.textContent = data.message || '✅ 密碼已更新';
+                loadAuthStatus();
+                loadAuditLogs();
+            } catch (e) {
+                msg.style.color = '#d32f2f';
+                msg.textContent = '❌ 連線失敗';
+            }
+        }
+
+        async function kickSessions(target) {
+            let msg = document.getElementById('kick-msg');
+            if (!confirm('確定強制登出所有同事？\n\n所有已登入嘅同事會即刻被踢返登入頁（最多 10 秒生效），需要用新密碼重新登入。')) return;
+            msg.style.color = '#666';
+            msg.textContent = '處理中…';
+            try {
+                let res = await fetch('/api/kick_sessions', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target: target || 'staff' })
+                });
+                let data = await res.json();
+                if (data.status !== 'success') {
+                    msg.style.color = '#d32f2f';
+                    msg.textContent = data.message || '❌ 執行失敗';
+                    return;
+                }
+                msg.style.color = '#2e7d32';
+                msg.textContent = data.message || '✅ 已強制登出';
+                loadAuditLogs();
+            } catch (e) {
+                msg.style.color = '#d32f2f';
+                msg.textContent = '❌ 連線失敗';
+            }
+        }
+
+        async function loadAuditLogs() {
+            let wrap = document.getElementById('audit-list');
+            wrap.innerHTML = '<div class="muted">載入中…</div>';
+            try {
+                let data = await (await fetch('/api/audit_logs?limit=100')).json();
+                if (data.status !== 'success') { wrap.innerHTML = '<div class="muted">' + (data.message || '讀取失敗') + '</div>'; return; }
+                if (!data.logs || data.logs.length === 0) { wrap.innerHTML = '<div class="empty" style="padding:10px 0;">暫時未有紀錄</div>'; return; }
+                wrap.innerHTML = '<table><thead><tr><th>時間</th><th>身份</th><th>動作</th><th>詳情</th></tr></thead><tbody>'
+                    + data.logs.map(l => '<tr><td style="white-space:nowrap;">' + esc((l.created_at || '').slice(5, 16)) + '</td>'
+                        + '<td>' + esc(l.actor || '') + '</td>'
+                        + '<td>' + esc(l.action || '') + '</td>'
+                        + '<td style="word-break:break-word;">' + esc(l.detail || '') + '</td></tr>').join('')
+                    + '</tbody></table>';
+            } catch (e) {
+                wrap.innerHTML = '<div class="muted">❌ 讀取失敗</div>';
+            }
+        }
+
+        async function clearAuditLogs() {
+            if (!confirm('確定清理 90 日前嘅操作紀錄？（最近 90 日會保留）')) return;
+            try {
+                let res = await fetch('/api/clear_audit_logs', { method: 'POST' });
+                let data = await res.json();
+                alert(data.message || (data.status === 'success' ? '✅ 已清理' : '清理失敗'));
+                loadAuditLogs();
+            } catch (e) {
+                alert('❌ 連線失敗');
+            }
+        }
+
+        /* ================= Excel（.xls，無需外部 library） ================= */
+        function xmlEsc(v) {
+            return String(v == null ? '' : v)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function downloadExcel(filename, sheetName, rows) {
+            let body = rows.map(row => '<Row>' + row.map(cell =>
+                '<Cell><Data ss:Type="String">' + xmlEsc(cell) + '</Data></Cell>').join('') + '</Row>').join('');
+            let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<?mso-application progid="Excel.Sheet"?>\n'
+                + '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'
+                + '<Worksheet ss:Name="' + xmlEsc(sheetName) + '"><Table>' + body + '</Table></Worksheet></Workbook>';
+            let blob = new Blob(['\uFEFF' + xml], { type: 'application/vnd.ms-excel;charset=utf-8' });
+            let a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        }
+
+        async function exportRecordsExcel() {
+            let msg = document.getElementById('exp-msg');
+            msg.style.color = '#666'; msg.textContent = '準備中…';
+            if (!allRecords || allRecords.length === 0) await loadRecords();
+            let from = document.getElementById('e-from').value;
+            let to = document.getElementById('e-to').value;
+            let list = allRecords.filter(r => {
+                let d = (r.created_at || '').slice(0, 10);
+                if (from && d < from) return false;
+                if (to && d > to) return false;
+                return true;
+            });
+            if (list.length === 0) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 範圍內冇紀錄'; return; }
+            let rows = [['日期時間', '交更人', '更份', '檢測Hall', 'Lux', '溫度', '分貝', '狀態', 'Checklist', '詳細事項']];
+            list.forEach(r => rows.push([r.created_at, r.name, r.shift, hallOf(r.checklist), r.lux, r.temp, r.bgm, r.status, r.checklist, r.note]));
+            downloadExcel('BS交更紀錄_' + new Date().toISOString().slice(0, 10) + '.xls', '交更紀錄', rows);
+            msg.style.color = '#2e7d32';
+            msg.textContent = '✅ 已匯出 Excel（' + list.length + ' 筆）';
+        }
+
+        function exportOptionsExcel() {
+            let rows = [['類別', '問題']];
+            Object.keys(configs).forEach(cat => configs[cat].forEach(p => rows.push([cat, p])));
+            if (rows.length === 1) { document.getElementById('exp-msg').textContent = '⚠️ 未有選項可匯出'; return; }
+            downloadExcel('BS選項清單_' + new Date().toISOString().slice(0, 10) + '.xls', '選項清單', rows);
+            document.getElementById('exp-msg').style.color = '#2e7d32';
+            document.getElementById('exp-msg').textContent = '✅ 已匯出 Excel（' + (rows.length - 1) + ' 個選項）';
+        }
+
+        /* ================= 啟動 ================= */
+        (async function init() {
+            await renderOptions();
+            await loadRecords();
+            fillFilterOptions();
+        })();
     </script>
 </body>
 </html>
