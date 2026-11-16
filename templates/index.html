@@ -860,7 +860,7 @@ function updatePendingCardState(card) {
                     parts.forEach(part => {
                         if (part.startsWith('NFC異常:')) {
                             let nfcText = part.replace('NFC異常:', '').trim();
-                            if (nfcText) addItem('NFC', nfcText, issue.id);
+                            if (nfcText) splitNfcDetails(nfcText).forEach(d => addItem('NFC', d, issue.id));
                         }
                     });
                 }
@@ -963,6 +963,17 @@ function updatePendingCardState(card) {
         return `<div class="issue-data" style="background:${bgColor}; color:${textColor};"><span><strong>${displayPrefix}</strong> ${text}</span><span class="status-badge ${badgeClass}">${displayStatus}</span></div>`;
     }
 
+    // 把一段 NFC異常 內容拆成逐個台號（同時兼容舊資料用 ", " 合併的寫法）
+    function splitNfcDetails(str) {
+        if (!str) return [];
+        let s = String(str).trim();
+        if (!s) return [];
+        // 舊格式範例：NB0201 (Box: Box 3) [狀態:已通知相關部門跟進], NB2002 (Box: Box 5) [狀態:已處理]
+        // 只在「逗號 + 台號 + 左括號」的位置切開，避免誤切 "Box: Box 1, Box 2"
+        let guarded = s.replace(/,\s*(?=[A-Za-z]{0,6}\d{1,6}\s*\()/g, '\u0000SPLIT\u0000');
+        return guarded.split('\u0000SPLIT\u0000').map(x => x.trim()).filter(Boolean);
+    }
+
     function displayRecords() {
         fetch('/api/records').then(res => res.json()).then(records => {
             allRecords = records; 
@@ -995,7 +1006,7 @@ function updatePendingCardState(card) {
                 if (r.checklist) { 
                     let items = r.checklist.split(' | '); 
                     items.forEach(item => { 
-                        if (item.includes('異常')) processIssue(item.replace('NFC異常: ', '').trim(), 'NFC -'); 
+                        if (item.includes('異常')) splitNfcDetails(item.replace(/^NFC異常[:：]\s*/, '')).forEach(d => processIssue(d, 'NFC -')); 
                     }); 
                 }
                 
@@ -1186,8 +1197,9 @@ function updatePendingCardState(card) {
                 document.getElementById('nfc-status').value = '有異常';
                 document.getElementById('nfc-issue-group').style.display = 'block';
                 
-                let nfcItemsStr = issueStr.replace('NFC異常:', '').trim();
-                let items = nfcItemsStr.split(', ');
+                let items = parts.filter(p => p.includes('NFC異常:'))
+                    .flatMap(p => splitNfcDetails(p.replace(/^NFC異常[:：]\s*/, '').trim()));
+                if (items.length === 0) items = splitNfcDetails(issueStr.replace(/^NFC異常[:：]\s*/, '').trim());
                 let container = document.getElementById('nfc-container');
                 container.innerHTML = '';
                 items.forEach(item => {
@@ -1383,7 +1395,7 @@ function updatePendingCardState(card) {
         }
         
         let nfcChecklistArray = [`NFC正常: ${selectedHall}`]; 
-        if (nfcDetails.length > 0) nfcChecklistArray.push(`NFC異常: ${nfcDetails.join(', ')}`); 
+        if (nfcDetails.length > 0) nfcDetails.forEach(d => nfcChecklistArray.push(`NFC異常: ${d}`)); 
         let checklistString = nfcChecklistArray.join(' | ');
         
         let overallStatus = "已處理"; 
