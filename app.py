@@ -151,9 +151,41 @@ def bump_epoch(role):
 
 ensure_tables()
 
+# ---------- 舊域名自動跳轉新域名（令舊微信名片／舊連結仍然可用） ----------
+PRIMARY_HOST = (os.environ.get('PRIMARY_HOST') or 'bs-shift.xyz').strip().lower()
+
+
+@app.before_request
+def force_primary_domain():
+    """
+    shift-app-wvgf.onrender.com 之類嘅舊網址 → 301 跳去新域名。
+    保留：/healthz、任何 .txt（微信域名驗證檔）、/static/ 資源。
+    """
+    host = (request.host or '').split(':')[0].strip().lower()
+    if not PRIMARY_HOST or not host:
+        return
+    if host == PRIMARY_HOST or host.endswith('.' + PRIMARY_HOST):
+        return
+    if not host.endswith('.onrender.com'):
+        return
+    if request.path.startswith('/static/') or request.path.endswith('.txt') or request.path == '/healthz':
+        return
+
+    qs = request.query_string.decode('utf-8', 'ignore')
+    target = 'https://' + PRIMARY_HOST + request.path
+    if qs:
+        target += '?' + qs
+    return redirect(target, code=301)
+
+
+@app.route('/healthz')
+def healthz():
+    return "ok", 200, {'Content-Type': 'text/plain'}
+
+
 @app.before_request
 def require_login():
-    allowed_routes = ['login', 'static', 'verify_wechat', 'catch_all_txt']
+    allowed_routes = ['login', 'static', 'verify_wechat', 'catch_all_txt', 'healthz']
     endpoint = request.endpoint
 
     if 'logged_in' not in session:
