@@ -168,7 +168,7 @@
         <label>目標帳號</label>
         <select id="auth-target">
             <option value="staff">同事（BS 帳號）</option>
-            <option value="admin">管理員（老細帳號）</option>
+            <option value="admin">管理員（帳號）</option>
         </select>
 
         <label>目前管理員密碼（確認身份）</label>
@@ -184,7 +184,7 @@
         <div class="msg" id="auth-msg"></div>
 
         <button class="btn btn-red" style="width:100%; margin-top:18px;" onclick="kickSessions('staff')">⚠️ 強制登出所有同事</button>
-        <div class="muted" style="margin-top:6px;">唔使改密碼，直接令所有已登入嘅同事 session 失效（最多 10 秒內生效）。有人離職時用呢個。</div>
+        <div class="muted" style="margin-top:6px;">無需改密碼，直接令所有已登入的同事 session 失效（最多 10 秒內生效）。有人離職時用這個。</div>
         <div class="msg" id="kick-msg"></div>
 
         <hr style="border:none; border-top:1px solid #eef1f5; margin:20px 0;">
