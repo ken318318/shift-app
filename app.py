@@ -1,10 +1,11 @@
-from flask import Flask, request, jsonify, render_template, session, redirect, url_for
+from flask import Flask, request, jsonify, render_template, session, redirect, url_for, Response
 from flask_cors import CORS
 import psycopg2
 from psycopg2 import pool
 import os
 import re
 import datetime
+import json
 import time
 import pytz
 
@@ -45,6 +46,8 @@ def ensure_tables():
                         value TEXT NOT NULL,
                         updated_at TIMESTAMPTZ DEFAULT NOW()
                      )""")
+        c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS guest_feedback TEXT")
+        c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS dlr_feedback TEXT")
         c.execute("""CREATE TABLE IF NOT EXISTS audit_logs (
                         id BIGSERIAL PRIMARY KEY,
                         actor TEXT,
@@ -407,11 +410,12 @@ def submit():
         c = conn.cursor()
         now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
         c.execute("""INSERT INTO records 
-                     (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, created_at) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+                     (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, created_at) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                    data.get('checklist'), data.get('status'), data.get('follower'), data.get('note'),
-                   data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'), now_macau))
+                   data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
+                   data.get('guest_feedback'), data.get('dlr_feedback'), now_macau))
         conn.commit()
         return jsonify({"message": "交更成功！", "status": "success"})
     except Exception as e:
@@ -448,11 +452,12 @@ def overwrite_record():
 
         now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
         c.execute("""INSERT INTO records 
-                     (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, created_at) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+                     (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, created_at) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                    data.get('checklist'), data.get('status'), data.get('follower'), data.get('note'),
-                   data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'), now_macau))
+                   data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
+                   data.get('guest_feedback'), data.get('dlr_feedback'), now_macau))
         
         conn.commit()
         log_action('修改紀錄', f"舊紀錄 ID {old_id}")
@@ -469,7 +474,8 @@ def overwrite_record():
 def get_records():
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("""SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, 
+    c.execute("""SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue,
+                 guest_feedback, dlr_feedback,
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
                  FROM records ORDER BY id DESC""")
     rows = c.fetchall()
@@ -480,9 +486,132 @@ def get_records():
             "id": row[0], "name": row[1], "shift": row[2], "lux": row[3], "temp": row[4], "bgm": row[5],
             "checklist": row[6], "status": row[7], "follower": row[8], "note": row[9],
             "lux_issue": row[10], "temp_issue": row[11], "db_issue": row[12],
-            "created_at": str(row[13]) if row[13] else None
+            "guest_feedback": row[13], "dlr_feedback": row[14],
+            "created_at": str(row[15]) if row[15] else None
         })
     return jsonify(records)
+
+# ---------- 匯出（伺服器端產生檔案，手機／微信都可下載） ----------
+def _csv_bytes(rows):
+    def esc(v):
+        s = '' if v is None else str(v)
+        return '"' + s.replace('"', '""') + '"'
+    body = '\r\n'.join(','.join(esc(c) for c in row) for row in rows)
+    return ('\ufeff' + body).encode('utf-8')
+
+
+def _xls_bytes(rows, sheet_name):
+    def x(v):
+        s = '' if v is None else str(v)
+        return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+    body = ''.join('<Row>' + ''.join('<Cell><Data ss:Type="String">' + x(c) + '</Data></Cell>' for c in row) + '</Row>' for row in rows)
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+           '<?mso-application progid="Excel.Sheet"?>\n'
+           '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" '
+           'xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'
+           '<Worksheet ss:Name="' + x(sheet_name) + '"><Table>' + body + '</Table></Worksheet></Workbook>')
+    return ('\ufeff' + xml).encode('utf-8')
+
+
+def _feedback_text(v):
+    if not v:
+        return ''
+    try:
+        d = json.loads(v)
+        parts = []
+        if d.get('items'):
+            parts.append('內容：' + '、'.join(str(i) for i in d['items']))
+        parts.append(f"好評{d.get('good', 0)}／中評{d.get('normal', 0)}／差評{d.get('bad', 0)}")
+        if d.get('note'):
+            parts.append('備註：' + str(d['note']))
+        return '；'.join(parts)
+    except Exception:
+        return str(v)
+
+
+def _file_response(rows, sheet_name, fmt):
+    stamp = datetime.datetime.now(pytz.timezone('Asia/Macau')).strftime('%Y%m%d_%H%M')
+    if fmt == 'xls':
+        data, mimetype, ext = _xls_bytes(rows, sheet_name), 'application/vnd.ms-excel', 'xls'
+    else:
+        data, mimetype, ext = _csv_bytes(rows), 'text/csv; charset=utf-8', 'csv'
+    filename = f"BS_{sheet_name}_{stamp}.{ext}"
+    return Response(data, mimetype=mimetype, headers={
+        'Content-Disposition': "attachment; filename=" + filename + "; filename*=UTF-8''" + filename,
+        'Cache-Control': 'no-store'
+    })
+
+
+@app.route('/api/export/records', methods=['GET'])
+def export_records_file():
+    date_from = (request.args.get('from') or '').strip()
+    date_to = (request.args.get('to') or '').strip()
+    fmt = (request.args.get('format') or 'csv').lower()
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        sql = """SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note,
+                        lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback,
+                        created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau'
+                 FROM records WHERE 1=1"""
+        params = []
+        if date_from:
+            sql += " AND (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date >= %s"
+            params.append(date_from)
+        if date_to:
+            sql += " AND (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date <= %s"
+            params.append(date_to)
+        sql += " ORDER BY id DESC"
+        c.execute(sql, params)
+        rows = c.fetchall()
+    except Exception as e:
+        print("Export Records Error:", e)
+        return jsonify({"status": "error", "message": "❌ 匯出失敗，請稍後再試。"})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+    out = [['日期時間', '交更人', '更份', 'Lux', '溫度', '分貝', '狀態', '檢測Hall',
+            'Checklist', '詳細事項', 'Lux異常', '溫度異常', '分貝異常', '客人意見', 'DLR意見']]
+    for r in rows:
+        checklist = r[6] or ''
+        hall = ''
+        for seg in checklist.split(' | '):
+            s = seg.strip()
+            if s.startswith('NFC正常'):
+                hall = s.replace('NFC正常:', '').replace('NFC正常：', '').strip()
+                break
+        out.append([
+            str(r[15]) if r[15] else '', r[1], r[2], r[3], r[4], r[5], r[7], hall,
+            checklist, r[9] or '', r[10] or '', r[11] or '', r[12] or '',
+            _feedback_text(r[13]), _feedback_text(r[14])
+        ])
+    return _file_response(out, 'records', fmt)
+
+
+@app.route('/api/export/configs', methods=['GET'])
+def export_configs_file():
+    fmt = (request.args.get('format') or 'csv').lower()
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT category, problem FROM venue_configs ORDER BY category ASC, id ASC")
+        rows = c.fetchall()
+    except Exception as e:
+        print("Export Configs Error:", e)
+        return jsonify({"status": "error", "message": "❌ 匯出失敗，請稍後再試。"})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+    out = [['類別', '問題']]
+    for r in rows:
+        out.append([r[0] or '', r[1] or ''])
+    return _file_response(out, 'options', fmt)
+
 
 @app.route('/api/pending_issues', methods=['GET'])
 def get_pending_issues():
