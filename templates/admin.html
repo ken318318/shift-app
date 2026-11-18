@@ -313,29 +313,43 @@
 
         let configDetail = [];
 
-        async function moveCategory(cat, dir) {
+        async function doReorder(payload) {
+            let msg = document.getElementById('opt-msg');
+            if (msg) { msg.style.color = '#666'; msg.textContent = '排序中…'; }
             try {
-                await fetch('/api/reorder_config', {
+                let res = await fetch('/api/reorder_config', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type: 'category', category: cat, direction: dir })
+                    body: JSON.stringify(payload)
                 });
-            } catch (e) { }
+                let data = null;
+                try { data = await res.json(); } catch (e) { data = null; }
+
+                if (!res.ok || !data) {
+                    if (msg) { msg.style.color = '#d32f2f'; msg.textContent = '❌ 伺服器沒有回應排序請求（HTTP ' + res.status + '）'; }
+                    return;
+                }
+                if (data.status !== 'success') {
+                    if (msg) { msg.style.color = '#d32f2f'; msg.textContent = data.message || '❌ 排序失敗'; }
+                } else {
+                    if (msg) { msg.style.color = '#2e7d32'; msg.textContent = data.message || '✅ 已調整次序'; }
+                }
+            } catch (e) {
+                if (msg) { msg.style.color = '#d32f2f'; msg.textContent = '❌ 連線失敗：' + e.message; }
+            }
             await renderOptions();
         }
 
-        async function moveProblem(id, dir) {
-            try {
-                await fetch('/api/reorder_config', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type: 'problem', id: Number(id), direction: dir })
-                });
-            } catch (e) { }
-            await renderOptions();
+        function moveCategory(cat, dir) {
+            return doReorder({ type: 'category', category: cat, direction: dir });
+        }
+
+        function moveProblem(id, dir) {
+            return doReorder({ type: 'problem', id: Number(id), direction: dir });
         }
 
         async function renderOptions() {
             try {
-                configDetail = await (await fetch('/api/configs_detail')).json();
+                configDetail = await (await fetch('/api/configs_detail?_t=' + Date.now())).json();
             } catch (e) {
                 configDetail = [];
             }
