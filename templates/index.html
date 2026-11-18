@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BS 交更系統</title>
-    <meta name="description" content="點擊查看最新的交更事項及未完成跟進項目。" />
+    <meta name="description" content="如顯示「未完成 ICP 備案」提示，請點「繼續前往」即可登入，查看交更事項及未完成跟進項目。" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="BS 交更系統" />
     <meta property="og:title" content="BS 交更系統" />
-    <meta property="og:description" content="點擊查看最新的交更事項及未完成跟進項目。" />
+    <meta property="og:description" content="如顯示「未完成 ICP 備案」提示，請點「繼續前往」即可登入，查看交更事項及未完成跟進項目。" />
     <meta property="og:url" content="https://bs-shift.xyz/" />
     <meta property="og:image" content="https://i.postimg.cc/Jhjtp4n8/f2150ee8ffeb916f27de3c102c70a7da.jpg" />
     <style>
@@ -76,6 +76,12 @@
             </div>
             <div id="home-pending-list" style="display: none; margin-top: 8px; border-top: 1px dashed #e0c97e; padding-top: 8px;"></div>
         </div>
+        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
+            <input type="date" id="list-date-filter" onchange="displayRecords()" style="flex: 1; min-width: 140px; padding: 9px; border: 1px solid #ccc; border-radius: 8px; font-size: 13px; background: #fff;">
+            <button type="button" onclick="clearDateFilter()" style="padding: 9px 14px; border: none; border-radius: 8px; background: #eceff1; color: #455a64; font-size: 13px; font-weight: bold;">顯示全部</button>
+            <input type="text" id="list-kw" oninput="debouncedSearch()" placeholder="🔍 搜尋關鍵字（台號／問題／備註／意見）" style="flex: 1 1 100%; padding: 9px; border: 1px solid #ccc; border-radius: 8px; font-size: 13px; background: #fff;">
+        </div>
+        <div id="list-count" style="font-size: 12px; color: #888; margin-bottom: 6px;"></div>
         <div id="recordList"><div style="text-align:center;color:#999;font-size:13px;padding:18px 0;">⏳ 正在載入歷史紀錄…</div></div>
     </div>
 
@@ -249,6 +255,44 @@
             </div>
         </div>
         
+        <label style="margin-top: 20px;">👥 客人意見收集（如不需要請留空）：</label>
+        <div class="issue-group" style="background: #f3e5f5; border-color: #ce93d8; display: block;">
+            <div class="issue-title" style="color: #6a1b9a;">收集內容</div>
+            <div class="checkbox-group" style="background: transparent; border: none; padding: 0; gap: 6px;">
+                    <label style="width:30%;"><input type="checkbox" value="燈光" class="guest-topic"> 燈光</label>
+                    <label style="width:30%;"><input type="checkbox" value="溫度" class="guest-topic"> 溫度</label>
+                    <label style="width:30%;"><input type="checkbox" value="聲音" class="guest-topic"> 聲音</label>
+                    <label style="width:30%;"><input type="checkbox" value="環境" class="guest-topic"> 環境</label>
+                    <label style="width:30%;"><input type="checkbox" value="座椅" class="guest-topic"> 座椅</label>
+                    <label style="width:30%;"><input type="checkbox" value="其他" class="guest-topic"> 其他</label>
+            </div>
+            <div class="box-row" style="margin-top: 10px;">
+                <div class="box-item"><span>好評（位）</span><input type="number" min="0" step="1" class="guest-good" value="0"></div>
+                <div class="box-item"><span>中評（位）</span><input type="number" min="0" step="1" class="guest-normal" value="0"></div>
+                <div class="box-item"><span>差評（位）</span><input type="number" min="0" step="1" class="guest-bad" value="0"></div>
+            </div>
+            <textarea class="guest-note" rows="2" placeholder="備註／事情描述（可留空）" style="width:100%; margin-top:8px; padding:8px; border:1px solid #ce93d8; border-radius:8px; font-size:13px; font-family:inherit; box-sizing:border-box;"></textarea>
+        </div>
+
+        <label style="margin-top: 20px;">👥 DLR 意見收集（如不需要請留空）：</label>
+        <div class="issue-group" style="background: #e0f2f1; border-color: #80cbc4; display: block;">
+            <div class="issue-title" style="color: #00695c;">收集內容</div>
+            <div class="checkbox-group" style="background: transparent; border: none; padding: 0; gap: 6px;">
+                    <label style="width:30%;"><input type="checkbox" value="燈光" class="dlr-topic"> 燈光</label>
+                    <label style="width:30%;"><input type="checkbox" value="溫度" class="dlr-topic"> 溫度</label>
+                    <label style="width:30%;"><input type="checkbox" value="聲音" class="dlr-topic"> 聲音</label>
+                    <label style="width:30%;"><input type="checkbox" value="環境" class="dlr-topic"> 環境</label>
+                    <label style="width:30%;"><input type="checkbox" value="座椅" class="dlr-topic"> 座椅</label>
+                    <label style="width:30%;"><input type="checkbox" value="其他" class="dlr-topic"> 其他</label>
+            </div>
+            <div class="box-row" style="margin-top: 10px;">
+                <div class="box-item"><span>好評（位）</span><input type="number" min="0" step="1" class="dlr-good" value="0"></div>
+                <div class="box-item"><span>中評（位）</span><input type="number" min="0" step="1" class="dlr-normal" value="0"></div>
+                <div class="box-item"><span>差評（位）</span><input type="number" min="0" step="1" class="dlr-bad" value="0"></div>
+            </div>
+            <textarea class="dlr-note" rows="2" placeholder="備註／事情描述（可留空）" style="width:100%; margin-top:8px; padding:8px; border:1px solid #80cbc4; border-radius:8px; font-size:13px; font-family:inherit; box-sizing:border-box;"></textarea>
+        </div>
+
         <!-- 5. 場面問題 -->
         <label style="margin-top: 20px;">場面問題項目輸入 (如不需要請留空)：</label>
         <div class="issue-group" style="background: #e3f2fd; border-color: #90caf9; display: block;">
@@ -442,6 +486,68 @@ function setSubmitting(on) {
     }
 
     // --- 自動保存草稿 ---
+    // ===== 意見收集（客人 / DLR）=====
+    function collectFeedback(prefix) {
+        let items = Array.from(document.querySelectorAll('.' + prefix + '-topic:checked')).map(cb => cb.value);
+        let getNum = (k) => {
+            let el = document.querySelector('.' + prefix + '-' + k);
+            let v = el ? parseInt(el.value || '0', 10) : 0;
+            return isNaN(v) ? 0 : v;
+        };
+        let good = getNum('good'), normal = getNum('normal'), bad = getNum('bad');
+        let noteEl = document.querySelector('.' + prefix + '-note');
+        let note = noteEl ? noteEl.value.trim() : '';
+        if (items.length === 0 && good === 0 && normal === 0 && bad === 0 && !note) return '';
+        return JSON.stringify({ items: items, good: good, normal: normal, bad: bad, note: note });
+    }
+
+    function resetFeedback(prefix) {
+        document.querySelectorAll('.' + prefix + '-topic').forEach(cb => { cb.checked = false; });
+        ['good', 'normal', 'bad'].forEach(k => {
+            let el = document.querySelector('.' + prefix + '-' + k);
+            if (el) el.value = '0';
+        });
+        let n = document.querySelector('.' + prefix + '-note');
+        if (n) n.value = '';
+    }
+
+    function applyFeedback(prefix, json) {
+        resetFeedback(prefix);
+        if (!json) return;
+        let d;
+        try { d = JSON.parse(json); } catch (e) { return; }
+        (d.items || []).forEach(v => {
+            let cb = document.querySelector('.' + prefix + '-topic[value="' + v + '"]');
+            if (cb) cb.checked = true;
+        });
+        ['good', 'normal', 'bad'].forEach(k => {
+            let el = document.querySelector('.' + prefix + '-' + k);
+            if (el) el.value = (d[k] === undefined ? 0 : d[k]);
+        });
+        let n = document.querySelector('.' + prefix + '-note');
+        if (n && d.note) n.value = d.note;
+    }
+
+    function escapeText(s) {
+        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function feedbackCardHtml(label, json, bg, border, color) {
+        if (!json) return '';
+        let d;
+        try { d = JSON.parse(json); } catch (e) { return ''; }
+        let counts = '好評 ' + (d.good || 0) + '｜中評 ' + (d.normal || 0) + '｜差評 ' + (d.bad || 0);
+        let lines = [];
+        if (d.items && d.items.length) lines.push('內容：' + d.items.join('、'));
+        if (d.note) lines.push('備註：' + escapeText(d.note));
+        let body = lines.length ? lines.join('<br>') : '（未填寫內容／備註）';
+        return '<details style="margin-top:8px; background:' + bg + '; border:1px solid ' + border + '; border-radius:6px;">' +
+            '<summary style="cursor:pointer; font-size:13px; font-weight:bold; color:' + color + '; padding:7px 9px;">' +
+            label + '｜' + counts + '</summary>' +
+            '<div style="padding:0 10px 10px 10px; font-size:12px; color:' + color + '; line-height:1.6;">' + body + '</div>' +
+            '</details>';
+    }
+
     function saveDraft() {
         try {
             if (editingRecordId) return;
@@ -514,6 +620,8 @@ function setSubmitting(on) {
                 if (c || l.length > 0) d.venue.push({ cat: c, prob: p, s: s, locs: l });
             });
 
+            d.guest = collectFeedback('guest');
+            d.dlr = collectFeedback('dlr');
             localStorage.setItem('bs_shift_draft', JSON.stringify(d));
         } catch(e) {
             console.error("Save draft failed", e);
@@ -631,6 +739,8 @@ function setSubmitting(on) {
                 });
             }
 
+            applyFeedback('guest', d.guest);
+            applyFeedback('dlr', d.dlr);
             transformInputs();
             alert("🔄 系統已自動為你還原未提交的交更草稿。");
         } catch(e) {
@@ -955,6 +1065,8 @@ function setSubmitting(on) {
         document.getElementById('lux-issue-group').style.display = 'none';
         document.getElementById('temp-issue-group').style.display = 'none';
         document.getElementById('bgm-issue-group').style.display = 'none';
+        resetFeedback('guest');
+        resetFeedback('dlr');
         
         document.getElementById('lux-container').innerHTML = `<div class="issue-item lux-item"><div class="issue-row"><input type="text" class="table-num lux-table" placeholder="輸入數字(如0201)"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
         document.getElementById('temp-container').innerHTML = `<div class="issue-item temp-item"><div class="issue-row"><input type="text" class="table-num temp-table" placeholder="輸入數字(如0201)"><input type="text" class="value temp-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
@@ -1032,7 +1144,7 @@ function updatePendingCardState(card) {
             window.globalGroupedItems = {}; 
             
             issues.forEach(issue => {
-                let timeStr = issue.created_at ? new Date(issue.created_at).toLocaleString('zh-HK') : '';
+                let timeStr = issue.created_at ? fmtDateTime(issue.created_at) : '';
                 let addItem = (type, text, recordId) => {
                     if (!text) return;
                     
@@ -1220,6 +1332,16 @@ function updatePendingCardState(card) {
         return guarded.split('\u0000SPLIT\u0000').map(x => x.trim()).filter(Boolean);
     }
 
+    function fmtDateTime(s) {
+        if (!s) return '';
+        let m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+        if (m) return m[1] + '-' + m[2] + '-' + m[3] + ' ' + m[4] + ':' + m[5] + ':' + (m[6] || '00');
+        let d = new Date(s);
+        if (isNaN(d.getTime())) return String(s);
+        const p = n => String(n).padStart(2, '0');
+        return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+    }
+
     function skeletonCard() {
         return '<div class="record-card" style="opacity:0.55;">' +
             '<div style="height:16px;width:45%;background:#e9edf2;border-radius:4px;margin-bottom:12px;"></div>' +
@@ -1238,6 +1360,41 @@ function updatePendingCardState(card) {
             let listDiv = document.getElementById('recordList');
             listDiv.setAttribute('data-loaded', '1');
             if (records.length === 0) { listDiv.innerHTML = "<p style='color: #888; text-align: center;'>暫時未有紀錄。</p >"; return; }
+
+            let dateFilter = (document.getElementById('list-date-filter') || {}).value || '';
+            let keyword = ((document.getElementById('list-kw') || {}).value || '').trim();
+            let totalBefore = records.length;
+
+            if (dateFilter) {
+                records = records.filter(x => (x.created_at || '').slice(0, 10) === dateFilter);
+            }
+            if (keyword) {
+                let kw = keyword.toUpperCase();
+                records = records.filter(x => {
+                    let blob = [x.name, x.shift, x.checklist, x.note, x.lux_issue, x.temp_issue, x.db_issue, x.guest_feedback, x.dlr_feedback, fmtDateTime(x.created_at)]
+                        .filter(Boolean).join(' ').toUpperCase();
+                    return blob.indexOf(kw) !== -1;
+                });
+            }
+            let countEl = document.getElementById('list-count');
+            if (countEl) {
+                if (dateFilter || keyword) {
+                    let cond = [];
+                    if (dateFilter) cond.push(dateFilter);
+                    if (keyword) cond.push('「' + keyword + '」');
+                    countEl.textContent = '找到 ' + records.length + ' 筆（共 ' + totalBefore + ' 筆）' + (cond.length ? '｜條件：' + cond.join(' ＋ ') : '');
+                } else {
+                    countEl.textContent = '共 ' + records.length + ' 筆紀錄';
+                }
+            }
+
+            if ((dateFilter || keyword) && records.length === 0) {
+                let cond = [];
+                if (dateFilter) cond.push('日期 ' + dateFilter);
+                if (keyword) cond.push('關鍵字「' + escapeText(keyword) + '」');
+                listDiv.innerHTML = "<p style='color: #888; text-align: center;'>" + cond.join(' ＋ ') + " 沒有符合的紀錄。<br><span style='font-size:12px;'>（原有 " + totalBefore + " 筆，可撳「顯示全部」）</span></p>";
+                return;
+            }
             let html = "";
             
             records.forEach((r, index) => {
@@ -1313,7 +1470,7 @@ function updatePendingCardState(card) {
                     });
                 }
 
-                let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${new Date(r.created_at).toLocaleString('zh-HK')}</div>` : "";
+                let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${fmtDateTime(r.created_at)}</div>` : "";
                 let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : 'Lux數值大致在於450-650之間';
                 let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常' || r.temp_issue) ? '溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
                 let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常' || r.db_issue) ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
@@ -1331,6 +1488,8 @@ function updatePendingCardState(card) {
                 
                 let divider = index > 0 ? `<hr style="border: 0; height: 8px; background: #d1d5db; margin: 30px 0; border-radius: 4px;">` : "";
                 
+                let feedbackHtml = feedbackCardHtml('👥 客人意見收集', r.guest_feedback, '#f3e5f5', '#ce93d8', '#6a1b9a') + feedbackCardHtml('👥 DLR 意見收集', r.dlr_feedback, '#e0f2f1', '#80cbc4', '#00695c');
+
                 let buttonsHtml = `<button onclick="editRecord(${r.id})" style="background: #f5b041; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">✏️ 修改</button>`;
                 if (isAdmin) {
                     buttonsHtml += `<button onclick="deleteRecord(${r.id})" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">×️ 刪除</button>`;
@@ -1355,6 +1514,16 @@ function updatePendingCardState(card) {
                     </details>`;
                 }
 
+                let hallShort = '';
+                if (r.checklist) {
+                    let seg = r.checklist.split(' | ').find(x => x.includes('NFC正常'));
+                    if (seg) hallShort = seg.replace(/^NFC正常[:：]\s*/, '').trim();
+                }
+                let quickInfo = (hallShort ? ('🛰️ ' + hallShort) : '無需檢測 Hall');
+                let pendInfo = pendingIssuesList.length > 0
+                    ? ('⚠️ ' + pendingIssuesList.length + ' 項未處理')
+                    : '✅ 全部已處理';
+
                 html += `${divider}<div class="record-card">
                     <div class="record-header" style="background: #f8f9fa; padding: 10px; border-radius: 6px 6px 0 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #1a73e8;">
                         <div style="flex: 1; min-width: 0;">
@@ -1364,7 +1533,10 @@ function updatePendingCardState(card) {
                             ${buttonsHtml}
                         </div>
                     </div>
-                    ${dataHtml}${hallInfoHtml}${checkItemsHtml}${noIssueBlock}${doneBlock}${pendingBlock}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div></div>`;
+                    <details${index === 0 ? ' open' : ''} style="margin-top: 4px;">
+                        <summary style="cursor: pointer; font-size: 12px; color: #555; padding: 6px 2px; line-height: 1.6;">${quickInfo}｜${pendInfo}｜點擊展開詳細</summary>
+                        <div style="margin-top: 8px;">${dataHtml}${hallInfoHtml}${feedbackHtml}${checkItemsHtml}${noIssueBlock}${doneBlock}${pendingBlock}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div></div>
+                    </details></div>`;
             });
             listDiv.innerHTML = html;
         }).catch(error => {
@@ -1376,6 +1548,20 @@ function updatePendingCardState(card) {
                     '<button onclick="displayRecords()" style="padding:9px 16px;border:none;border-radius:8px;background:#1a73e8;color:#fff;font-size:13px;font-weight:bold;">🔄 重新載入</button></div>';
             }
         });
+    }
+
+    let searchTimer = null;
+    function debouncedSearch() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(displayRecords, 300);
+    }
+
+    function clearDateFilter() {
+        let d = document.getElementById('list-date-filter');
+        if (d) d.value = '';
+        let k = document.getElementById('list-kw');
+        if (k) k.value = '';
+        displayRecords();
     }
 
     function editRecord(id) {
@@ -1527,6 +1713,8 @@ function updatePendingCardState(card) {
 
         let parsedNote = parseNote(r.note || "");
         document.getElementById('notes').value = parsedNote.main;
+        applyFeedback('guest', r.guest_feedback);
+        applyFeedback('dlr', r.dlr_feedback);
         
         if (parsedNote.venue) {
             parsedNote.venue.split('\n').forEach((line, index) => {
@@ -1722,6 +1910,8 @@ function updatePendingCardState(card) {
             status: overallStatus, 
             follower: Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無', 
             note: finalNote, 
+            guest_feedback: collectFeedback('guest'),
+            dlr_feedback: collectFeedback('dlr'),
             lux_issue: document.getElementById('skip-lux').checked ? "" : luxIssue, 
             temp_issue: document.getElementById('skip-temp').checked ? "" : tempIssue, 
             db_issue: document.getElementById('skip-bgm').checked ? "" : dbIssue 
