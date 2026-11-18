@@ -1018,4 +1018,64 @@
         async function clearAuditLogs() {
             if (!confirm('確定清理 90 日前的操作紀錄？（最近 90 日會保留）')) return;
             try {
-      
+                let res = await fetch('/api/clear_audit_logs', { method: 'POST' });
+                let data = await res.json();
+                alert(data.message || (data.status === 'success' ? '✅ 已清理' : '清理失敗'));
+                loadAuditLogs();
+            } catch (e) {
+                alert('❌ 連線失敗');
+            }
+        }
+
+        /* ================= Excel（.xls，無需外部 library） ================= */
+        function xmlEsc(v) {
+            return String(v == null ? '' : v)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function downloadExcel(filename, sheetName, rows) {
+            let body = rows.map(row => '<Row>' + row.map(cell =>
+                '<Cell><Data ss:Type="String">' + xmlEsc(cell) + '</Data></Cell>').join('') + '</Row>').join('');
+            let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<?mso-application progid="Excel.Sheet"?>\n'
+                + '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'
+                + '<Worksheet ss:Name="' + xmlEsc(sheetName) + '"><Table>' + body + '</Table></Worksheet></Workbook>';
+            let blob = new Blob(['\uFEFF' + xml], { type: 'application/vnd.ms-excel;charset=utf-8' });
+            let a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        }
+
+        async function exportRecordsExcel() {
+            if (!allRecords || allRecords.length === 0) await loadRecords();
+            if (!allRecords || allRecords.length === 0) {
+                let m = document.getElementById('exp-msg');
+                m.style.color = '#d32f2f';
+                m.textContent = '⚠️ 目前沒有紀錄可匯出';
+                return;
+            }
+            let url = '/api/export/records?format=xls';
+            let from = document.getElementById('e-from').value;
+            let to = document.getElementById('e-to').value;
+            if (from) url += '&from=' + encodeURIComponent(from);
+            if (to) url += '&to=' + encodeURIComponent(to);
+            openExport(url, '📥 正在產生 Excel 檔（.xls），如未自動下載，請稍候或改用「在瀏覽器打開」。');
+        }
+
+        function exportOptionsExcel() {
+            openExport('/api/export/configs?format=xls', '📥 正在產生選項清單 Excel…');
+        }
+
+        /* ================= 啟動 ================= */
+        (async function init() {
+            await renderOptions();
+            await loadRecords();
+            fillFilterOptions();
+        })();
+    </script>
+</body>
+</html>
