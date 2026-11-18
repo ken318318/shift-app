@@ -334,7 +334,9 @@ def get_configs():
                 configs[row[0]] = []
             configs[row[0]].append(row[1])
         cache_set('configs', configs, 300)
-        return jsonify(configs)
+        resp = jsonify(configs)
+        resp.headers['Cache-Control'] = 'no-store, max-age=0'
+        return resp
     except Exception as e:
         print("Get Configs Error:", e)
         return jsonify({})
@@ -352,7 +354,9 @@ def configs_detail():
         c.execute("""SELECT id, category, problem FROM venue_configs
                      ORDER BY COALESCE(cat_order,0) ASC, category ASC, COALESCE(item_order,0) ASC, id ASC""")
         rows = c.fetchall()
-        return jsonify([{"id": r[0], "category": r[1], "problem": r[2]} for r in rows])
+        resp = jsonify([{"id": r[0], "category": r[1], "problem": r[2]} for r in rows])
+        resp.headers['Cache-Control'] = 'no-store, max-age=0'
+        return resp
     except Exception as e:
         print("Configs Detail Error:", e)
         return jsonify([])
@@ -693,7 +697,9 @@ def get_records_home():
             "guest_feedback": r[13], "dlr_feedback": r[14],
             "created_at": str(r[15]) if r[15] else None
         } for r in rows]
-        return jsonify({"records": records, "total": total, "limit": limit, "offset": offset})
+        resp = jsonify({"records": records, "total": total, "limit": limit, "offset": offset})
+        resp.headers['Cache-Control'] = 'no-store, max-age=0'
+        return resp
     except Exception as e:
         print("Records Home Error:", e)
         return jsonify({"records": [], "total": 0, "error": str(e)})
@@ -897,7 +903,9 @@ def get_pending_issues():
         })
     payload = {"issues": pending, "done_items": list(done_items)}
     cache_set('pending', payload, 45)
-    return jsonify(payload)
+    resp = jsonify(payload)
+    resp.headers['Cache-Control'] = 'no-store, max-age=0'
+    return resp
 
 @app.route('/api/delete_record', methods=['POST'])
 def delete_record():
