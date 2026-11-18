@@ -1276,7 +1276,7 @@ function updatePendingCardState(card) {
                 }
 
                 let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${new Date(r.created_at).toLocaleString('zh-HK')}</div>` : "";
-                let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : 'Lux數值大致在於450-650之間';
+                let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : '檢查Lux數值大致在於450-650之間';
                 let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常' || r.temp_issue) ? '溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
                 let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常' || r.db_issue) ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
                 let dataHtml = `<div class="record-data">📊 ${luxStr} | ${tempStr} | ${bgmStr}</div>`;
