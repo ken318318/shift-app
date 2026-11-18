@@ -46,8 +46,6 @@ def ensure_tables():
                         value TEXT NOT NULL,
                         updated_at TIMESTAMPTZ DEFAULT NOW()
                      )""")
-        c.execute("ALTER TABLE venue_configs ADD COLUMN IF NOT EXISTS cat_order INTEGER DEFAULT 0")
-        c.execute("ALTER TABLE venue_configs ADD COLUMN IF NOT EXISTS item_order INTEGER DEFAULT 0")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS guest_feedback TEXT")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS dlr_feedback TEXT")
         c.execute("""CREATE TABLE IF NOT EXISTS audit_logs (
@@ -154,44 +152,7 @@ def bump_epoch(role):
     return ok
 
 
-def init_config_order():
-    """第一次啟動時，按舊有顯示次序寫入 cat_order / item_order（之後唔會再動）。"""
-    conn = None
-    try:
-        conn = get_db_connection()
-        c = conn.cursor()
-        c.execute("SELECT COUNT(*) FROM venue_configs WHERE COALESCE(cat_order,0) <> 0 OR COALESCE(item_order,0) <> 0")
-        if c.fetchone()[0] > 0:
-            return
-        c.execute("""SELECT category, problem, id FROM venue_configs
-                     ORDER BY CASE
-                        WHEN category = '賭檯 - Display(大Mon)' THEN 1
-                        WHEN category = '賭檯 - Display(細Mon)' THEN 2
-                        WHEN category = '賭檯 - Layout' THEN 3
-                        WHEN category = '賭檯 - Sound Bar' THEN 4
-                        ELSE 5 END, category ASC, id ASC""")
-        rows = c.fetchall()
-        cat_order = {}
-        item_counter = {}
-        for cat, prob, rid in rows:
-            if cat not in cat_order:
-                cat_order[cat] = (len(cat_order) + 1) * 10
-                item_counter[cat] = 0
-            item_counter[cat] += 1
-            c.execute("UPDATE venue_configs SET cat_order = %s, item_order = %s WHERE id = %s",
-                      (cat_order[cat], item_counter[cat], rid))
-        conn.commit()
-        print("選項排序初始化完成，共", len(cat_order), "個類別")
-    except Exception as e:
-        print("選項排序初始化失敗:", e)
-        if conn: conn.rollback()
-    finally:
-        if conn:
-            release_db_connection(conn)
-
-
 ensure_tables()
-init_config_order()
 
 # ---------- 舊域名自動跳轉新域名（令舊微信名片／舊連結仍然可用） ----------
 PRIMARY_HOST = (os.environ.get('PRIMARY_HOST') or 'bs-shift.xyz').strip().lower()
@@ -295,8 +256,15 @@ def admin():
 def get_configs():
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("""SELECT category, problem FROM venue_configs
-                 ORDER BY COALESCE(cat_order,0) ASC, category ASC, COALESCE(item_order,0) ASC, id ASC""")
+    c.execute("""SELECT category, problem FROM venue_configs 
+                 ORDER BY 
+                 CASE 
+                    WHEN category = '賭檯 - Display(大Mon)' THEN 1
+                    WHEN category = '賭檯 - Display(細Mon)' THEN 2
+                    WHEN category = '賭檯 - Layout' THEN 3
+                    WHEN category = '賭檯 - Sound Bar' THEN 4
+                    ELSE 5 
+                 END, category ASC, id ASC""")
     rows = c.fetchall()
     release_db_connection(conn)
     configs = {}
@@ -305,90 +273,6 @@ def get_configs():
             configs[row[0]] = []
         configs[row[0]].append(row[1])
     return jsonify(configs)
-
-@app.route('/api/configs_detail', methods=['GET'])
-def configs_detail():
-    """回傳帶 id 的選項清單（admin 排序用）。"""
-    conn = None
-    try:
-        conn = get_db_connection()
-        c = conn.cursor()
-        c.execute("""SELECT id, category, problem FROM venue_configs
-                     ORDER BY COALESCE(cat_order,0) ASC, category ASC, COALESCE(item_order,0) ASC, id ASC""")
-        rows = c.fetchall()
-        return jsonify([{"id": r[0], "category": r[1], "problem": r[2]} for r in rows])
-    except Exception as e:
-        print("Configs Detail Error:", e)
-        return jsonify([])
-    finally:
-        if conn:
-            release_db_connection(conn)
-
-
-@app.route('/api/reorder_config', methods=['POST'])
-def reorder_config():
-    """上下移動類別或問題選項。"""
-    data = request.json or {}
-    rtype = (data.get('type') or '').strip()
-    direction = (data.get('direction') or '').strip()
-    if direction not in ('up', 'down'):
-        return jsonify({"status": "error", "message": "❌ 移動方向不正確。"})
-
-    conn = None
-    try:
-        conn = get_db_connection()
-        c = conn.cursor()
-
-        if rtype == 'category':
-            category = (data.get('category') or '').strip()
-            if not category:
-                return jsonify({"status": "error", "message": "❌ 缺少類別資料。"})
-            c.execute("""SELECT category FROM venue_configs
-                         GROUP BY category
-                         ORDER BY MIN(COALESCE(cat_order,0)) ASC, category ASC""")
-            names = [r[0] for r in c.fetchall()]
-            if category not in names:
-                return jsonify({"status": "error", "message": "❌ 找不到該類別。"})
-            i = names.index(category)
-            j = i - 1 if direction == 'up' else i + 1
-            if j < 0 or j >= len(names):
-                return jsonify({"status": "success", "message": "已經喺最" + ('前' if direction == 'up' else '後') + "面。"})
-            names[i], names[j] = names[j], names[i]
-            for k, name in enumerate(names, start=1):
-                c.execute("UPDATE venue_configs SET cat_order = %s WHERE category = %s", (k * 10, name))
-            conn.commit()
-            return jsonify({"status": "success", "message": "✅ 已調整類別次序。"})
-
-        if rtype == 'problem':
-            rid = data.get('id')
-            if not rid:
-                return jsonify({"status": "error", "message": "❌ 缺少選項資料。"})
-            c.execute("SELECT category FROM venue_configs WHERE id = %s", (rid,))
-            row = c.fetchone()
-            if not row:
-                return jsonify({"status": "error", "message": "❌ 找不到該選項。"})
-            c.execute("""SELECT id FROM venue_configs WHERE category = %s
-                         ORDER BY COALESCE(item_order,0) ASC, id ASC""", (row[0],))
-            ids = [r[0] for r in c.fetchall()]
-            i = ids.index(rid)
-            j = i - 1 if direction == 'up' else i + 1
-            if j < 0 or j >= len(ids):
-                return jsonify({"status": "success", "message": "已經喺最" + ('前' if direction == 'up' else '後') + "面。"})
-            ids[i], ids[j] = ids[j], ids[i]
-            for k, oid in enumerate(ids, start=1):
-                c.execute("UPDATE venue_configs SET item_order = %s WHERE id = %s", (k, oid))
-            conn.commit()
-            return jsonify({"status": "success", "message": "✅ 已調整問題次序。"})
-
-        return jsonify({"status": "error", "message": "❌ 未知的排序類型。"})
-    except Exception as e:
-        print("Reorder Error:", e)
-        if conn: conn.rollback()
-        return jsonify({"status": "error", "message": "❌ 排序失敗，請稍後再試。"})
-    finally:
-        if conn:
-            release_db_connection(conn)
-
 
 @app.route('/api/add_config', methods=['POST'])
 def add_config():
@@ -407,16 +291,7 @@ def add_config():
         if c.fetchone():
             return jsonify({"status": "error", "message": "⚠️ 呢個選項已經存在。"})
 
-        c.execute("""SELECT COALESCE(MAX(cat_order),0), COALESCE(MAX(item_order),0)
-                     FROM venue_configs WHERE category = %s""", (category,))
-        row = c.fetchone()
-        cat_order = row[0] or 0
-        item_order = (row[1] or 0) + 1
-        if not cat_order:
-            c.execute("SELECT COALESCE(MAX(cat_order),0) FROM venue_configs")
-            cat_order = (c.fetchone()[0] or 0) + 10
-        c.execute("INSERT INTO venue_configs (category, problem, cat_order, item_order) VALUES (%s, %s, %s, %s)",
-                  (category, problem, cat_order, item_order))
+        c.execute("INSERT INTO venue_configs (category, problem) VALUES (%s, %s)", (category, problem))
         conn.commit()
         log_action('新增選項', f"{category} / {problem}")
         return jsonify({"status": "success", "message": "✅ 新增成功！"})
