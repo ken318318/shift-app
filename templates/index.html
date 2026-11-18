@@ -748,7 +748,27 @@ function setSubmitting(on) {
         }
     }
 
+    async function refreshConfigs() {
+        try {
+            let res = await fetch('/api/get_configs?_t=' + Date.now());
+            let data = await res.json();
+            if (!data || typeof data !== 'object') return;
+            venueCategories = data;
+            document.querySelectorAll('.venue-category').forEach(sel => {
+                let cur = sel.value;
+                initVenueCategory(sel);
+                if (cur && venueCategories[cur]) {
+                    sel.value = cur;
+                    updateVenueProblem(sel);
+                }
+            });
+        } catch (e) {
+            console.warn('更新選項失敗', e);
+        }
+    }
+
     function showForm(isNew = true) { 
+        refreshConfigs();
         if (isNew) {
             resetForm(false);
             loadDraft();
@@ -1981,7 +2001,7 @@ function updatePendingCardState(card) {
 
     document.addEventListener("DOMContentLoaded", function() { 
         showList(); 
-        fetch('/api/get_configs').then(res => res.json()).then(data => { 
+        fetch('/api/get_configs?_t=' + Date.now()).then(res => res.json()).then(data => { 
             venueCategories = data; 
             let firstVenue = document.querySelector('.venue-category'); 
             if(firstVenue) initVenueCategory(firstVenue); 
