@@ -76,7 +76,7 @@
             </div>
             <div id="home-pending-list" style="display: none; margin-top: 8px; border-top: 1px dashed #e0c97e; padding-top: 8px;"></div>
         </div>
-        <div id="recordList"></div>
+        <div id="recordList"><div style="text-align:center;color:#999;font-size:13px;padding:18px 0;">⏳ 正在載入歷史紀錄…</div></div>
     </div>
 
     <div class="card" id="form-container" style="display: none;">
@@ -302,16 +302,16 @@
                 </label>
             </div>
         </div>
-        <button class="submit-btn" onclick="submitForm()">提交交更</button>
+        <button class="submit-btn" id="submit-btn-main" onclick="submitForm()">提交交更</button>
         <div id="result"></div>
         <div id="current-time" style="text-align: center; color: #888; font-size: 14px; margin-top: 20px; font-weight: bold;"></div>
     </div>
 
-    <!-- 新增場面問題選項（同事亦可自行新增，唔需要管理員） -->
+    <!-- 新增場面問題選項（同事亦可自行新增，無需管理員） -->
     <div id="add-config-modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; overflow-y: auto; padding: 16px;">
         <div style="background: #fff; border-radius: 12px; max-width: 420px; margin: 50px auto; padding: 18px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);">
             <h3 style="margin: 0 0 4px 0; font-size: 16px; color: #333;">➕ 新增場面問題選項</h3>
-            <p style="font-size: 12px; color: #777; margin: 0 0 14px 0;">新增後即時可用，唔需要再叫管理員幫手。</p>
+            <p style="font-size: 12px; color: #777; margin: 0 0 14px 0;">新增後即時可用，無需通知管理員。</p>
 
             <label style="font-size: 13px; font-weight: bold; color: #444;">類別</label>
             <select id="cfg-category-select" onchange="onCfgCategoryChange()" style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 14px;"></select>
@@ -345,7 +345,7 @@
                         isKick = !!(data && data.kick);
                     } catch (e) { /* 非 JSON 就當普通 401 */ }
                     if (isKick) {
-                        alert('⏰ 你嘅登入已失效（密碼已被更改），請重新登入。');
+                        alert('⏰ 你的登入已失效（密碼已被更改），請重新登入。');
                         window.location.href = '/login';
                         throw new Error('kicked');
                     }
@@ -365,6 +365,30 @@
     let venueCategories = {}; 
     let allRecords = []; 
     let editingRecordId = null;
+    let isSubmitting = false;   // 防止重複提交
+
+// 鎖定／解鎖提交按鈕
+function setSubmitting(on) {
+    isSubmitting = on;
+    let btn = document.getElementById('submit-btn-main');
+    if (!btn) return;
+    if (on) {
+        btn.dataset.originalText = btn.dataset.originalText || btn.textContent;
+        btn.textContent = '⏳ 提交中，請勿重複點擊…';
+        btn.disabled = true;
+        btn.style.opacity = '0.65';
+        btn.style.cursor = 'not-allowed';
+        // 15 秒後仍未回應，改提示（伺服器可能正在喚醒）
+        setTimeout(function () {
+            if (isSubmitting && btn) btn.textContent = '⏳ 伺服器喚醒中，請稍候（勿重複點擊）…';
+        }, 15000);
+    } else {
+        if (btn.dataset.originalText) btn.textContent = btn.dataset.originalText;
+        btn.disabled = false;
+        btn.style.opacity = '';
+        btn.style.cursor = '';
+    }
+}
     let saveTimeout = null;
 
     const rawTableList = `RL0101,RL0102,RL0103,RL0105,CS0106,CS0107,CS0108,CS0109,CS0110,BJ0111,BJ0112,BJ0113,BJ0115,BJ0128,BJ0117,FP0120,FP0121,BJ0122,BJ0123,FP0129,FP0130,FP0116,FP0117,CR0118,BJ0125,BJ0126,CR0127,LT3101,LT3102,LT3103,LT3105,LT6301,LT6302,LT6303,LT6305,DS0927,DS0928,DS0929,DS1106,DS1107,DS1108,DS1109,DS1110,DS1111,NB0201,NB0202,NB0203,NB0205,NB0210,NB0211,NB0212,NB0213,NB0215,NB0216,NB0217,NB0218,NB0219,NB0220,NB0221,NB0223,NB0225,NB0226,NB0227,NB3205,NB3206,NB3207,NB3208,NB3209,NB3210,NB3211,NB3212,NB3213,NB3215,NB3216,NB3217,NB3218,NB3219,NB3220,NB3509,NB3510,NB3511,NB3512,NB3513,NB3515,NB3516,NB3517,NB3518,NB3519,NB0301,NB0302,NB0303,NB0305,NB0306,NB0307,NB0308,NB0309,NB0310,NB0311,NB0312,NB0313,NB0315,NB0316,NB0317,NB0318,NB0501,NB0502,NB0503,NB0505,NB0506,NB0507,NB0508,NB0509,NB0510,NB0511,NB0516,NB0517,NB0518,NB0519,NB0520,NB0521,NB0522,NB0523,NB0525,NB0526,NB0527,NB0528,NB0529,NB0530,NB0801,NB0802,NB0803,NB0805,NB0806,NB0807,NB0808,NB0809,NB0810,NB0811,NB0812,NB0815,NB0816,NB0817,NB0818,NB2601,NB2602,NB2603,NB2605,NB2606,NB2607,NB2608,NB2609,NB2610,NB2611,NB2612,NB2613,NB2615,NB2616,NB2617,NB2618,NB2619,NB2620,NB2621,NB2622,NB2623,NB2625,NB2701,NB2702,NB2703,NB2705,NB2706,NB2707,NB2708,NB2709,NB2710,NB2711,NB2712,NB2715,NB2716,NB2717,NB2718,NB2719,NB2720,NB2721,NB2801,NB2802,NB2803,NB2805,NB2806,NB2807,NB2808,NB2809,NB2810,NB2811,NB2812,NB2813,NB2815,NB2816,NB2817,NB2818,NB2819,NB2820,NB2821,NB2822,NB2823,NB2825,NB2826,NB2901,NB2902,NB2903,NB2905,NB2906,NB2907,NB2908,NB2909,NB2910,NB2911,NB2912,NB2913,NB2915,NB2916,NB2919,NB2917,NB2918,NB2921,NB2922,NB2920,NB2923,NB2925,NB3005,NB3006,NB3007,NB3022,NB3008,NB3023,NB3025,NB3013,NB3015,NB3016,NB3017,NB3018,NB3019,NB3020,NB3021,NB3028,NB3029,NB3030,NB3031,NB3301,NB3302,NB3303,NB3305,NB3306,NB3307,NB3308,NB3309,NB3310,NB3311,NB3312,NB3313,NB3315,NB3316,NB3317,NB3318,NB0901,NB0902,NB0903,NB0905,NB0906,NB0907,NB0908,NB0909,NB0910,NB0911,NB0912,NB0913,NB0915,NB0916,NB0917,NB0918,NB0919,NB0920,NB0921,NB0922,NB0923,NB0925,NB0926,NB1101,NB1102,NB1103,NB1105,NB1112,NB1113,NB1115,NB1116,NB1117,NB1118,NB1119,NB1120,NB1121,NB1122,NB1123,NB1125,NB1126,NB1127,NB1128,NB1129,NB1130,NB1131,NB1132,NB1201,NB1202,NB1203,NB1205,NB1206,NB1207,NB1208,NB1209,NB1210,NB1211,NB1212,NB1213,NB1215,NB1216,NB1217,NB1218,NB1219,NB1220,NB1221,NB1222,NB1223,NB1225,NB1226,NB1227,NB1228,NB1229,NB1251,NB1230,NB1231,NB1232,NB1233,NB1250,NB1235,NB1236,NB1237,NB1238,NB1239,NB2501,NB2502,NB2503,NB2505,NB2506,NB2507,NB2508,NB2509,NB2510,NB2511,NB2512,NB2513,NB2515,NB2516,NB2517,NB2518,NB2519,NB2520,NB2521,NB2522,NB2523,NB2525,NB2526,NB2527,NB2528,NB2529,NB2530,NB2531,NB2532,NB2533,NB2535,NB2536,NB2537,NB2538,NB1601,NB1602,NB1603,NB1605,NB1606,NB1607,NB1608,NB1609,NB1610,NB1611,NB1612,NB1613,NB1615,NB1616,NB1617,NB1618,NB1619,NB1620,NB1621,NB1622,NB1623,NB1625,NB1626,NB1627,NB1628,NB1629,NB1630,NB1631,NB1632,NB1633,NB1301,NB1302,NB1303,NB1305,NB1306,NB1307,NB1308,NB1309,NB1310,NB1311,NB1312,NB1313,NB1315,NB1316,NB1317,NB1318,NB1319,NB1320,NB1321,NB1322,NB1323,NB1325,NB1326,NB1327,NB1501,NB1502,NB1503,NB1505,NB1506,NB1507,NB1508,NB1509,NB1510,NB1511,NB1512,NB1513,NB1515,NB1516,NB1517,NB1518,NB1519,NB1520,NB1521,NB1522,NB1523,NB1525,NB1526,NB1527,NB1701,NB1702,NB1703,NB1705,NB1706,NB1707,NB1708,NB1709,NB1710,NB1711,NB1712,NB1713,NB1715,NB1716,NB1717,NB1718,NB1719,NB1720,NB1721,NB1722,NB1723,NB1725,NB1726,NB1727,NB1801,NB1802,NB1803,NB1805,NB1806,NB1807,NB1808,NB1809,NB1810,NB1811,NB1812,NB1813,NB1815,NB1816,NB1817,NB1818,NB1819,NB1820,NB1821,NB1822,NB1823,NB1825,NB1901,NB1902,NB1903,NB1905,NB1906,NB1907,NB1908,NB1909,NB1910,NB1911,NB1912,NB1913,NB1915,NB1916,NB1917,NB1918,NB2001,NB2002,NB2003,NB2005,NB2006,NB2007,NB2008,NB2009,NB2010,NB2011,NB2012,NB2013,NB2015,NB2016,NB2017,NB2018,NB10321,NB10322,NB10302,NB10303,NB10305,NB10301,NB10323,NB10325,NB10307,NB10308,NB10309,NB10306,NB10310,NB10311,NB10312,NB10313,NB10315,NB10316,NB10317,NB10501,NB10502,NB10503,NB10505,NB10506,NB10507,NB10508,NB10519,NB10520,NB10627,NB10601,NB10602,NB10603,NB10628,NB10629,NB10606,NB10607,NB10608,NB10605,NB10630,NB10610,NB10611,NB10609,NB10612,NB10613,NB10615,NB10616,NB10617,NB10618,NB10619,NB10620,NB10621,NB10622,NB10623,NB10625,NB10701,NB10702,NB10703,NB10705,NB10706,NB10707,NB10708,NB10709,NB10720,NB10721,NB10722,NB10723,NB10710,NB10711,NB10712,NB10713,NB10715,NB10716,NB10717,NB10718,NB10719`;
@@ -699,7 +723,7 @@
         return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
-    // 重新建立彈窗內嘅「類別」下拉
+    // 重新建立彈窗內的「類別」下拉
     function rebuildCfgCategorySelect(preferCat) {
         let sel = document.getElementById('cfg-category-select');
         let keys = Object.keys(venueCategories || {});
@@ -714,7 +738,7 @@
         }
     }
 
-    // 顯示所選類別嘅現有問題選項（可逐個刪除）
+    // 顯示所選類別的現有問題選項（可逐個刪除）
     function renderCfgExisting() {
         let wrap = document.getElementById('cfg-existing');
         if (!wrap) return;
@@ -741,12 +765,12 @@
     }
 
     function deleteConfigOption(cat, prob) {
-        if (!confirm('確定刪除「' + cat + '」嘅選項「' + prob + '」？\n\n刪除後唔可以復原，但已提交嘅舊紀錄唔受影響。')) return;
+        if (!confirm('確定刪除「' + cat + '」的選項「' + prob + '」？\n\n刪除後無法復原，但已提交的舊紀錄不受影響。')) return;
         doDeleteConfig({ category: cat, problem: prob }, cat);
     }
 
     function deleteConfigCategory(cat) {
-        if (!confirm('確定刪除整個類別「' + cat + '」連同裡面所有問題選項？\n\n刪除後唔可以復原，但已提交嘅舊紀錄唔受影響。')) return;
+        if (!confirm('確定刪除整個類別「' + cat + '」連同裡面所有問題選項？\n\n刪除後無法復原，但已提交的舊紀錄不受影響。')) return;
         doDeleteConfig({ category: cat, problem: '' }, '');
     }
 
@@ -802,7 +826,7 @@
         if (!category) { msg.textContent = '⚠️ 請填寫類別名稱'; return; }
         if (!problem) { msg.textContent = '⚠️ 請填寫問題內容'; return; }
         let exist = (venueCategories[category] || []).some(p => String(p).trim() === problem);
-        if (exist) { msg.textContent = '⚠️ 呢個選項已經存在，唔需要重複新增'; return; }
+        if (exist) { msg.textContent = '⚠️ 此選項已存在，無需重複新增'; return; }
 
         msg.style.color = '#666';
         msg.textContent = '儲存中…';
@@ -1164,7 +1188,7 @@ function updatePendingCardState(card) {
                             cb.checked = true;
                         }
                     });
-                    // ★ 新增：編輯模式手動勾完之後，更新每個分類頂層嘅半選狀態
+                    // ★ 新增：編輯模式手動勾選後，更新每個分類頂層的半選狀態
                     document.querySelectorAll('#pending-list .pending-card').forEach(card => updatePendingCardState(card));
 
                 }
@@ -1196,10 +1220,23 @@ function updatePendingCardState(card) {
         return guarded.split('\u0000SPLIT\u0000').map(x => x.trim()).filter(Boolean);
     }
 
+    function skeletonCard() {
+        return '<div class="record-card" style="opacity:0.55;">' +
+            '<div style="height:16px;width:45%;background:#e9edf2;border-radius:4px;margin-bottom:12px;"></div>' +
+            '<div style="height:12px;width:80%;background:#eef1f5;border-radius:4px;margin-bottom:8px;"></div>' +
+            '<div style="height:12px;width:65%;background:#eef1f5;border-radius:4px;"></div></div>';
+    }
+
     function displayRecords() {
+        let firstDiv = document.getElementById('recordList');
+        if (firstDiv && firstDiv.getAttribute('data-loaded') !== '1') {
+            firstDiv.innerHTML = skeletonCard() + skeletonCard() +
+                '<div style="text-align:center;color:#aaa;font-size:12px;padding:6px 0 0;">正在載入歷史紀錄…</div>';
+        }
         fetch('/api/records').then(res => res.json()).then(records => {
             allRecords = records; 
             let listDiv = document.getElementById('recordList');
+            listDiv.setAttribute('data-loaded', '1');
             if (records.length === 0) { listDiv.innerHTML = "<p style='color: #888; text-align: center;'>暫時未有紀錄。</p >"; return; }
             let html = "";
             
@@ -1244,7 +1281,7 @@ function updatePendingCardState(card) {
                             hallInfoHtml = `<div class="record-data" style="background:#e8f0fe; color:#174ea6; font-size:13px; line-height:1.6;">
                                 <div style="font-weight:bold; word-break:break-word; margin-bottom:6px;">🛰️ 本更檢測 Hall：${hallName} <span style="background:#1a73e8; color:#fff; padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap; margin-left:4px;">✅ 已完成</span></div>
                                 <div style="display:flex; flex-wrap:wrap; gap:5px;">${chip('Lux', !!r.lux)}${chip('溫度', !!r.temp)}${chip('分貝', !!r.bgm)}${chip('NFC', true)}</div>
-                                ${hasNfcIssue ? `<div style="font-size:11px; color:#856404; margin-top:6px;">※ 以下只列出 ${hallName} 內發現異常嘅個別台號，並非全個 Hall 都異常。</div>` : ''}
+                                ${hasNfcIssue ? `<div style="font-size:11px; color:#856404; margin-top:6px;">※ 以下僅列出 ${hallName} 內發現異常的個別台號，並非整個 Hall 均有異常。</div>` : ''}
                             </div>`;
                         }
                     }
@@ -1264,19 +1301,20 @@ function updatePendingCardState(card) {
                 
                 if (parsedNote.doneOld) {
                     parsedNote.doneOld.split('\n').forEach(line => {
-                        if (line.trim()) doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 舊問題已處理: ${line.trim()}</span></div>`;
+                        line = line.replace(/\s*\[狀態:.*?\]/g, '').trim();
+                            if (line) doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 舊問題已處理: ${line}</span></div>`;
                     });
                 }
 
                 if (parsedNote.pendingOld) {
                     parsedNote.pendingOld.split('\n').forEach(line => {
                         line = line.trim();
-                        if (line) pendingIssuesList.push(formatIssueText(line, '', '未處理'));
+                        if (line) pendingIssuesList.push(formatIssueText(line.replace(/\s*\[狀態:.*?\]/g, '').trim(), '', '未處理'));
                     });
                 }
 
                 let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${new Date(r.created_at).toLocaleString('zh-HK')}</div>` : "";
-                let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : '檢查Lux數值大致在於450-650之間';
+                let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : 'Lux數值大致在於450-650之間';
                 let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常' || r.temp_issue) ? '溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
                 let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常' || r.db_issue) ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
                 let dataHtml = `<div class="record-data">📊 ${luxStr} | ${tempStr} | ${bgmStr}</div>`;
@@ -1298,6 +1336,25 @@ function updatePendingCardState(card) {
                     buttonsHtml += `<button onclick="deleteRecord(${r.id})" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">×️ 刪除</button>`;
                 }
 
+                let pendingBlock = '';
+                if (pendingIssuesList.length > 0) {
+                    pendingBlock = `<details open style="margin-top:8px;">
+                        <summary style="cursor:pointer; font-size:13px; font-weight:bold; color:#c62828; padding:7px 9px; background:#fff5f5; border:1px solid #ffd9d9; border-radius:6px;">⚠️ 未處理項目（${pendingIssuesList.length} 項）</summary>
+                        <div style="margin-top:6px;">${pendingIssuesList.join('')}</div>
+                    </details>`;
+                }
+                let noIssueBlock = '';
+                if (pendingIssuesList.length === 0 && doneIssuesList.length === 0 && !doneOldHtml) {
+                    noIssueBlock = `<div style="margin-top:8px; background:#f1fbf4; border:1px solid #c8ecd5; border-radius:6px; padding:9px 10px; font-size:12px; color:#2e7d32;">✅ 本更未發現異常項目</div>`;
+                }
+                let doneBlock = '';
+                if (doneIssuesList.length > 0 || doneOldHtml) {
+                    doneBlock = `<details style="margin-top:8px;">
+                        <summary style="cursor:pointer; font-size:13px; font-weight:bold; color:#2e7d32; padding:7px 9px; background:#f1fbf4; border:1px solid #c8ecd5; border-radius:6px;">✅ 已處理項目（${doneIssuesList.length} 項）</summary>
+                        <div style="margin-top:6px;">${doneIssuesList.join('')}${doneOldHtml}</div>
+                    </details>`;
+                }
+
                 html += `${divider}<div class="record-card">
                     <div class="record-header" style="background: #f8f9fa; padding: 10px; border-radius: 6px 6px 0 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #1a73e8;">
                         <div style="flex: 1; min-width: 0;">
@@ -1307,10 +1364,18 @@ function updatePendingCardState(card) {
                             ${buttonsHtml}
                         </div>
                     </div>
-                    ${dataHtml}${hallInfoHtml}${checkItemsHtml}${doneIssuesList.join('')}${doneOldHtml}${pendingIssuesList.join('')}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div></div>`;
+                    ${dataHtml}${hallInfoHtml}${checkItemsHtml}${noIssueBlock}${doneBlock}${pendingBlock}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div></div>`;
             });
             listDiv.innerHTML = html;
-        }).catch(error => console.error("讀取失敗:", error));
+        }).catch(error => {
+            console.error("讀取失敗:", error);
+            let listDiv = document.getElementById('recordList');
+            if (listDiv) {
+                listDiv.innerHTML = '<div style="text-align:center;padding:18px 0;">' +
+                    '<div style="color:#c0392b;font-size:13px;margin-bottom:10px;">⚠️ 讀取紀錄失敗（伺服器可能正在喚醒）</div>' +
+                    '<button onclick="displayRecords()" style="padding:9px 16px;border:none;border-radius:8px;background:#1a73e8;color:#fff;font-size:13px;font-weight:bold;">🔄 重新載入</button></div>';
+            }
+        });
     }
 
     function editRecord(id) {
@@ -1523,7 +1588,7 @@ function updatePendingCardState(card) {
         }
         transformInputs();
         loadPendingIssues();
-        alert("📝 已為你載入原有資料。\n請喺下方修改後重新提交。");
+        alert("📝 已載入原有資料。\n請於下方修改後重新提交。");
     }
 
     function deleteRecord(id) { 
@@ -1559,7 +1624,7 @@ function updatePendingCardState(card) {
         if (hasUnresolved) { 
             let isConfirmed = document.getElementById('confirm-pending').checked; 
             if (!isConfirmed) { 
-                alert("⚠️ 請注意：仲有未完成嘅跟進項目！\n\n如果你確定這些問題仍然未處理，請在最下方按下『我確定未打勾的項目仍然未處理』的小格，然後再提交。"); 
+                alert("⚠️ 請注意：仍有未完成的跟進項目。\n\n如確定該等問題仍未處理，請於頁面最下方勾選「我確定未打勾的項目仍然未處理」，然後再次提交。"); 
                 return; 
             } 
         }
@@ -1667,17 +1732,21 @@ function updatePendingCardState(card) {
         let rawNote = document.getElementById('notes').value.trim(); 
         if (!editingRecordId && rawNote === '' && venueIssues.length === 0 && luxIssue === '' && tempIssue === '' && dbIssue === '' && nfcDetails.length === 0 && doneOldItems.length === 0) { 
             if (hasEmptyVenue) {
-                if (!confirm("⚠️ 你選擇了場面問題，但沒有填寫「位置」。\n\n系統會忽略該項，確定要繼續提交嗎？")) return;
+                if (!confirm("⚠️ 已選擇場面問題，但未填寫「位置」。\n\n系統會忽略該項，確定要繼續提交嗎？")) return;
             } else {
                 if (!confirm("⚠️ 你沒有填寫任何實質的交更內容，確定要提交這份空白紀錄嗎？")) return;
             }
         }
         
+        if (isSubmitting) return;
+        setSubmitting(true);
+
         if (editingRecordId) { 
             data.old_id = editingRecordId; 
             fetch('/api/overwrite_record', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
             .then(res => res.json())
             .then(res => { 
+                setSubmitting(false);
                 if (res.status === 'success') { 
                     alert("✅ 修改成功！"); 
                     editingRecordId = null; 
@@ -1687,13 +1756,14 @@ function updatePendingCardState(card) {
                     alert(res.message || "修改失敗"); 
                 } 
             })
-            .catch(err => alert("❌ 修改連線失敗！\n可能係伺服器未準備好，請重新整理頁面再試。")); 
+            .catch(err => { setSubmitting(false); alert("❌ 修改連線失敗！\n可能伺服器尚未準備好，請重新整理頁面再試。"); }); 
             return; 
         }
         
         fetch('/api/submit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
         .then(res => res.json())
         .then(res => { 
+            setSubmitting(false);
             if (res.status === 'success') { 
                 alert("✅ " + data.name + " 交更成功！"); 
                 resetForm(true); 
@@ -1702,7 +1772,10 @@ function updatePendingCardState(card) {
                 alert(res.message || "提交失敗"); 
             } 
         })
-        .catch(error => alert("❌ 提交連線失敗！\n可能係 Render 伺服器正在喚醒（需時約 30 秒），或者微信網絡攔截。\n\n請稍等一陣，然後重新整理網頁再試一次，或者改用「在瀏覽器打開」。")); 
+        .catch(error => {
+            setSubmitting(false);
+            alert("❌ 提交連線失敗！\n可能係 Render 伺服器正在喚醒（需時約 30 秒），或者微信網絡攔截。\n\n請稍後重新整理網頁再試，或改用「在瀏覽器打開」。");
+        }); 
     }
 
     document.addEventListener("DOMContentLoaded", function() { 
