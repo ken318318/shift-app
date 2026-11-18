@@ -154,6 +154,30 @@ def bump_epoch(role):
     return ok
 
 
+# ---------- 簡單記憶體快取（單一 worker 有效，減少重複查詢） ----------
+_RESULT_CACHE = {}
+
+
+def cache_get(key):
+    item = _RESULT_CACHE.get(key)
+    if not item:
+        return None
+    expiry, val = item
+    if time.time() > expiry:
+        _RESULT_CACHE.pop(key, None)
+        return None
+    return val
+
+
+def cache_set(key, val, ttl=60):
+    _RESULT_CACHE[key] = (time.time() + ttl, val)
+
+
+def cache_clear(*keys):
+    for k in keys:
+        _RESULT_CACHE.pop(k, None)
+
+
 def init_config_order():
     """第一次啟動時，按舊有顯示次序寫入 cat_order / item_order（之後唔會再動）。"""
     conn = None
@@ -293,18 +317,30 @@ def admin():
 
 @app.route('/api/get_configs', methods=['GET'])
 def get_configs():
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("""SELECT category, problem FROM venue_configs
-                 ORDER BY COALESCE(cat_order,0) ASC, category ASC, COALESCE(item_order,0) ASC, id ASC""")
-    rows = c.fetchall()
-    release_db_connection(conn)
-    configs = {}
-    for row in rows:
-        if row[0] not in configs: 
-            configs[row[0]] = []
-        configs[row[0]].append(row[1])
-    return jsonify(configs)
+    cached = cache_get('configs')
+    if cached is not None:
+        return jsonify(cached)
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""SELECT category, problem FROM venue_configs
+                     ORDER BY COALESCE(cat_order,0) ASC, category ASC, COALESCE(item_order,0) ASC, id ASC""")
+        rows = c.fetchall()
+        configs = {}
+        for row in rows:
+            if row[0] not in configs:
+                configs[row[0]] = []
+            configs[row[0]].append(row[1])
+        cache_set('configs', configs, 300)
+        return jsonify(configs)
+    except Exception as e:
+        print("Get Configs Error:", e)
+        return jsonify({})
+    finally:
+        if conn:
+            release_db_connection(conn)
 
 @app.route('/api/configs_detail', methods=['GET'])
 def configs_detail():
@@ -357,6 +393,7 @@ def reorder_config():
             for k, name in enumerate(names, start=1):
                 c.execute("UPDATE venue_configs SET cat_order = %s WHERE category = %s", (k * 10, name))
             conn.commit()
+            cache_clear('configs')
             return jsonify({"status": "success", "message": "✅ 已調整類別次序。"})
 
         if rtype == 'problem':
@@ -378,6 +415,7 @@ def reorder_config():
             for k, oid in enumerate(ids, start=1):
                 c.execute("UPDATE venue_configs SET item_order = %s WHERE id = %s", (k, oid))
             conn.commit()
+            cache_clear('configs')
             return jsonify({"status": "success", "message": "✅ 已調整問題次序。"})
 
         return jsonify({"status": "error", "message": "❌ 未知的排序類型。"})
@@ -418,6 +456,7 @@ def add_config():
         c.execute("INSERT INTO venue_configs (category, problem, cat_order, item_order) VALUES (%s, %s, %s, %s)",
                   (category, problem, cat_order, item_order))
         conn.commit()
+        cache_clear('configs')
         log_action('新增選項', f"{category} / {problem}")
         return jsonify({"status": "success", "message": "✅ 新增成功！"})
     except Exception as e:
@@ -459,6 +498,7 @@ def delete_config():
         if deleted == 0:
             return jsonify({"status": "error", "message": "⚠️ 搵唔到要刪除嘅選項（可能已經被其他人刪除）。"})
 
+        cache_clear('configs')
         log_action('刪除選項', f"{category} / {problem or '整個類別'}（共 {deleted}）")
         return jsonify({"status": "success", "message": f"✅ 已刪除 {deleted} 個選項。", "deleted": deleted})
     except Exception as e:
@@ -515,6 +555,7 @@ def rename_config():
         if updated == 0:
             return jsonify({"status": "error", "message": "⚠️ 搵唔到要修改嘅資料。"})
 
+        cache_clear('configs')
         log_action('修改選項名稱', f"{rtype} / 更新 {updated} 筆")
         return jsonify({"status": "success", "message": f"✅ 已更新 {updated} 筆。", "updated": updated})
     except Exception as e:
@@ -542,6 +583,7 @@ def submit():
                    data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
                    data.get('guest_feedback'), data.get('dlr_feedback'), now_macau))
         conn.commit()
+        cache_clear('pending')
         return jsonify({"message": "交更成功！", "status": "success"})
     except Exception as e:
         print("Submit Error:", e)
@@ -585,6 +627,7 @@ def overwrite_record():
                    data.get('guest_feedback'), data.get('dlr_feedback'), now_macau))
         
         conn.commit()
+        cache_clear('pending')
         log_action('修改紀錄', f"舊紀錄 ID {old_id}")
         return jsonify({"status": "success", "message": "✅ 紀錄已成功修改並覆蓋！"})
     except Exception as e:
@@ -804,6 +847,10 @@ def export_configs_file():
 
 @app.route('/api/pending_issues', methods=['GET'])
 def get_pending_issues():
+    cached = cache_get('pending')
+    if cached is not None:
+        return jsonify(cached)
+
     conn = get_db_connection()
     c = conn.cursor()
     
@@ -848,7 +895,9 @@ def get_pending_issues():
             "checklist": row[7],
             "created_at": str(row[8]) if row[8] else None
         })
-    return jsonify({"issues": pending, "done_items": list(done_items)})
+    payload = {"issues": pending, "done_items": list(done_items)}
+    cache_set('pending', payload, 45)
+    return jsonify(payload)
 
 @app.route('/api/delete_record', methods=['POST'])
 def delete_record():
@@ -860,6 +909,7 @@ def delete_record():
     c.execute("DELETE FROM records WHERE id = %s", (data.get('id'),))
     conn.commit()
     release_db_connection(conn)
+    cache_clear('pending')
     log_action('刪除紀錄', f"紀錄 ID {data.get('id')}")
     return jsonify({"status": "success", "message": "✅ 紀錄已成功刪除！"})
 
@@ -883,6 +933,7 @@ def update_record():
                 
         c.execute("UPDATE records SET note = %s, status = %s WHERE id = %s", (data.get('note'), data.get('status'), data.get('id')))
         conn.commit()
+        cache_clear('pending')
         return jsonify({"status": "success", "message": "✅ 紀錄已成功更新！"})
     except Exception as e:
         print("Update Error:", e)
