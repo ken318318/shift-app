@@ -315,6 +315,63 @@ def admin():
         return "⚠️ 權限不足！", 403
     return render_template('admin.html')
 
+@app.route('/api/diag', methods=['GET'])
+def diag():
+    """診斷用：睇實際 cat_order 值同各查詢結果次序。"""
+    cache_clear('configs')
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        out = {}
+
+        c.execute("SELECT COUNT(*) FROM venue_configs")
+        out['total_rows'] = c.fetchone()[0]
+
+        c.execute("SELECT COUNT(DISTINCT category) FROM venue_configs")
+        out['total_categories'] = c.fetchone()[0]
+
+        # 有冇 cat_order / item_order 欄位
+        c.execute("""SELECT column_name FROM information_schema.columns
+                     WHERE table_name = 'venue_configs'""")
+        out['columns'] = sorted([r[0] for r in c.fetchall()])
+
+        # cat_order 分佈
+        c.execute("""SELECT COALESCE(cat_order, -1) AS co, COUNT(*)
+                     FROM venue_configs GROUP BY COALESCE(cat_order, -1)
+                     ORDER BY co LIMIT 10""")
+        out['cat_order_values'] = [f"{r[0]} → {r[1]} 行" for r in c.fetchall()]
+
+        # 頭 5 個類別（按 cat_order）
+        c.execute("""SELECT category, COALESCE(cat_order,0), COALESCE(item_order,0)
+                     FROM venue_configs
+                     ORDER BY COALESCE(cat_order,0) ASC, category ASC, COALESCE(item_order,0) ASC, id ASC
+                     LIMIT 5""")
+        out['first_5_rows'] = [f"{r[0]} (cat={r[1]}, item={r[2]})" for r in c.fetchall()]
+
+        # 用 get_configs 嘅同一條 SQL 模擬
+        c.execute("""SELECT category, problem FROM venue_configs
+                     ORDER BY COALESCE(cat_order,0) ASC, category ASC, COALESCE(item_order,0) ASC, id ASC""")
+        cfg = {}
+        for r in c.fetchall():
+            cfg.setdefault(r[0], []).append(r[1])
+        out['get_configs_keys_first3'] = list(cfg.keys())[:3]
+        out['get_configs_count'] = len(cfg.keys())
+
+        # 用 configs_detail 嘅同一條 SQL 模擬
+        c.execute("""SELECT id, category, problem FROM venue_configs
+                     ORDER BY COALESCE(cat_order,0) ASC, category ASC, COALESCE(item_order,0) ASC, id ASC
+                     LIMIT 3""")
+        out['configs_detail_first3'] = [f"{r[1]} / {r[2]}" for r in c.fetchall()]
+
+        return jsonify(out)
+    except Exception as e:
+        return jsonify({"error": str(e)})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
 @app.route('/api/get_configs', methods=['GET'])
 def get_configs():
     cached = cache_get('configs')
