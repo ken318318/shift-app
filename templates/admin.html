@@ -311,8 +311,42 @@
             document.getElementById('opt-new-cat').classList.toggle('hide', !isNew);
         }
 
+        let configDetail = [];
+
+        async function moveCategory(cat, dir) {
+            try {
+                await fetch('/api/reorder_config', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'category', category: cat, direction: dir })
+                });
+            } catch (e) { }
+            await renderOptions();
+        }
+
+        async function moveProblem(id, dir) {
+            try {
+                await fetch('/api/reorder_config', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'problem', id: Number(id), direction: dir })
+                });
+            } catch (e) { }
+            await renderOptions();
+        }
+
         async function renderOptions() {
-            await fetchConfigs();
+            try {
+                configDetail = await (await fetch('/api/configs_detail')).json();
+            } catch (e) {
+                configDetail = [];
+            }
+
+            // 由 detail 重建 configs，確保同顯示次序一致
+            configs = {};
+            configDetail.forEach(d => {
+                if (!configs[d.category]) configs[d.category] = [];
+                configs[d.category].push(d.problem);
+            });
+
             renderOptionSelect(document.getElementById('opt-category').value);
             document.getElementById('opt-category').onchange = toggleNewCatInput;
 
@@ -327,31 +361,58 @@
                 return;
             }
 
-            document.getElementById('opt-list').innerHTML = keys.map(cat => `
-                <div class="cat-box">
+            let groups = new Map();
+            configDetail.forEach(d => {
+                if (!groups.has(d.category)) groups.set(d.category, []);
+                groups.get(d.category).push(d);
+            });
+
+            let html = '';
+            let catIdx = 0;
+            const catCount = groups.size;
+            groups.forEach((items, cat) => {
+                catIdx++;
+                let catUp = catIdx === 1 ? 'disabled style="opacity:.35"' : '';
+                let catDown = catIdx === catCount ? 'disabled style="opacity:.35"' : '';
+                html += `<div class="cat-box">
                     <div class="cat-head">
                         <div class="name">${esc(cat)}</div>
-                        <span class="badge b-info">${configs[cat].length} 項</span>
+                        <span class="badge b-info">${items.length} 項</span>
+                        <button class="btn btn-gray btn-sm" data-act="catup" data-cat="${esc(cat)}" ${catUp}>↑</button>
+                        <button class="btn btn-gray btn-sm" data-act="catdown" data-cat="${esc(cat)}" ${catDown}>↓</button>
                         <button class="btn btn-gray btn-sm" data-act="rencat" data-cat="${esc(cat)}">改名</button>
                         <button class="btn btn-red btn-sm" data-act="delcat" data-cat="${esc(cat)}">刪除</button>
                     </div>
-                    <div class="cat-body">
-                        ${configs[cat].map(p => `
-                            <div class="opt-row">
-                                <span>${esc(p)}</span>
-                                <button class="btn btn-gray btn-sm" data-act="renprob" data-cat="${esc(cat)}" data-prob="${esc(p)}">改名</button>
-                                <button class="btn btn-red btn-sm" data-act="delprob" data-cat="${esc(cat)}" data-prob="${esc(p)}">刪除</button>
-                            </div>`).join('') || '<div class="muted">此類別未有問題選項</div>'}
-                    </div>
-                </div>`).join('');
+                    <div class="cat-body">`;
+                if (items.length === 0) {
+                    html += '<div class="muted">此類別未有問題選項</div>';
+                }
+                items.forEach((it, i) => {
+                    let up = i === 0 ? 'disabled style="opacity:.35"' : '';
+                    let down = i === items.length - 1 ? 'disabled style="opacity:.35"' : '';
+                    html += `<div class="opt-row">
+                        <span>${esc(it.problem)}</span>
+                        <button class="btn btn-gray btn-sm" data-act="probup" data-id="${it.id}" ${up}>↑</button>
+                        <button class="btn btn-gray btn-sm" data-act="probdown" data-id="${it.id}" ${down}>↓</button>
+                        <button class="btn btn-gray btn-sm" data-act="renprob" data-cat="${esc(cat)}" data-prob="${esc(it.problem)}">改名</button>
+                        <button class="btn btn-red btn-sm" data-act="delprob" data-cat="${esc(cat)}" data-prob="${esc(it.problem)}">刪除</button>
+                    </div>`;
+                });
+                html += '</div></div>';
+            });
+            document.getElementById('opt-list').innerHTML = html;
 
             document.querySelectorAll('#opt-list [data-act]').forEach(btn => {
                 btn.onclick = () => {
-                    let act = btn.dataset.act, cat = btn.dataset.cat, prob = btn.dataset.prob;
+                    let act = btn.dataset.act, cat = btn.dataset.cat, prob = btn.dataset.prob, id = btn.dataset.id;
                     if (act === 'rencat') askRenameCategory(cat);
                     if (act === 'delcat') askDeleteCategory(cat);
                     if (act === 'renprob') askRenameProblem(cat, prob);
                     if (act === 'delprob') askDeleteProblem(cat, prob);
+                    if (act === 'catup') moveCategory(cat, 'up');
+                    if (act === 'catdown') moveCategory(cat, 'down');
+                    if (act === 'probup') moveProblem(id, 'up');
+                    if (act === 'probdown') moveProblem(id, 'down');
                 };
             });
         }
