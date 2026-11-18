@@ -294,7 +294,10 @@
         </div>
 
         <!-- 5. 場面問題 -->
-        <label style="margin-top: 20px;">場面問題項目輸入 (如不需要請留空)：</label>
+        <label style="margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+            <span>場面問題項目輸入 (如不需要請留空)：</span>
+            <button type="button" onclick="manualRefreshConfigs()" style="padding: 4px 10px; border: 1px solid #90caf9; border-radius: 12px; background: #e3f2fd; color: #1565c0; font-size: 11px; font-weight: bold; white-space: nowrap;">🔄 更新選項</button>
+        </label>
         <div class="issue-group" style="background: #e3f2fd; border-color: #90caf9; display: block;">
             <div id="venue-container">
                 <div class="issue-item venue-item" style="border-bottom-color: #90caf9;">
@@ -746,6 +749,14 @@ function setSubmitting(on) {
         } catch(e) {
             console.error("載入草稿失敗", e);
         }
+    }
+
+    async function manualRefreshConfigs() {
+        let btnTxt = '🔄 更新選項';
+        await refreshConfigs();
+        let count = Object.keys(venueCategories || {}).length;
+        let firstCat = Object.keys(venueCategories || {})[0] || '（冇）';
+        alert('✅ 已更新選項\n\n類別數：' + count + '\n第一個類別：' + firstCat);
     }
 
     async function refreshConfigs() {
