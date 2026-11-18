@@ -126,7 +126,7 @@
             <option value="14" selected>最近 14 日</option>
             <option value="30">最近 30 日</option>
         </select>
-        <div class="muted" style="margin-top:8px;">※ 依紀錄實際填寫嘅「無需檢測」判斷，不會預設任何星期規則。</div>
+        <div class="muted" style="margin-top:8px;">※ 依紀錄實際填寫的「無需檢測」判斷，不預設任何星期規則。</div>
         <div class="stat-grid" id="p-stats"></div>
         <div id="p-table" style="margin-top:10px;"></div>
     </div>
@@ -142,7 +142,7 @@
         <button class="btn btn-outline" style="width:100%; margin-top:8px;" onclick="exportOptions()">⬇️ 匯出選項清單 CSV</button>
         <button class="btn btn-green" style="width:100%; margin-top:8px;" onclick="exportRecordsExcel()">⬇️ 匯出交更紀錄（Excel .xls）</button>
         <button class="btn btn-outline" style="width:100%; margin-top:8px;" onclick="exportOptionsExcel()">⬇️ 匯出選項清單（Excel .xls）</button>
-        <div class="muted" style="margin-top:10px;">CSV 已加入 UTF-8 BOM，Excel 直接打開唔會亂碼。</div>
+        <div class="muted" style="margin-top:10px;">CSV 已加入 UTF-8 BOM，以 Excel 直接開啟不會出現亂碼。</div>
         <div class="msg" id="exp-msg"></div>
     </div>
 
@@ -167,8 +167,8 @@
 
         <label>目標帳號</label>
         <select id="auth-target">
-            <option value="staff">同事（BS 帳號）</option>
-            <option value="admin">管理員（帳號）</option>
+            <option value="staff">同事帳號</option>
+            <option value="admin">管理員帳號</option>
         </select>
 
         <label>目前管理員密碼（確認身份）</label>
@@ -184,7 +184,7 @@
         <div class="msg" id="auth-msg"></div>
 
         <button class="btn btn-red" style="width:100%; margin-top:18px;" onclick="kickSessions('staff')">⚠️ 強制登出所有同事</button>
-        <div class="muted" style="margin-top:6px;">無需改密碼，直接令所有已登入的同事 session 失效（最多 10 秒內生效）。有人離職時用這個。</div>
+        <div class="muted" style="margin-top:6px;">無需更改密碼，可直接令所有已登入的同事帳號失效（最多 10 秒內生效）。適用於同事離職時使用。</div>
         <div class="msg" id="kick-msg"></div>
 
         <hr style="border:none; border-top:1px solid #eef1f5; margin:20px 0;">
@@ -224,7 +224,7 @@
                         isKick = !!(data && data.kick);
                     } catch (e) { /* ignore */ }
                     if (isKick) {
-                        alert('⏰ 你嘅登入已失效（密碼已被更改），請重新登入。');
+                        alert('⏰ 你的登入已失效（密碼已被更改），請重新登入。');
                         window.location.href = '/login';
                         throw new Error('kicked');
                     }
@@ -361,7 +361,7 @@
             if (!category) { optMsg('⚠️ 請填寫類別名稱', '#d32f2f'); return; }
             if (!problem) { optMsg('⚠️ 請填寫問題內容', '#d32f2f'); return; }
             if ((configs[category] || []).some(p => String(p).trim() === problem)) {
-                optMsg('⚠️ 呢個選項已經存在', '#d32f2f'); return;
+                optMsg('⚠️ 此選項已存在', '#d32f2f'); return;
             }
             if (!confirm('確定新增？\n\n類別：' + category + '\n問題：' + problem)) return;
 
@@ -546,7 +546,7 @@
             let list = filteredRecords();
             document.getElementById('rec-count').textContent = '共 ' + list.length + ' 筆紀錄';
             if (list.length === 0) {
-                document.getElementById('rec-list').innerHTML = '<div class="empty">冇符合條件嘅紀錄</div>';
+                document.getElementById('rec-list').innerHTML = '<div class="empty">沒有符合條件的紀錄</div>';
                 return;
             }
             document.getElementById('rec-list').innerHTML = list.map(r => {
@@ -690,7 +690,7 @@
                 if (to && d > to) return false;
                 return true;
             });
-            if (list.length === 0) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 範圍內冇紀錄'; return; }
+            if (list.length === 0) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 範圍內沒有紀錄'; return; }
             let rows = [['日期時間', '交更人', '更份', '檢測Hall', 'Lux', '溫度', '分貝', '狀態', 'Checklist', '詳細事項']];
             list.forEach(r => {
                 rows.push([r.created_at, r.name, r.shift, hallOf(r.checklist), r.lux, r.temp, r.bgm, r.status, r.checklist, r.note]);
@@ -781,7 +781,7 @@
                 let who = r.name || '未填';
                 staffCount[who] = (staffCount[who] || 0) + 1;
 
-                // 場面問題類別（優先用已設定嘅類別名做前綴比對，避免「賭檯 - 賭檯木紋」被拆成「賭檯」）
+                // 場面問題類別（優先以已設定的類別名作前綴比對，避免「賭檯 - 賭檯木紋」被拆成「賭檯」）
                 if (r.note) {
                     const catKeys = Object.keys(configs || {}).sort((a, b) => b.length - a.length);
                     String(r.note).split('\n').forEach(line => {
@@ -860,7 +860,7 @@
 
             if (!cur) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 請輸入目前管理員密碼'; return; }
             if (p1.length < 4) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 新密碼最少 4 個字元'; return; }
-            if (p1 !== p2) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 兩次輸入嘅新密碼不一致'; return; }
+            if (p1 !== p2) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 兩次輸入的新密碼不一致'; return; }
             if (!confirm('確定更新密碼？\n\n帳號：' + (target === 'admin' ? '管理員' : '同事') + '\n\n請記住新密碼，忘記後需要改 app.py。')) return;
 
             msg.style.color = '#666';
@@ -891,7 +891,7 @@
 
         async function kickSessions(target) {
             let msg = document.getElementById('kick-msg');
-            if (!confirm('確定強制登出所有同事？\n\n所有已登入嘅同事會即刻被踢返登入頁（最多 10 秒生效），需要用新密碼重新登入。')) return;
+            if (!confirm('確定強制登出所有同事？\n\n所有已登入的同事將立即被登出並返回登入頁（最多 10 秒內生效），需以新密碼重新登入。')) return;
             msg.style.color = '#666';
             msg.textContent = '處理中…';
             try {
@@ -933,7 +933,7 @@
         }
 
         async function clearAuditLogs() {
-            if (!confirm('確定清理 90 日前嘅操作紀錄？（最近 90 日會保留）')) return;
+            if (!confirm('確定清理 90 日前的操作紀錄？（最近 90 日會保留）')) return;
             try {
                 let res = await fetch('/api/clear_audit_logs', { method: 'POST' });
                 let data = await res.json();
@@ -979,7 +979,7 @@
                 if (to && d > to) return false;
                 return true;
             });
-            if (list.length === 0) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 範圍內冇紀錄'; return; }
+            if (list.length === 0) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 範圍內沒有紀錄'; return; }
             let rows = [['日期時間', '交更人', '更份', '檢測Hall', 'Lux', '溫度', '分貝', '狀態', 'Checklist', '詳細事項']];
             list.forEach(r => rows.push([r.created_at, r.name, r.shift, hallOf(r.checklist), r.lux, r.temp, r.bgm, r.status, r.checklist, r.note]));
             downloadExcel('BS交更紀錄_' + new Date().toISOString().slice(0, 10) + '.xls', '交更紀錄', rows);
