@@ -10,6 +10,7 @@ import time
 import pytz
 
 app = Flask(__name__)
+app.json.sort_keys = False          # 保留字典原有次序（否則 jsonify 會按字母重排）
 app.secret_key = "Ken_Shift_App_Secret_123" 
 CORS(app)
 
@@ -317,56 +318,54 @@ def admin():
 
 @app.route('/api/diag', methods=['GET'])
 def diag():
-    """診斷用：睇實際 cat_order 值同各查詢結果次序。"""
+    """診斷（純文字，方便手機睇）。"""
     cache_clear('configs')
     conn = None
+    lines = []
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        out = {}
 
         c.execute("SELECT COUNT(*) FROM venue_configs")
-        out['total_rows'] = c.fetchone()[0]
+        lines.append('total_rows=' + str(c.fetchone()[0]))
 
         c.execute("SELECT COUNT(DISTINCT category) FROM venue_configs")
-        out['total_categories'] = c.fetchone()[0]
+        lines.append('total_categories=' + str(c.fetchone()[0]))
 
-        # 有冇 cat_order / item_order 欄位
         c.execute("""SELECT column_name FROM information_schema.columns
-                     WHERE table_name = 'venue_configs'""")
-        out['columns'] = sorted([r[0] for r in c.fetchall()])
+                     WHERE table_name = 'venue_configs' ORDER BY column_name""")
+        lines.append('columns=' + ','.join(r[0] for r in c.fetchall()))
 
-        # cat_order 分佈
-        c.execute("""SELECT COALESCE(cat_order, -1) AS co, COUNT(*)
-                     FROM venue_configs GROUP BY COALESCE(cat_order, -1)
-                     ORDER BY co LIMIT 10""")
-        out['cat_order_values'] = [f"{r[0]} → {r[1]} 行" for r in c.fetchall()]
+        c.execute("""SELECT COALESCE(cat_order,-1), COUNT(*) FROM venue_configs
+                     GROUP BY COALESCE(cat_order,-1) ORDER BY 1 LIMIT 8""")
+        lines.append('cat_order_values=' + ' | '.join(str(r[0]) + 'x' + str(r[1]) for r in c.fetchall()))
 
-        # 頭 5 個類別（按 cat_order）
-        c.execute("""SELECT category, COALESCE(cat_order,0), COALESCE(item_order,0)
+        lines.append('--- SQL 排序頭 5 個（repr 顯示隱藏字元）---')
+        c.execute("""SELECT category, COALESCE(cat_order,0), COALESCE(item_order,0), id
                      FROM venue_configs
                      ORDER BY COALESCE(cat_order,0) ASC, category ASC, COALESCE(item_order,0) ASC, id ASC
                      LIMIT 5""")
-        out['first_5_rows'] = [f"{r[0]} (cat={r[1]}, item={r[2]})" for r in c.fetchall()]
-
-        # 用 get_configs 嘅同一條 SQL 模擬
-        c.execute("""SELECT category, problem FROM venue_configs
-                     ORDER BY COALESCE(cat_order,0) ASC, category ASC, COALESCE(item_order,0) ASC, id ASC""")
-        cfg = {}
         for r in c.fetchall():
-            cfg.setdefault(r[0], []).append(r[1])
-        out['get_configs_keys_first3'] = list(cfg.keys())[:3]
-        out['get_configs_count'] = len(cfg.keys())
+            lines.append('  cat=' + str(r[1]) + ' item=' + str(r[2]) + ' id=' + str(r[3]) + ' name=' + repr(r[0]))
 
-        # 用 configs_detail 嘅同一條 SQL 模擬
-        c.execute("""SELECT id, category, problem FROM venue_configs
-                     ORDER BY COALESCE(cat_order,0) ASC, category ASC, COALESCE(item_order,0) ASC, id ASC
-                     LIMIT 3""")
-        out['configs_detail_first3'] = [f"{r[1]} / {r[2]}" for r in c.fetchall()]
+        lines.append('--- get_configs 頭 3 個 key ---')
+        c.execute("""SELECT category FROM venue_configs
+                     ORDER BY COALESCE(cat_order,0) ASC, category ASC, COALESCE(item_order,0) ASC, id ASC""")
+        keys = []
+        for r in c.fetchall():
+            if r[0] not in keys:
+                keys.append(r[0])
+        for k in keys[:3]:
+            lines.append('  ' + repr(k))
 
-        return jsonify(out)
+        lines.append('--- 可能有重複／相似類別（前 6）---')
+        for k in keys[:6]:
+            lines.append('  ' + repr(k) + ' 長度=' + str(len(k)))
+
+        return Response('\n'.join(lines), mimetype='text/plain; charset=utf-8',
+                        headers={'Cache-Control': 'no-store'})
     except Exception as e:
-        return jsonify({"error": str(e)})
+        return Response('ERROR: ' + str(e), mimetype='text/plain; charset=utf-8')
     finally:
         if conn:
             release_db_connection(conn)
@@ -376,7 +375,9 @@ def diag():
 def get_configs():
     cached = cache_get('configs')
     if cached is not None:
-        return jsonify(cached)
+        resp = Response(json.dumps(cached, ensure_ascii=False), mimetype='application/json; charset=utf-8')
+        resp.headers['Cache-Control'] = 'no-store, max-age=0'
+        return resp
 
     conn = None
     try:
@@ -391,7 +392,7 @@ def get_configs():
                 configs[row[0]] = []
             configs[row[0]].append(row[1])
         cache_set('configs', configs, 300)
-        resp = jsonify(configs)
+        resp = Response(json.dumps(configs, ensure_ascii=False), mimetype='application/json; charset=utf-8')
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
         return resp
     except Exception as e:
