@@ -838,6 +838,338 @@ def _file_response(rows, sheet_name, fmt):
     })
 
 
+# ---------- 交更報表模板（圖1 格式） ----------
+_REPORT_ROWS = [
+    ('Hall1', ['Pit 1', 'Pit 2', 'Pit 30', 'Pit 32', 'Pit 35', 'Pit 31 LT']),
+    ('Hall2', ['Pit 3', 'Pit 5', 'Pit 8', 'Pit 26', 'Pit 27', 'Pit 28', 'Pit 29']),
+    ('Hall3', ['Pit 33', 'Pit 9', 'Pit 11', 'Pit 12']),
+    ('Hall4', ['Pit 25', 'Pit 16']),
+    ('Hall5', ['Pit 13', 'Pit 15', 'Pit 17', 'Pit 18', 'Pit 19', 'Pit 20', 'Pit 63 LT']),
+    ('Hall6', ['Pit 103', 'Pit 105', 'Pit 106', 'Pit 107']),
+]
+
+_REPORT_LOC_DETAIL = {
+    'Pit 9': 'Pit 9\nDS x3, BA x23',
+    'Pit 11': 'Pit 11\nDS x6, BA x23',
+}
+
+_REPORT_ACTIVE_DETAIL = {
+    'Pit 1': 'BJ x8,CS x5,RL x4\nFP x6,Craps x2',
+}
+
+
+def _xml_esc(v):
+    s = '' if v is None else str(v)
+    return (s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+             .replace('"', '&quot;').replace('\n', '&#10;'))
+
+
+def build_report_template():
+    def cell(text='', style=None, across=0, down=0, formula=None):
+        attrs = ''
+        if across:
+            attrs += ' ss:MergeAcross="' + str(across) + '"'
+        if down:
+            attrs += ' ss:MergeDown="' + str(down) + '"'
+        if style:
+            attrs += ' ss:StyleID="' + style + '"'
+        if formula:
+            attrs += ' ss:Formula="' + _xml_esc(formula) + '"'
+            return '<Cell' + attrs + '/>'
+        return ('<Cell' + attrs + '><Data ss:Type="String">' + _xml_esc(text) + '</Data></Cell>')
+
+    stamp = datetime.datetime.now(pytz.timezone('Asia/Macau')).strftime('%Y/%b/%d')
+    rows = []
+
+    # 標題
+    rows.append('<Row ss:Height="34">' + cell('Update ' + stamp, 'Title', across=6) + '</Row>')
+
+    # 表頭（兩行）
+    rows.append('<Row ss:Height="26">' +
+                cell('Mass', 'Head', down=1) +
+                cell('Location', 'Head', down=1) +
+                cell('ALL', 'Head', across=1) +
+                cell('Dealer Chair', 'Head', across=1) +
+                cell('Total', 'Head', down=1) +
+                '</Row>')
+    rows.append('<Row ss:Height="22">' +
+                cell('Active', 'HeadPink') +
+                cell('Deactive', 'HeadYellow') +
+                cell('New', 'Head') +
+                cell('Old', 'Head') +
+                '</Row>')
+
+    first_data_row = len(rows) + 1
+    for hall, pits in _REPORT_ROWS:
+        for idx, pit in enumerate(pits):
+            r = '<Row ss:Height="20">'
+            if idx == 0:
+                r += cell(hall, 'Mass', down=len(pits) - 1)
+            loc_text = _REPORT_LOC_DETAIL.get(pit, pit)
+            active_text = _REPORT_ACTIVE_DETAIL.get(pit, '')
+            r += cell(loc_text, 'Loc')
+            r += cell(active_text, 'Pink')
+            r += cell('', 'Yellow')
+            r += cell('', 'Plain')
+            r += cell('', 'Plain')
+            r += cell('', 'Green')
+            r += '</Row>'
+            rows.append(r)
+    last_data_row = len(rows)
+
+    # 合計行
+    total_formula_tpl = '=SUM(R[-{}]C:R[-1]C)'.format(last_data_row - first_data_row + 1)
+    rows.append('<Row ss:Height="24">' +
+                cell('Total DLR Chair New/Old', 'TotalLabel', across=3) +
+                cell(formula=total_formula_tpl, style='TotalCell') +
+                cell(formula=total_formula_tpl, style='TotalCell') +
+                cell(formula=total_formula_tpl, style='TotalCell') +
+                '</Row>')
+
+    border = ('<Borders>'
+              '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>'
+              '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>'
+              '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>'
+              '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>'
+              '</Borders>')
+
+    styles = (
+        '<Styles>'
+        '<Style ss:ID="Default" ss:Name="Normal">'
+        '<Alignment ss:Vertical="Center" ss:Horizontal="Center"/>'
+        '<Font ss:FontName="Arial" ss:Size="10"/>' + border + '</Style>'
+        '<Style ss:ID="Title">'
+        '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>'
+        '<Font ss:FontName="Arial" ss:Size="20" ss:Bold="1" ss:Color="#2E74B5"/></Style>'
+        '<Style ss:ID="Head">'
+        '<Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>'
+        '<Font ss:FontName="Arial" ss:Size="10" ss:Bold="1"/>'
+        '<Interior ss:Color="#CCFFFF" ss:Pattern="Solid"/>' + border + '</Style>'
+        '<Style ss:ID="HeadPink">'
+        '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>'
+        '<Font ss:FontName="Arial" ss:Size="10" ss:Bold="1"/>'
+        '<Interior ss:Color="#FFD9D9" ss:Pattern="Solid"/>' + border + '</Style>'
+        '<Style ss:ID="HeadYellow">'
+        '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>'
+        '<Font ss:FontName="Arial" ss:Size="10" ss:Bold="1"/>'
+        '<Interior ss:Color="#FFFF99" ss:Pattern="Solid"/>' + border + '</Style>'
+        '<Style ss:ID="Mass">'
+        '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>'
+        '<Font ss:FontName="Arial" ss:Size="10" ss:Bold="1"/>' + border + '</Style>'
+        '<Style ss:ID="Loc">'
+        '<Alignment ss:Horizontal="Left" ss:Vertical="Center" ss:WrapText="1"/>'
+        '<Font ss:FontName="Arial" ss:Size="10"/>' + border + '</Style>'
+        '<Style ss:ID="Pink">'
+        '<Interior ss:Color="#FFECEC" ss:Pattern="Solid"/>' + border + '</Style>'
+        '<Style ss:ID="Yellow">'
+        '<Interior ss:Color="#FFFFE0" ss:Pattern="Solid"/>' + border + '</Style>'
+        '<Style ss:ID="Plain">' + border + '</Style>'
+        '<Style ss:ID="Green">'
+        '<Interior ss:Color="#D9F2D9" ss:Pattern="Solid"/>'
+        '<Font ss:FontName="Arial" ss:Size="10" ss:Bold="1"/>' + border + '</Style>'
+        '<Style ss:ID="TotalLabel">'
+        '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>'
+        '<Font ss:FontName="Arial" ss:Size="10" ss:Bold="1"/>'
+        '<Interior ss:Color="#CCFFFF" ss:Pattern="Solid"/>' + border + '</Style>'
+        '<Style ss:ID="TotalCell">'
+        '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>'
+        '<Font ss:FontName="Arial" ss:Size="11" ss:Bold="1"/>'
+        '<Interior ss:Color="#D9F2D9" ss:Pattern="Solid"/>' + border + '</Style>'
+        '</Styles>'
+    )
+
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+           '<?mso-application progid="Excel.Sheet"?>\n'
+           '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"'
+           ' xmlns:o="urn:schemas-microsoft-com:office:office"'
+           ' xmlns:x="urn:schemas-microsoft-com:office:excel"'
+           ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'
+           + styles +
+           '<Worksheet ss:Name="Update"><Table ss:DefaultRowHeight="18">'
+           '<Column ss:Width="52"/><Column ss:Width="110"/>'
+           '<Column ss:Width="150"/><Column ss:Width="80"/>'
+           '<Column ss:Width="66"/><Column ss:Width="66"/><Column ss:Width="62"/>'
+           + ''.join(rows) +
+           '</Table></Worksheet></Workbook>')
+    return ('\ufeff' + xml).encode('utf-8')
+
+
+# ---------- 交更報表：由 hall_tables 自動填數 ----------
+def build_update_report(data_rows):
+    """data_rows: [(hall, pit, 營運數, 停運數), ...]"""
+
+    def cell(text='', style=None, across=0, down=0, num=None):
+        attrs = ''
+        if across:
+            attrs += ' ss:MergeAcross="' + str(across) + '"'
+        if down:
+            attrs += ' ss:MergeDown="' + str(down) + '"'
+        if style:
+            attrs += ' ss:StyleID="' + style + '"'
+        if num is not None:
+            return ('<Cell' + attrs + '><Data ss:Type="Number">' + str(num) + '</Data></Cell>')
+        return ('<Cell' + attrs + '><Data ss:Type="String">' + _xml_esc(text) + '</Data></Cell>')
+
+    stamp = datetime.datetime.now(pytz.timezone('Asia/Macau')).strftime('%Y/%b/%d')
+    rows_xml = []
+    rows_xml.append('<Row ss:Height="34">' + cell('Update ' + stamp, 'Title', across=5) + '</Row>')
+    rows_xml.append('<Row ss:Height="26">' +
+                    cell('Mass', 'Head', down=1) +
+                    cell('Location', 'Head', down=1) +
+                    cell('ALL', 'Head', across=1) +
+                    cell('Total', 'Head', down=1) +
+                    '</Row>')
+    rows_xml.append('<Row ss:Height="22">' +
+                    cell('Active', 'HeadPink') +
+                    cell('Deactive', 'HeadYellow') +
+                    '</Row>')
+
+    grouped = {}
+    order = []
+    for hall, pit, act, dea in data_rows:
+        if hall not in grouped:
+            grouped[hall] = []
+            order.append(hall)
+        grouped[hall].append((pit, act, dea))
+
+    sum_act = sum_dea = 0
+    for hall in order:
+        items = grouped[hall]
+        for idx, (pit, act, dea) in enumerate(items):
+            r = '<Row ss:Height="20">'
+            if idx == 0:
+                r += cell(hall, 'Mass', down=len(items) - 1)
+            r += cell('Pit ' + str(pit), 'Loc')
+            r += cell(num=act, style='Pink')
+            r += cell(num=dea, style='Yellow')
+            r += cell(num=act + dea, style='Green')
+            r += '</Row>'
+            rows_xml.append(r)
+            sum_act += act
+            sum_dea += dea
+
+    rows_xml.append('<Row ss:Height="24">' +
+                    cell('Total', 'TotalLabel', across=2) +
+                    cell(num=sum_act, style='TotalCell') +
+                    cell(num=sum_dea, style='TotalCell') +
+                    cell(num=sum_act + sum_dea, style='TotalCell') +
+                    '</Row>')
+
+    return _xls_from_rows(rows_xml)
+
+
+def _xls_from_rows(rows_xml):
+    border = ('<Borders>'
+              '<Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>'
+              '<Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>'
+              '<Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>'
+              '<Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>'
+              '</Borders>')
+
+    styles = (
+        '<Styles>'
+        '<Style ss:ID="Default" ss:Name="Normal">'
+        '<Alignment ss:Vertical="Center" ss:Horizontal="Center"/>'
+        '<Font ss:FontName="Arial" ss:Size="10"/>' + border + '</Style>'
+        '<Style ss:ID="Title">'
+        '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>'
+        '<Font ss:FontName="Arial" ss:Size="20" ss:Bold="1" ss:Color="#2E74B5"/></Style>'
+        '<Style ss:ID="Head">'
+        '<Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/>'
+        '<Font ss:FontName="Arial" ss:Size="10" ss:Bold="1"/>'
+        '<Interior ss:Color="#CCFFFF" ss:Pattern="Solid"/>' + border + '</Style>'
+        '<Style ss:ID="HeadPink">'
+        '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>'
+        '<Font ss:FontName="Arial" ss:Size="10" ss:Bold="1"/>'
+        '<Interior ss:Color="#FFD9D9" ss:Pattern="Solid"/>' + border + '</Style>'
+        '<Style ss:ID="HeadYellow">'
+        '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>'
+        '<Font ss:FontName="Arial" ss:Size="10" ss:Bold="1"/>'
+        '<Interior ss:Color="#FFFF99" ss:Pattern="Solid"/>' + border + '</Style>'
+        '<Style ss:ID="Mass">'
+        '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>'
+        '<Font ss:FontName="Arial" ss:Size="10" ss:Bold="1"/>' + border + '</Style>'
+        '<Style ss:ID="Loc">'
+        '<Alignment ss:Horizontal="Left" ss:Vertical="Center"/>'
+        '<Font ss:FontName="Arial" ss:Size="10"/>' + border + '</Style>'
+        '<Style ss:ID="Pink">'
+        '<Interior ss:Color="#FFECEC" ss:Pattern="Solid"/>' + border + '</Style>'
+        '<Style ss:ID="Yellow">'
+        '<Interior ss:Color="#FFFFE0" ss:Pattern="Solid"/>' + border + '</Style>'
+        '<Style ss:ID="Green">'
+        '<Interior ss:Color="#D9F2D9" ss:Pattern="Solid"/>'
+        '<Font ss:FontName="Arial" ss:Size="10" ss:Bold="1"/>' + border + '</Style>'
+        '<Style ss:ID="TotalLabel">'
+        '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>'
+        '<Font ss:FontName="Arial" ss:Size="10" ss:Bold="1"/>'
+        '<Interior ss:Color="#CCFFFF" ss:Pattern="Solid"/>' + border + '</Style>'
+        '<Style ss:ID="TotalCell">'
+        '<Alignment ss:Horizontal="Center" ss:Vertical="Center"/>'
+        '<Font ss:FontName="Arial" ss:Size="11" ss:Bold="1"/>'
+        '<Interior ss:Color="#D9F2D9" ss:Pattern="Solid"/>' + border + '</Style>'
+        '</Styles>'
+    )
+
+    xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+           '<?mso-application progid="Excel.Sheet"?>\n'
+           '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"'
+           ' xmlns:o="urn:schemas-microsoft-com:office:office"'
+           ' xmlns:x="urn:schemas-microsoft-com:office:excel"'
+           ' xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">'
+           + styles +
+           '<Worksheet ss:Name="Update"><Table ss:DefaultRowHeight="18">'
+           '<Column ss:Width="56"/><Column ss:Width="90"/>'
+           '<Column ss:Width="90"/><Column ss:Width="90"/><Column ss:Width="70"/>'
+           + ''.join(rows_xml) +
+           '</Table></Worksheet></Workbook>')
+    return ('\ufeff' + xml).encode('utf-8')
+
+
+@app.route('/api/export/report_update', methods=['GET'])
+def export_report_update():
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""select hall, pit,
+                            count(*) filter (where status = '營運') as act,
+                            count(*) filter (where status = '停運') as dea
+                     from hall_tables
+                     group by hall, pit
+                     order by hall, pit""")
+        rows = c.fetchall()
+    except Exception as e:
+        print("Report Update Error:", e)
+        return jsonify({"status": "error",
+                        "message": "❌ 讀取不通。請先執行「台號總表_seed.sql」建立 hall_tables。"})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+    if not rows:
+        return jsonify({"status": "error", "message": "❌ hall_tables 沒有任何資料。"})
+
+    data = m_build_rows = [(r[0], r[1], int(r[2] or 0), int(r[3] or 0)) for r in rows]
+    payload = build_update_report(data)
+    stamp = datetime.datetime.now(pytz.timezone('Asia/Macau')).strftime('%Y%m%d')
+    filename = 'BS_update_' + stamp + '.xls'
+    return Response(payload, mimetype='application/vnd.ms-excel', headers={
+        'Content-Disposition': "attachment; filename=" + filename + "; filename*=UTF-8''" + filename,
+        'Cache-Control': 'no-store'
+    })
+
+
+@app.route('/api/export/report_template', methods=['GET'])
+def export_report_template():
+    data = build_report_template()
+    stamp = datetime.datetime.now(pytz.timezone('Asia/Macau')).strftime('%Y%m%d')
+    filename = 'BS_report_template_' + stamp + '.xls'
+    return Response(data, mimetype='application/vnd.ms-excel', headers={
+        'Content-Disposition': "attachment; filename=" + filename + "; filename*=UTF-8''" + filename,
+        'Cache-Control': 'no-store'
+    })
+
+
 @app.route('/api/export/records', methods=['GET'])
 def export_records_file():
     date_from = (request.args.get('from') or '').strip()
