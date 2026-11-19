@@ -1125,6 +1125,178 @@ def _xls_from_rows(rows_xml):
     return ('\ufeff' + xml).encode('utf-8')
 
 
+# ---------- 真 .xlsx 產生器（顯示最穩定） ----------
+def _xlsx_col(i):
+    """1 -> A, 2 -> B ..."""
+    out = ''
+    while i > 0:
+        i, rem = divmod(i - 1, 26)
+        out = chr(65 + rem) + out
+    return out
+
+
+def build_update_report_xlsx(data_rows):
+    import io
+    import zipfile
+    from xml.sax.saxutils import escape as xe
+
+    stamp = datetime.datetime.now(pytz.timezone('Asia/Macau')).strftime('%Y/%b/%d')
+
+    grouped = {}
+    order = []
+    for hall, pit, act, dea in data_rows:
+        if hall not in grouped:
+            grouped[hall] = []
+            order.append(hall)
+        grouped[hall].append((pit, act, dea))
+
+    rows_xml = []
+    merges = []
+
+    def row(idx, cells):
+        parts = []
+        for col, (style, val, is_num) in cells:
+            ref = _xlsx_col(col) + str(idx)
+            if is_num:
+                parts.append(f'<c r="{ref}" s="{style}"><v>{val}</v></c>')
+            else:
+                parts.append(f'<c r="{ref}" s="{style}" t="inlineStr"><is><t xml:space="preserve">{xe(str(val))}</t></is></c>')
+        rows_xml.append(f'<row r="{idx}" ht="20" customHeight="1">' + ''.join(parts) + '</row>')
+
+    # 標題
+    rows_xml.append('<row r="1" ht="34" customHeight="1">'
+                    f'<c r="A1" s="1" t="inlineStr"><is><t>Update {stamp}</t></is></c></row>')
+    merges.append('A1:E1')
+
+    # 表頭
+    rows_xml.append('<row r="2" ht="26" customHeight="1">'
+                    '<c r="A2" s="2" t="inlineStr"><is><t>Mass</t></is></c>'
+                    '<c r="B2" s="2" t="inlineStr"><is><t>Location</t></is></c>'
+                    '<c r="C2" s="2" t="inlineStr"><is><t>ALL</t></is></c>'
+                    '<c r="E2" s="2" t="inlineStr"><is><t>Total</t></is></c></row>')
+    merges += ['A2:A3', 'B2:B3', 'C2:D2', 'E2:E3']
+
+    rows_xml.append('<row r="3" ht="22" customHeight="1">'
+                    '<c r="C3" s="3" t="inlineStr"><is><t>Active</t></is></c>'
+                    '<c r="D3" s="4" t="inlineStr"><is><t>Deactive</t></is></c></row>')
+
+    idx = 4
+    sum_act = sum_dea = 0
+    for hall in order:
+        items = grouped[hall]
+        start = idx
+        for j, (pit, act, dea) in enumerate(items):
+            cells = []
+            if j == 0:
+                cells.append((1, (5, hall, False)))
+            cells.append((2, (6, 'Pit ' + str(pit), False)))
+            cells.append((3, (7, act, True)))
+            cells.append((4, (8, dea, True)))
+            cells.append((5, (9, act + dea, True)))
+            row(idx, cells)
+            sum_act += act
+            sum_dea += dea
+            idx += 1
+        if len(items) > 1:
+            merges.append('A' + str(start) + ':A' + str(idx - 1))
+
+    # 合計行
+    rows_xml.append(f'<row r="{idx}" ht="24" customHeight="1">'
+                    f'<c r="A{idx}" s="10" t="inlineStr"><is><t>Total</t></is></c>'
+                    f'<c r="C{idx}" s="11"><v>{sum_act}</v></c>'
+                    f'<c r="D{idx}" s="11"><v>{sum_dea}</v></c>'
+                    f'<c r="E{idx}" s="11"><v>{sum_act + sum_dea}</v></c></row>')
+    merges += [f'A{idx}:B{idx}']
+
+    sheet = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+             '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+             '<cols>'
+             '<col min="1" max="1" width="11" customWidth="1"/>'
+             '<col min="2" max="2" width="12" customWidth="1"/>'
+             '<col min="3" max="4" width="12" customWidth="1"/>'
+             '<col min="5" max="5" width="10" customWidth="1"/>'
+             '</cols>'
+             '<sheetData>' + ''.join(rows_xml) + '</sheetData>'
+             '<mergeCells count="' + str(len(merges)) + '">' +
+             ''.join(f'<mergeCell ref="{m}"/>' for m in merges) +
+             '</mergeCells></worksheet>')
+
+    styles = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+              '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+              '<fonts count="4">'
+              '<font><sz val="10"/><name val="Arial"/></font>'
+              '<font><b/><sz val="10"/><name val="Arial"/></font>'
+              '<font><b/><sz val="20"/><color rgb="FF2E74B5"/><name val="Arial"/></font>'
+              '<font><b/><sz val="11"/><name val="Arial"/></font>'
+              '</fonts>'
+              '<fills count="8">'
+              '<fill><patternFill patternType="none"/></fill>'
+              '<fill><patternFill patternType="gray125"/></fill>'
+              '<fill><patternFill patternType="solid"><fgColor rgb="FFCCFFFF"/><bgColor indexed="64"/></patternFill></fill>'
+              '<fill><patternFill patternType="solid"><fgColor rgb="FFFFD9D9"/><bgColor indexed="64"/></patternFill></fill>'
+              '<fill><patternFill patternType="solid"><fgColor rgb="FFFFFF99"/><bgColor indexed="64"/></patternFill></fill>'
+              '<fill><patternFill patternType="solid"><fgColor rgb="FFFFECEC"/><bgColor indexed="64"/></patternFill></fill>'
+              '<fill><patternFill patternType="solid"><fgColor rgb="FFFFFFE0"/><bgColor indexed="64"/></patternFill></fill>'
+              '<fill><patternFill patternType="solid"><fgColor rgb="FFD9F2D9"/><bgColor indexed="64"/></patternFill></fill>'
+              '</fills>'
+              '<borders count="2">'
+              '<border><left/><right/><top/><bottom/><diagonal/></border>'
+              '<border><left style="thin"/><right style="thin"/><top style="thin"/><bottom style="thin"/><diagonal/></border>'
+              '</borders>'
+              '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+              '<cellXfs count="12">'
+              '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'
+              '<xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+              '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>'
+              '<xf numFmtId="0" fontId="1" fillId="3" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+              '<xf numFmtId="0" fontId="1" fillId="4" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+              '<xf numFmtId="0" fontId="1" fillId="0" borderId="1" xfId="0" applyFont="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+              '<xf numFmtId="0" fontId="0" fillId="0" borderId="1" xfId="0" applyBorder="1" applyAlignment="1"><alignment horizontal="left" vertical="center"/></xf>'
+              '<xf numFmtId="0" fontId="0" fillId="5" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+              '<xf numFmtId="0" fontId="0" fillId="6" borderId="1" xfId="0" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+              '<xf numFmtId="0" fontId="1" fillId="7" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+              '<xf numFmtId="0" fontId="1" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+              '<xf numFmtId="0" fontId="3" fillId="7" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>'
+              '</cellXfs>'
+              '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>'
+              '</styleSheet>')
+
+    content_types = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                     '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+                     '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+                     '<Default Extension="xml" ContentType="application/xml"/>'
+                     '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+                     '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+                     '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+                     '</Types>')
+
+    rels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+            '</Relationships>')
+
+    workbook = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+                'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+                '<sheets><sheet name="Update" sheetId="1" r:id="rId1"/></sheets></workbook>')
+
+    wb_rels = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+               '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+               '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>'
+               '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+               '</Relationships>')
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as z:
+        z.writestr('[Content_Types].xml', content_types)
+        z.writestr('_rels/.rels', rels)
+        z.writestr('xl/workbook.xml', workbook)
+        z.writestr('xl/_rels/workbook.xml.rels', wb_rels)
+        z.writestr('xl/styles.xml', styles)
+        z.writestr('xl/worksheets/sheet1.xml', sheet)
+    return buf.getvalue()
+
+
 @app.route('/api/export/report_update', methods=['GET'])
 def export_report_update():
     conn = None
@@ -1149,11 +1321,11 @@ def export_report_update():
     if not rows:
         return jsonify({"status": "error", "message": "❌ hall_tables 沒有任何資料。"})
 
-    data = m_build_rows = [(r[0], r[1], int(r[2] or 0), int(r[3] or 0)) for r in rows]
-    payload = build_update_report(data)
+    data = [(r[0], r[1], int(r[2] or 0), int(r[3] or 0)) for r in rows]
+    payload = build_update_report_xlsx(data)
     stamp = datetime.datetime.now(pytz.timezone('Asia/Macau')).strftime('%Y%m%d')
-    filename = 'BS_update_' + stamp + '.xls'
-    return Response(payload, mimetype='application/vnd.ms-excel', headers={
+    filename = 'BS_update_' + stamp + '.xlsx'
+    return Response(payload, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', headers={
         'Content-Disposition': "attachment; filename=" + filename + "; filename*=UTF-8''" + filename,
         'Cache-Control': 'no-store'
     })
