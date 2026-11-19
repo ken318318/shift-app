@@ -142,6 +142,8 @@
         <button class="btn btn-green" style="width:100%; margin-top:12px;" onclick="exportRecords()">⬇️ 匯出交更紀錄 CSV</button>
         <button class="btn btn-outline" style="width:100%; margin-top:8px;" onclick="exportOptions()">⬇️ 匯出選項清單 CSV</button>
         <button class="btn btn-green" style="width:100%; margin-top:8px;" onclick="exportRecordsExcel()">⬇️ 匯出交更紀錄（Excel .xls）</button>
+        <button class="btn btn-purple" style="width:100%; margin-top:8px;" onclick="openExport('/api/export/report_update', '📥 正在產生交更報表模板（Update 表）…')">⬇️ 交更報表（自動填數）</button>
+        <div class="muted" style="margin-top:6px;">數字自動由「台號總表」計算（營運／停運），Hall1–6 及 Pit 已排好，一撳即出。</div>
         <button class="btn btn-outline" style="width:100%; margin-top:8px;" onclick="exportOptionsExcel()">⬇️ 匯出選項清單（Excel .xls）</button>
         <div class="muted" style="margin-top:10px;">CSV 已加入 UTF-8 BOM，可直接以 Excel 開啟。<br>手機／微信內如未能下載，請點擊右上角「在瀏覽器打開」後再試。</div>
         <div class="msg" id="exp-msg"></div>
