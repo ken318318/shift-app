@@ -53,6 +53,9 @@ def ensure_tables():
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS dlr_feedback TEXT")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS layout_side TEXT")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS on_duty TEXT")
+        c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS reviewed BOOLEAN DEFAULT FALSE")
+        c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ")
+        c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS reviewed_by TEXT")
         c.execute("""CREATE TABLE IF NOT EXISTS audit_logs (
                         id BIGSERIAL PRIMARY KEY,
                         actor TEXT,
@@ -775,7 +778,10 @@ def get_records_home():
 
         c.execute("""SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note,
                             lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, on_duty,
-                            created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau'
+                            created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
+                            COALESCE(reviewed, FALSE),
+                            reviewed_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
+                            COALESCE(reviewed_by, '')
                      FROM records""" + sql_where + " ORDER BY id DESC LIMIT %s OFFSET %s",
                   params + [limit, offset])
         rows = c.fetchall()
@@ -784,7 +790,10 @@ def get_records_home():
             "checklist": r[6], "status": r[7], "follower": r[8], "note": r[9],
             "lux_issue": r[10], "temp_issue": r[11], "db_issue": r[12],
             "guest_feedback": r[13], "dlr_feedback": r[14], "layout_side": r[15], "on_duty": r[16],
-            "created_at": str(r[17]) if r[17] else None
+            "created_at": str(r[17]) if r[17] else None,
+            "reviewed": bool(r[18]),
+            "reviewed_at": str(r[19]) if r[19] else '',
+            "reviewed_by": r[20] or ''
         } for r in rows]
         resp = jsonify({"records": records, "total": total, "limit": limit, "offset": offset})
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
@@ -803,7 +812,10 @@ def get_records():
     c = conn.cursor()
     c.execute("""SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue,
                  guest_feedback, dlr_feedback, layout_side, on_duty,
-                 created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
+                 created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
+                 COALESCE(reviewed, FALSE),
+                 reviewed_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
+                 COALESCE(reviewed_by, '')
                  FROM records ORDER BY id DESC""")
     rows = c.fetchall()
     release_db_connection(conn)
@@ -814,7 +826,10 @@ def get_records():
             "checklist": row[6], "status": row[7], "follower": row[8], "note": row[9],
             "lux_issue": row[10], "temp_issue": row[11], "db_issue": row[12],
             "guest_feedback": row[13], "dlr_feedback": row[14], "layout_side": row[15], "on_duty": row[16],
-            "created_at": str(row[17]) if row[17] else None
+            "created_at": str(row[17]) if row[17] else None,
+            "reviewed": bool(row[18]),
+            "reviewed_at": str(row[19]) if row[19] else '',
+            "reviewed_by": row[20] or ''
         })
     return jsonify(records)
 
@@ -1513,6 +1528,72 @@ def delete_record():
     cache_clear('pending')
     log_action('刪除紀錄', f"紀錄 ID {data.get('id')}")
     return jsonify({"status": "success", "message": "✅ 紀錄已成功刪除！"})
+
+@app.route('/api/record_review', methods=['POST'])
+def record_review():
+    """已檢閱（👍）：可多人累加／取消。
+    action: add（加自己名）／remove（移除自己名）／clear（全部取消）
+    """
+    data = request.json or {}
+    rid = data.get('id')
+    by_name = (data.get('by') or '').strip()[:40]
+    action = (data.get('action') or ('add' if data.get('reviewed') else 'clear')).strip()
+    if action not in ('add', 'remove', 'clear'):
+        action = 'add' if data.get('reviewed') else 'clear'
+    if not rid:
+        return jsonify({'status': 'error', 'message': '❌ 找不到紀錄。'})
+    if action in ('add', 'remove') and not by_name:
+        return jsonify({'status': 'error', 'message': '❌ 請選擇檢閱人。'})
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT COALESCE(reviewed_by, '') FROM records WHERE id = %s", (rid,))
+        row = c.fetchone()
+        if not row:
+            return jsonify({'status': 'error', 'message': '❌ 找不到該紀錄！'})
+
+        names = [n.strip() for n in (row[0] or '').split(',') if n.strip()]
+        if action == 'add':
+            if by_name and by_name not in names:
+                names.append(by_name)
+        elif action == 'remove':
+            names = [n for n in names if n != by_name]
+        else:
+            names = []
+
+        if names:
+            c.execute("""UPDATE records SET reviewed = TRUE, reviewed_at = NOW(), reviewed_by = %s
+                         WHERE id = %s""", (', '.join(names), rid))
+        else:
+            c.execute("""UPDATE records SET reviewed = FALSE, reviewed_at = NULL, reviewed_by = NULL
+                         WHERE id = %s""", (rid,))
+
+        c.execute("""SELECT COALESCE(reviewed, FALSE),
+                            reviewed_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
+                            COALESCE(reviewed_by, '')
+                     FROM records WHERE id = %s""", (rid,))
+        row = c.fetchone()
+        conn.commit()
+        if action == 'add':
+            log_action('已檢閱', '紀錄 ID %s（%s）' % (rid, by_name))
+        elif action == 'remove':
+            log_action('取消檢閱', '紀錄 ID %s（%s）' % (rid, by_name))
+        else:
+            log_action('取消檢閱', '紀錄 ID %s（全部）' % rid)
+        return jsonify({'status': 'success',
+                        'reviewed': bool(row[0]) if row else False,
+                        'reviewed_at': str(row[1]) if row and row[1] else '',
+                        'reviewed_by': (row[2] or '') if row else ''})
+    except Exception as e:
+        print('Review Error:', e)
+        if conn: conn.rollback()
+        return jsonify({'status': 'error', 'message': '❌ 操作失敗，請稍後再試。'})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
 
 @app.route('/api/update_record', methods=['POST'])
 def update_record():
