@@ -25,6 +25,9 @@
         .checkbox-group { margin-top: 5px; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; display: flex; flex-wrap: wrap; gap: 10px; }
         .checkbox-group label { font-weight: normal; display: flex; align-items: center; margin-top: 0; cursor: pointer; font-size: 13px; width: 30%; }
         .checkbox-group input { margin-right: 8px; width: 16px; height: 16px; }
+        #on-duty-box summary::-webkit-details-marker { display: none; }
+        #on-duty-box summary { outline: none; }
+        #on-duty-box .checkbox-group { max-height: 260px; overflow-y: auto; }
         .issue-group { display: none; background: #fff3cd; padding: 10px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 5px; }
         .issue-title { font-size: 12px; color: #856404; margin-bottom: 5px; font-weight: bold; }
         .issue-item { border-bottom: 1px dashed #e0c97e; padding-bottom: 8px; margin-bottom: 8px; position: relative; }
@@ -181,7 +184,7 @@
                     <option value="阿能 (8055532)">阿能 (8055532)</option>
                     <option value="阿威 (8055475)">阿威 (8055475)</option>
                     <option value="阿倫 (8017308)">阿倫 (8017308)</option>
-                    <option value="阿mio (298)">阿mio (298)</option>
+                    <option value="世外高喵 (298)">世外高喵 (298)</option>
                     <option value="Paco (8047393)">Paco (8047393)</option>
                     <option value="小信 (8056027)">小信 (8056027)</option>
                     <option value="kiko (1227)">kiko (1227)</option>
@@ -405,6 +408,17 @@
                 <button type="button" class="btn-add" style="background: #7b1fa2; margin-top: 0;" onclick="openAddConfigModal()">⚙️ 新增選項</button>
             </div>
         </div>
+
+        <details id="on-duty-box" style="margin-top: 15px;">
+            <summary style="cursor: pointer; font-weight: bold; font-size: 14px; color: #444; display: flex; align-items: center; gap: 8px; list-style: none;">
+                <span>當更同事（可多選）</span>
+                <span id="on-duty-count" style="font-weight: normal; font-size: 12px; color: #1a73e8;">（未選）</span>
+                <span id="on-duty-arrow" style="margin-left: auto; font-size: 12px; color: #888; white-space: nowrap;">▼ 展開</span>
+            </summary>
+            <div class="checkbox-group" style="display:block; margin-top: 8px;" id="on-duty-list">
+                <!-- 會自動用「交更人」名單填入 -->
+            </div>
+        </details>
 
         <label>負責跟進人 (可多選)：</label>
         <div class="checkbox-group" style="display:block;">
@@ -682,6 +696,7 @@ function setSubmitting(on) {
             d.staffName = document.getElementById('staffName').value;
             d.notes = document.getElementById('notes').value;
             d.follower = Array.from(document.querySelectorAll('.follower-item:checked')).map(c => c.value);
+            d.onDuty = Array.from(document.querySelectorAll('.onduty-item:checked')).map(c => c.value);
             
             d.skipLux = document.getElementById('skip-lux').checked;
             d.lux = document.getElementById('lux').value;
@@ -786,6 +801,12 @@ function setSubmitting(on) {
                 document.querySelectorAll('.follower-item').forEach(c => {
                     if (d.follower.includes(c.value)) c.checked = true;
                 });
+            }
+            if (d.onDuty) {
+                document.querySelectorAll('.onduty-item').forEach(c => {
+                    if (d.onDuty.includes(c.value)) c.checked = true;
+                });
+                updateOnDutyUI();
             }
 
             document.getElementById('skip-lux').checked = d.skipLux;
@@ -1265,6 +1286,8 @@ function setSubmitting(on) {
         document.getElementById('staffName').value = '';
         document.getElementById('notes').value = '';
         document.querySelectorAll('.follower-item').forEach(cb => cb.checked = false);
+        document.querySelectorAll('.onduty-item').forEach(cb => cb.checked = false);
+        updateOnDutyUI();
         ['lux', 'temp', 'bgm', 'nfc'].forEach(type => { 
             document.getElementById('skip-' + type).checked = false; 
             document.getElementById(type + '-input-area').style.display = 'block'; 
@@ -1695,6 +1718,25 @@ function updatePendingCardState(card) {
                 let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常' || r.db_issue) ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
                 let dataHtml = `<div class="record-data">📊 ${luxStr} | ${tempStr} | ${bgmStr}</div>`;
                 
+                let onDutyHtml = '';
+                if (r.on_duty) {
+                    let mNames = [], fNames = [], oNames = [];
+                    r.on_duty.split(', ').forEach(function (n) {
+                        n = (n || '').trim();
+                        if (!n) return;
+                        const g = STAFF_GENDER[n];
+                        if (g === '男') mNames.push(n);
+                        else if (g === '女') fNames.push(n);
+                        else oNames.push(n);
+                    });
+                    const shortName = function (n) { return n.replace(/\s*[（(]\d+[)）]\s*$/, '').trim(); };
+                    let parts = [];
+                    if (mNames.length) parts.push('<span style="color:#1565c0; font-weight:bold;">♂ ' + escapeText(mNames.map(shortName).join(', ')) + '</span>');
+                    if (fNames.length) parts.push('<span style="color:#c2185b; font-weight:bold;">♀ ' + escapeText(fNames.map(shortName).join(', ')) + '</span>');
+                    if (oNames.length) parts.push('<span style="color:#546e7a;">' + escapeText(oNames.map(shortName).join(', ')) + '</span>');
+                    onDutyHtml = `<div class="record-data" style="background:#e8f0fe; color:#174ea6; display:flex; flex-wrap:wrap; align-items:center; gap:14px; line-height:1.7;"><span style="white-space:nowrap;">👥 當更同事：</span>${parts.join('')}</div>`;
+                }
+
                 let followerHtml = ''; 
                 if (r.follower && r.follower !== '無') { 
                     let names = r.follower.split(', '); 
@@ -1746,7 +1788,7 @@ function updatePendingCardState(card) {
                 html += `${divider}<div class="record-card">
                     <div class="record-header" style="background: #f8f9fa; padding: 10px; border-radius: 6px 6px 0 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #1a73e8;">
                         <div style="flex: 1; min-width: 0;">
-                            <strong style="font-size: 16px; word-break: break-word;">${r.name} (${r.shift})</strong>${timeStr}
+                            <strong style="font-size: 16px; word-break: break-word;">${r.name} (${r.shift})</strong>${genderBadge(r.name)}${timeStr}
                         </div>
                         <div style="display: flex; flex-shrink: 0; gap: 5px; align-items: center;">
                             ${buttonsHtml}
@@ -1754,7 +1796,7 @@ function updatePendingCardState(card) {
                     </div>
                     <details${index === 0 ? ' open' : ''} style="margin-top: 4px;">
                         <summary style="cursor: pointer; font-size: 12px; color: #555; padding: 6px 2px; line-height: 1.6;">${quickInfo}｜${pendInfo}｜點擊展開詳細</summary>
-                        <div style="margin-top: 8px;">${dataHtml}${hallInfoHtml}${feedbackHtml}${checkItemsHtml}${noIssueBlock}${doneBlock}${pendingBlock}${sideInfoHtml}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div></div>
+                        <div style="margin-top: 8px;">${dataHtml}${hallInfoHtml}${feedbackHtml}${checkItemsHtml}${noIssueBlock}${doneBlock}${pendingBlock}${sideInfoHtml}${onDutyHtml}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div></div>
                     </details></div>`;
             });
             listDiv.innerHTML = html;
@@ -1835,6 +1877,11 @@ function updatePendingCardState(card) {
         if (r.follower && r.follower !== '無') {
             let names = r.follower.split(', ');
             document.querySelectorAll('.follower-item').forEach(cb => { if (names.includes(cb.value)) cb.checked = true; });
+        }
+        if (r.on_duty) {
+            let onNames = r.on_duty.split(', ');
+            document.querySelectorAll('.onduty-item').forEach(cb => { if (onNames.includes(cb.value)) cb.checked = true; });
+            updateOnDutyUI();
         }
 
         if (!r.lux) {
@@ -2176,7 +2223,8 @@ function updatePendingCardState(card) {
             bgm: document.getElementById('skip-bgm').checked ? "" : document.getElementById('bgm').value, 
             checklist: document.getElementById('skip-nfc').checked ? "" : checklistString, 
             status: overallStatus, 
-            follower: Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無', 
+            follower: Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無',
+            on_duty: Array.from(document.querySelectorAll('.onduty-item:checked')).map(cb => cb.value).join(', '), 
             note: finalNote, 
             guest_feedback: collectFeedback('guest'),
             dlr_feedback: collectFeedback('dlr'),
@@ -2695,7 +2743,73 @@ function updatePendingCardState(card) {
         urCyclePool(parseInt(chip.getAttribute('data-p'), 10));
     });
 
+    // ===== 同事性別（只用作顯示，唔影響儲存嘅名） =====
+    const STAFF_GENDER = {
+        '龍ken (8000285)': '男',
+        '陳ken (80571)': '男',
+        'Fish (8047495)': '女',
+        '阿能 (8055532)': '男',
+        '阿威 (8055475)': '男',
+        '阿倫 (8017308)': '男',
+        '世外高喵 (298)': '女',
+        'Paco (8047393)': '男',
+        '小信 (8056027)': '女',
+        'kiko (1227)': '女',
+        'Wawa (1145)': '男',
+        'Ivy (8001161)': '女',
+        '秋龍 (67162)': '女',
+        '炳 (6234)': '男'
+    };
+
+    function genderBadge(name) {
+        const g = STAFF_GENDER[name];
+        if (!g) return '';
+        const female = (g === '女');
+        const color = female ? '#c2185b' : '#1565c0';
+        const bg = female ? '#fce4ec' : '#e3f2fd';
+        return ' <span style="font-size:11px; color:' + color + '; background:' + bg + '; padding:0 5px; border-radius:8px; white-space:nowrap;">' + g + '</span>';
+    }
+
+    // 交更人下拉：名後面加（男）／（女）
+    function decorateStaffOptions() {
+        const sel = document.getElementById('staffName');
+        if (!sel) return;
+        Array.from(sel.options).forEach(function (o) {
+            if (!o.value) return;
+            const g = STAFF_GENDER[o.value];
+            o.textContent = g ? (o.value + '（' + g + '）') : o.value;
+        });
+    }
+
+    // ===== 當更同事（用「交更人」一樣嘅名單） =====
+    function buildOnDutyList() {
+        const box = document.getElementById('on-duty-list');
+        const sel = document.getElementById('staffName');
+        if (!box || !sel) return;
+        const names = Array.from(sel.options).map(o => o.value).filter(Boolean);
+        box.innerHTML = names.map(function (n) {
+            return '<label style="width:100%; margin-top:8px;"><input type="checkbox" class="onduty-item" value="' + n + '"> ' + n + genderBadge(n) + '</label>';
+        }).join('');
+        updateOnDutyUI();
+    }
+
+    function updateOnDutyUI() {
+        const box = document.getElementById('on-duty-box');
+        const cnt = document.getElementById('on-duty-count');
+        const arrow = document.getElementById('on-duty-arrow');
+        if (!cnt) return;
+        const n = document.querySelectorAll('.onduty-item:checked').length;
+        cnt.textContent = n ? ('已選 ' + n + ' 位') : '（未選）';
+        if (arrow && box) arrow.textContent = box.open ? '▲ 收起' : '▼ 展開';
+    }
+
     document.addEventListener("DOMContentLoaded", function() { 
+        decorateStaffOptions();
+        buildOnDutyList();
+        const ob = document.getElementById('on-duty-box');
+        if (ob) ob.addEventListener('toggle', updateOnDutyUI);
+        const ol = document.getElementById('on-duty-list');
+        if (ol) ol.addEventListener('change', updateOnDutyUI);
         showList(); 
         fetch('/api/get_configs?_t=' + Date.now()).then(res => res.json()).then(data => { 
             venueCategories = data; 
