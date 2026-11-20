@@ -1706,30 +1706,52 @@ def _up_layout_guess(problem, side=''):
     return None
 
 
+def _up_parse_line(line):
+    """解析單行： [類別 - 問題] 位置: 台號 [狀態:xxx]"""
+    if not line or '位置' not in line:
+        return []
+    m = re.search(r'\[([^\[\]]+?)\]\s*位置\s*[:：]\s*(.+)', line)
+    if not m:
+        return []
+    parts = [p.strip() for p in m.group(1).split(' - ')]
+    problem = parts[-1] if parts else ''
+    category = ' - '.join(parts[:-1]).strip() if len(parts) > 1 else ''
+    loc_text = m.group(2)
+    st = re.search(r'\[狀態\s*[:：]\s*([^\]]*)\]', loc_text)
+    status = st.group(1).strip() if st else ''
+    if st:
+        loc_text = loc_text[:st.start()]
+    out = []
+    for raw in re.split(r'[,，、;；]', loc_text):
+        code = _up_norm(raw)
+        if code and _up_is_code(code):
+            out.append({'code': code, 'category': category,
+                        'problem': problem, 'status': status})
+    return out
+
+
+def _up_split_sections(note):
+    """把備註按 【標題】 分段落。"""
+    text = str(note or '')
+    marks = [(m.start(), m.group(1)) for m in re.finditer(r'【([^】]+)】', text)]
+    if not marks:
+        return {'': text}
+    out = {}
+    if marks[0][0] > 0:
+        out[''] = text[:marks[0][0]]
+    for i, (pos, name) in enumerate(marks):
+        end = marks[i + 1][0] if i + 1 < len(marks) else len(text)
+        seg = re.sub(r'^【[^】]+】', '', text[pos:end])
+        out[name] = (out.get(name, '') + '\n' + seg)
+    return out
+
+
 def _up_parse_note(note):
     out = []
     if not note:
         return out
     for line in str(note).split('\n'):
-        if '位置' not in line:
-            continue
-        m = re.search(r'\[([^\[\]]+?)\]\s*位置\s*[:：]\s*(.+)', line)
-        if not m:
-            continue
-        tag = m.group(1).strip()
-        loc_text = m.group(2)
-        st = re.search(r'\[狀態\s*[:：]\s*([^\]]*)\]', loc_text)
-        status = st.group(1).strip() if st else ''
-        if st:
-            loc_text = loc_text[:st.start()]
-        parts = [p.strip() for p in tag.split(' - ')]
-        problem = parts[-1] if parts else tag
-        category = ' - '.join(parts[:-1]).strip() if len(parts) > 1 else ''
-        for raw in re.split(r'[,，、;；]', loc_text):
-            code = _up_norm(raw)
-            if code and _up_is_code(code):
-                out.append({'code': code, 'category': category,
-                            'problem': problem, 'status': status})
+        out.extend(_up_parse_line(line))
     return out
 
 
@@ -1756,6 +1778,7 @@ def _up_detect(date_str):
 
     out = {}
     sides = {}
+    done_at = {}
     for row in rows:
         note = row[0]
         d = row[1]
@@ -1771,25 +1794,46 @@ def _up_detect(date_str):
                             sides[ck] = v
             except Exception:
                 pass
-        for it in _up_parse_note(note):
-            if not it['category']:
-                continue
-            code = it['code']
-            rec = out.get(code)
-            if rec is None:
-                out[code] = {'category': it['category'], 'problem': it['problem'],
-                             'status': it['status'], 'side': '',
-                             'first_seen': ds, 'last_seen': ds}
-            else:
-                rec['category'] = it['category']
-                rec['problem'] = it['problem']
-                rec['status'] = it['status']
-                if ds > rec['last_seen']:
-                    rec['last_seen'] = ds
 
-    for code, rec in out.items():
+        secs = _up_split_sections(note)
+        # 【早前已處理】＝已經搞掂，唔應該再出現在更新表
+        # 以「類別＋台號」判斷（因為有時同事冇填問題，只填台號）
+        for line in secs.get('早前已處理', '').split('\n'):
+            for it in _up_parse_line(line):
+                done_at[(it['category'], it['code'])] = ds
+
+        for name, seg in secs.items():
+            if name == '早前已處理':
+                continue
+            for line in seg.split('\n'):
+                for it in _up_parse_line(line):
+                    if not it['category']:
+                        continue
+                    code = it['code']
+                    rec = out.get(code)
+                    if rec is None:
+                        out[code] = {'category': it['category'], 'problem': it['problem'],
+                                     'status': it['status'], 'side': '',
+                                     'first_seen': ds, 'last_seen': ds}
+                    else:
+                        rec['category'] = it['category']
+                        rec['problem'] = it['problem']
+                        rec['status'] = it['status']
+                        if ds > rec['last_seen']:
+                            rec['last_seen'] = ds
+
+    for code in list(out.keys()):
+        rec = out[code]
+        dd = done_at.get((rec['category'], code))
+        if dd and dd >= rec['last_seen']:
+            out.pop(code, None)
+            continue
         rec['side'] = sides.get(code, '')
-    return out
+
+    # 已標記完成、而且之後冇再上報嘅台號（用嚟清除之前已儲存的舊表）
+    done_only = set(done_at.keys())
+    done_only = set(k[1] for k in done_only) - set(out.keys())
+    return out, done_only
 
 
 def _up_table_lookup():
@@ -1867,7 +1911,7 @@ def update_report_cats():
     if not re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
         date_str = _up_today()
 
-    det = _up_detect(date_str)
+    det, done_only = _up_detect(date_str)
     agg = {}
     layout_mail = layout_all = 0
     for code, e in det.items():
@@ -1927,7 +1971,7 @@ def update_report_get():
                 if c:
                     baseline.add(c)
 
-    det = _up_detect(date_str)
+    det, done_only = _up_detect(date_str)
     lut = _up_table_lookup()
 
     def eligible(e):
@@ -1948,7 +1992,7 @@ def update_report_get():
         codes = []
         for x in (col.get('codes') or []):
             c = _up_norm(x)
-            if c and c not in excl:
+            if c and c not in excl and c not in done_only:
                 codes.append(c)
         columns.append({'main': col.get('main') or '',
                         'sub': (col.get('sub') or '').replace('Dearly', 'Dealer'),
