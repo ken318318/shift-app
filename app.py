@@ -52,6 +52,7 @@ def ensure_tables():
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS guest_feedback TEXT")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS dlr_feedback TEXT")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS layout_side TEXT")
+        c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS on_duty TEXT")
         c.execute("""CREATE TABLE IF NOT EXISTS audit_logs (
                         id BIGSERIAL PRIMARY KEY,
                         actor TEXT,
@@ -666,10 +667,10 @@ def submit():
         c = conn.cursor()
         now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
         c.execute("""INSERT INTO records 
-                     (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, created_at) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+                     (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, created_at) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
-                   data.get('checklist'), data.get('status'), data.get('follower'), data.get('note'),
+                   data.get('checklist'), data.get('status'), data.get('follower'), data.get('on_duty'), data.get('note'),
                    data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
                    data.get('guest_feedback'), data.get('dlr_feedback'),
                    data.get('layout_side'), now_macau))
@@ -710,10 +711,10 @@ def overwrite_record():
 
         now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
         c.execute("""INSERT INTO records 
-                     (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, created_at) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+                     (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, created_at) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
-                   data.get('checklist'), data.get('status'), data.get('follower'), data.get('note'),
+                   data.get('checklist'), data.get('status'), data.get('follower'), data.get('on_duty'), data.get('note'),
                    data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
                    data.get('guest_feedback'), data.get('dlr_feedback'),
                    data.get('layout_side'), now_macau))
@@ -773,7 +774,7 @@ def get_records_home():
         total = c.fetchone()[0]
 
         c.execute("""SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note,
-                            lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side,
+                            lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, on_duty,
                             created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau'
                      FROM records""" + sql_where + " ORDER BY id DESC LIMIT %s OFFSET %s",
                   params + [limit, offset])
@@ -782,8 +783,8 @@ def get_records_home():
             "id": r[0], "name": r[1], "shift": r[2], "lux": r[3], "temp": r[4], "bgm": r[5],
             "checklist": r[6], "status": r[7], "follower": r[8], "note": r[9],
             "lux_issue": r[10], "temp_issue": r[11], "db_issue": r[12],
-            "guest_feedback": r[13], "dlr_feedback": r[14], "layout_side": r[15],
-            "created_at": str(r[16]) if r[16] else None
+            "guest_feedback": r[13], "dlr_feedback": r[14], "layout_side": r[15], "on_duty": r[16],
+            "created_at": str(r[17]) if r[17] else None
         } for r in rows]
         resp = jsonify({"records": records, "total": total, "limit": limit, "offset": offset})
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
@@ -801,7 +802,7 @@ def get_records():
     conn = get_db_connection()
     c = conn.cursor()
     c.execute("""SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue,
-                 guest_feedback, dlr_feedback, layout_side,
+                 guest_feedback, dlr_feedback, layout_side, on_duty,
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
                  FROM records ORDER BY id DESC""")
     rows = c.fetchall()
@@ -812,8 +813,8 @@ def get_records():
             "id": row[0], "name": row[1], "shift": row[2], "lux": row[3], "temp": row[4], "bgm": row[5],
             "checklist": row[6], "status": row[7], "follower": row[8], "note": row[9],
             "lux_issue": row[10], "temp_issue": row[11], "db_issue": row[12],
-            "guest_feedback": row[13], "dlr_feedback": row[14], "layout_side": row[15],
-            "created_at": str(row[16]) if row[16] else None
+            "guest_feedback": row[13], "dlr_feedback": row[14], "layout_side": row[15], "on_duty": row[16],
+            "created_at": str(row[17]) if row[17] else None
         })
     return jsonify(records)
 
