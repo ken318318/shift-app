@@ -1581,6 +1581,106 @@ function updatePendingCardState(card) {
             '<div style="height:12px;width:65%;background:#eef1f5;border-radius:4px;"></div></div>';
     }
 
+    // ===== 已檢閱（👍，可多人累加） =====
+    function staffNameList() {
+        const sel = document.getElementById('staffName');
+        if (!sel) return [];
+        return Array.from(sel.options).map(function (o) { return o.value; }).filter(Boolean);
+    }
+
+    function followerNameList() {
+        return Array.from(document.querySelectorAll('.follower-item')).map(function (c) { return c.value; });
+    }
+
+    function reviewNames(by) {
+        return String(by || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    }
+
+    function reviewButtonHtml(id, reviewed, at, by) {
+        const names = reviewNames(by);
+        if (reviewed) {
+            const who = names.length ? (' · ' + escapeText(names.join('、'))) : '';
+            return '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
+                '<span style="padding:8px 12px; border-radius:8px; background:#e8f5e9; color:#1b5e20; font-size:13px; font-weight:bold;">✅ 已檢閱' + who +
+                (at ? ' · ' + fmtDateTime(at) : '') + '</span>' +
+                '<button onclick="showReviewPicker(' + id + ')" style="padding:7px 10px; border:1px solid #a5d6a7; border-radius:8px; background:#fff; color:#2e7d32; font-size:12px; font-weight:bold; cursor:pointer;">＋ 我也檢閱</button>' +
+                '<button onclick="clearReview(' + id + ')" style="padding:7px 10px; border:1px solid #e0e0e0; border-radius:8px; background:#fafafa; color:#757575; font-size:12px; cursor:pointer;">✖ 取消</button>' +
+                '</div>';
+        }
+        return '<div><button onclick="showReviewPicker(' + id + ')" style="padding:8px 12px; border:1px dashed #90caf9; border-radius:8px; background:#f5faff; color:#1565c0; font-size:13px; font-weight:bold; cursor:pointer;">👍 標記為已檢閱</button></div>';
+    }
+
+    function showReviewPicker(id) {
+        const box = document.getElementById('review-' + id);
+        if (!box) return;
+        const staff = staffNameList();
+        let opts = staff.map(function (n) {
+            return '<option value="' + n + '">' + n + '（' + (STAFF_GENDER[n] || '-') + '）</option>';
+        }).join('');
+        followerNameList().forEach(function (n) {
+            if (staff.indexOf(n) >= 0) return;
+            opts += '<option value="' + n + '">' + n + '（跟進人）</option>';
+        });
+        box.innerHTML = '<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">' +
+            '<span style="font-size:12px; color:#555; font-weight:bold;">邊位檢閱？</span>' +
+            '<select id="review-sel-' + id + '" style="padding:7px; border:1px solid #90caf9; border-radius:8px; font-size:13px; max-width:220px; margin:0;">' + opts + '</select>' +
+            '<button onclick="submitReview(' + id + ')" style="padding:8px 12px; border:none; border-radius:8px; background:#2ecc71; color:#fff; font-size:13px; font-weight:bold; cursor:pointer;">✓ 確認</button>' +
+            '<button onclick="cancelReviewPicker(' + id + ')" style="padding:8px 12px; border:none; border-radius:8px; background:#eceff1; color:#455a64; font-size:13px; font-weight:bold; cursor:pointer;">取消</button>' +
+            '</div>';
+        const sel = document.getElementById('review-sel-' + id);
+        const last = localStorage.getItem('bs_reviewer');
+        if (sel && last) {
+            for (let i = 0; i < sel.options.length; i++) {
+                if (sel.options[i].value === last) { sel.value = last; break; }
+            }
+        }
+    }
+
+    function submitReview(id) {
+        const sel = document.getElementById('review-sel-' + id);
+        const by = sel ? sel.value : '';
+        if (!by) { alert('請選擇檢閱人'); return; }
+        try { localStorage.setItem('bs_reviewer', by); } catch (e) { }
+        postReview(id, 'add', by);
+    }
+
+    function cancelReviewPicker(id) {
+        const box = document.getElementById('review-' + id);
+        if (box) box.innerHTML = reviewButtonHtml(id, false, '', '');
+    }
+
+    function clearReview(id) {
+        if (!confirm('確定取消所有人嘅檢閱記錄？')) return;
+        postReview(id, 'clear', '');
+    }
+
+    function postReview(id, action, by) {
+        fetch('/api/record_review', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id, action: action, by: by || '' })
+        })
+        .then(r => r.json())
+        .then(function (d) {
+            if (!d || d.status !== 'success') { alert((d && d.message) || '❌ 操作失敗'); return; }
+            const box = document.getElementById('review-' + id);
+            if (box) {
+                box.innerHTML = reviewButtonHtml(id, !!d.reviewed, d.reviewed_at || '', d.reviewed_by || '');
+                const card = box.closest ? box.closest('.record-card') : null;
+                const sum = card ? card.querySelector('summary') : null;
+                if (sum) {
+                    const n = reviewNames(d.reviewed_by).length;
+                    let t = sum.textContent;
+                    const sep = t.indexOf('｜');
+                    if (sep > 0 && t.slice(0, sep).indexOf('已檢閱') >= 0) t = t.slice(sep + 1);
+                    if (d.reviewed && n) t = '✅ 已檢閱' + (n > 1 ? '（' + n + '）' : '') + '｜' + t;
+                    sum.textContent = t;
+                }
+            }
+        })
+        .catch(function () { alert('❌ 連線失敗，請稍後再試。'); });
+    }
+
     function displayRecords() {
         let firstDiv = document.getElementById('recordList');
         let isFirstLoad = !firstDiv || firstDiv.getAttribute('data-loaded') !== '1';
@@ -1780,7 +1880,8 @@ function updatePendingCardState(card) {
                     let seg = r.checklist.split(' | ').find(x => x.includes('NFC正常'));
                     if (seg) hallShort = seg.replace(/^NFC正常[:：]\s*/, '').trim();
                 }
-                let quickInfo = (hallShort ? ('🛰️ ' + hallShort) : '無需檢測 Hall');
+                let rvNames = reviewNames(r.reviewed_by);
+                let quickInfo = (r.reviewed ? ('✅ 已檢閱' + (rvNames.length > 1 ? '（' + rvNames.length + '）' : '') + '｜') : '') + (hallShort ? ('🛰️ ' + hallShort) : '無需檢測 Hall');
                 let pendInfo = pendingIssuesList.length > 0
                     ? ('⚠️ ' + pendingIssuesList.length + ' 項未處理')
                     : '✅ 全部已處理';
@@ -1796,7 +1897,7 @@ function updatePendingCardState(card) {
                     </div>
                     <details${index === 0 ? ' open' : ''} style="margin-top: 4px;">
                         <summary style="cursor: pointer; font-size: 12px; color: #555; padding: 6px 2px; line-height: 1.6;">${quickInfo}｜${pendInfo}｜點擊展開詳細</summary>
-                        <div style="margin-top: 8px;">${dataHtml}${hallInfoHtml}${feedbackHtml}${checkItemsHtml}${noIssueBlock}${doneBlock}${pendingBlock}${sideInfoHtml}${onDutyHtml}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div></div>
+                        <div style="margin-top: 8px;">${dataHtml}${hallInfoHtml}${feedbackHtml}${checkItemsHtml}${noIssueBlock}${doneBlock}${pendingBlock}${sideInfoHtml}${onDutyHtml}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div><div id="review-${r.id}" style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e0e6ed;">${reviewButtonHtml(r.id, r.reviewed, r.reviewed_at, r.reviewed_by)}</div></div>
                     </details></div>`;
             });
             listDiv.innerHTML = html;
@@ -2235,6 +2336,14 @@ function updatePendingCardState(card) {
         };
         
         if (!data.name) { alert("請選擇交更人！"); return; }
+
+        // 負責跟進人必須最少揀一位
+        if (Array.from(document.querySelectorAll('.follower-item:checked')).length === 0) {
+            let fb = document.querySelector('.follower-item');
+            if (fb) fb.scrollIntoView({ block: 'center' });
+            alert("⚠️ 請勾選負責跟進人（最少一位）！");
+            return;
+        }
         
         let rawNote = document.getElementById('notes').value.trim(); 
         if (!editingRecordId && rawNote === '' && venueIssues.length === 0 && luxIssue === '' && tempIssue === '' && dbIssue === '' && nfcDetails.length === 0 && doneOldItems.length === 0) { 
