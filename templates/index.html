@@ -53,10 +53,66 @@
         .issue-status { padding: 6px; font-size: 12px; border-radius: 6px; border: 1px solid #ccc; background: #fff; color: #d32f2f; font-weight: bold; }
         .pending-card { background: #fff8e1; border-left: 4px solid #ffa000; padding: 10px; margin-bottom: 10px; border-radius: 4px; font-size: 13px; }
         .btn-remove { background: #ff4d4f; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; position: absolute; right: 0; top: 0; }
+        /* ===== 更新表（一鍵生成） ===== */
+        .lr-btn2 { width: 100%; padding: 13px; margin: 0 0 20px 0; background: #fff; color: #1565c0; border: 2px solid #1976d2; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; }
+        .lr-modal { display: none; position: fixed; inset: 0; background: #eef2f7; z-index: 10000; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .lr-wrap { max-width: 1080px; margin: 0 auto; padding: 10px 10px 40px; }
+        .lr-bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; background: #fff; padding: 8px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 10px; }
+        .lr-bar input[type=date] { padding: 7px; border: 1px solid #ccc; border-radius: 8px; font-size: 13px; width: auto; margin: 0; flex: 1 1 120px; }
+        .lr-bar button { padding: 8px 10px; border: none; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .lr-b-sent { background: #eceff1; color: #455a64; }
+        .lr-b-sent.on { background: #2ecc71; color: #fff; }
+        .lr-b-blue { background: #1a73e8; color: #fff; }
+        .lr-b-gray { background: #eceff1; color: #455a64; }
+        .lr-b-close { background: #e67c73; color: #fff; }
+        .ur-select { padding: 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 13px; margin: 0; flex: 1 1 170px; max-width: 240px; background: #fff; }
+        .ur-check { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #455a64; background: #f4f6f8; padding: 7px 9px; border-radius: 8px; white-space: nowrap; }
+        .ur-check input { width: 15px; height: 15px; margin: 0; }
+        .lr-msg { font-size: 12px; color: #555; margin: 6px 2px; min-height: 16px; line-height: 1.5; }
+        .lr-tip { font-size: 12px; color: #5d4037; background: #fff8e1; border: 1px solid #ffe0a3; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; line-height: 1.6; }
+        .lr-pool { background: #fff; border: 1px dashed #90a4ae; border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
+        .lr-pool b { font-size: 12px; color: #37474f; display: block; margin-bottom: 6px; }
+        .lr-chip { display: inline-block; padding: 5px 9px; margin: 0 6px 6px 0; border-radius: 14px; background: #e3f2fd; border: 1px solid #90caf9; color: #0d47a1; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .lr-chip small { font-weight: normal; color: #5c6bc0; }
+        .lr-sheet-box { background: #fff; padding: 8px; border-radius: 10px; overflow-x: auto; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+        #lr-sheet { width: 100%; max-width: 1000px; margin: 0 auto; }
+        .lr-table { width: 100%; border-collapse: collapse; table-layout: fixed; background: #fff; }
+        .lr-table td { border: 1px solid #000; text-align: center; vertical-align: middle; padding: 3px 2px; font-size: 13px; color: #000; height: 24px; word-break: break-all; }
+        .lr-title { font-size: 22px; color: #2E74B5; padding: 9px 4px !important; border: 3px solid #000 !important; letter-spacing: .5px; }
+        .lr-h1 { background: #CCFFFF; font-size: 15px; }
+        .lr-h2 { background: #BDD7EE; font-size: 15px; }
+        .lr-sub { background: #CCFFFF; font-size: 12px; }
+        .lr-sub2 { background: #BDD7EE; font-size: 12px; }
+        .lr-ch { background: #E8F7F7; font-size: 12px; font-weight: bold; }
+        .lr-c2 { background: #E8F2FA; font-size: 12px; font-weight: bold; }
+        .lr-td { cursor: pointer; }
+        .lr-td.lr-new { color: #FF0000; }
+        .lr-emp { background: #FDE9E9; }
+        .lr-cnt { background: #FDE9E9; font-weight: bold; font-size: 14px; }
+        .lr-total { font-size: 16px; font-weight: bold; border-top: 3px solid #000 !important; border-bottom: 3px solid #000 !important; padding: 7px 4px !important; }
+        .lr-sep { border-left: 3px solid #000 !important; }
+        .lr-legend { font-size: 12px; color: #c62828; margin: 8px 2px; font-weight: bold; }
+        .lr-add-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; background: #fff; padding: 8px; border-radius: 10px; margin-top: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        .lr-add-row input { flex: 1 1 180px; padding: 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 13px; margin: 0; }
+        .lr-add-row button { padding: 8px 12px; border: none; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; background: #1a73e8; color: #fff; }
+        .lr-pool-btns button { padding: 6px 10px; font-size: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; background: #1a73e8; color: #fff; }
+        .lr-imgbox { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.88); z-index: 10001; overflow: auto; padding: 12px; text-align: center; }
+        .lr-imgbox p { color: #fff; font-size: 13px; margin: 8px 0 12px; }
+        .lr-imgbox img { max-width: 100%; background: #fff; }
+        .lr-imgbox a { display: inline-block; margin: 12px 0 30px; padding: 10px 18px; background: #1a73e8; color: #fff; border-radius: 8px; font-size: 14px; font-weight: bold; text-decoration: none; }
+        .lr-imgbox .lr-img-close { display: block; margin: 0 auto 6px; padding: 8px 16px; border: none; border-radius: 8px; background: #e67c73; color: #fff; font-size: 13px; font-weight: bold; }
+
         @media (max-width: 500px) {
             .card { padding: 12px !important; }
             .record-header { padding: 8px !important; }
+            .lr-wrap { padding: 8px 6px 40px; }
+            .lr-title { font-size: 17px; }
+            .lr-table td { font-size: 11px; height: 21px; }
+            .lr-h1, .lr-h2 { font-size: 12px; }
+            .lr-sub, .lr-sub2, .lr-ch, .lr-c2 { font-size: 10px; }
+            .ur-select { max-width: 100%; }
         }
+    </style>
     </style>
 </head>
 <body data-admin="{{ 'true' if is_admin else 'false' }}">
@@ -68,7 +124,8 @@
                 <button onclick="window.location.href='/logout';" style="color: #e74c3c; background: #ffebee; padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer;">🚪 登出</button>
             </div>
         </div>
-        <button class="submit-btn" onclick="showForm()" style="margin-top: 0; margin-bottom: 20px; background-color: #2ecc71;">📝 新增BS交更紀錄</button>
+        <button class="submit-btn" onclick="showForm()" style="margin-top: 0; margin-bottom: 10px; background-color: #2ecc71;">📝 新增BS交更紀錄</button>
+        <button class="lr-btn2" onclick="openUpdateReport()">📋 一鍵生成更新表（Layout／各類別）</button>
         
         <div id="home-pending-container" style="display: none; background: #fff3cd; padding: 9px 12px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 14px;">
             <div onclick="toggleHomePending()" style="cursor: pointer;">
@@ -382,6 +439,48 @@
             <div id="cfg-msg" style="font-size: 12px; margin-top: 10px; color: #d32f2f; min-height: 16px;"></div>
         </div>
     </div>
+    <!-- ===== 更新表（一鍵生成） ===== -->
+    <div id="layout-report-modal" class="lr-modal">
+        <div class="lr-wrap">
+            <div class="lr-bar">
+                <button class="lr-b-close" onclick="closeUpdateReport()">✖ 返回</button>
+                <select id="ur-type" class="ur-select" onchange="loadUpdateReport()"></select>
+                <input type="date" id="ur-date" onchange="loadUpdateReport()">
+                <button id="ur-sent-btn" class="lr-b-sent" onclick="toggleUrSent()">⬜ 未 Send Email</button>
+                <button class="lr-b-blue" onclick="urSave()">💾 儲存</button>
+                <button class="lr-b-gray" onclick="urReload()">🔄 重新抓取</button>
+                <button class="lr-b-gray" onclick="urImage()">🖼️ 存為圖片</button>
+                <label class="ur-check"><input type="checkbox" id="ur-mail-only" checked onchange="loadUpdateReport()"> 只計「已 Send mail」</label>
+            </div>
+            <div class="lr-msg" id="ur-msg"></div>
+            <div class="lr-tip">
+                <b>用法：</b>① 先揀報表／類別，再揀日期；系統自動抽出該類別已 Send mail 嘅台號。<br>
+                ② 輕觸表格內台號＝去下一欄；去到最後一欄再撳＝移除。<br>
+                ③ 按「💾 儲存」，再按「🖼️ 存為圖片」，長按圖片儲存就可以 Send 俾老細。
+            </div>
+            <div id="ur-pool-box" class="lr-pool" style="display: none;">
+                <b>🟡 待分類台號（未歸入任何一欄，撳一下即可加入第一欄）</b>
+                <div id="ur-pool" style="margin-bottom: 6px;"></div>
+                <div id="ur-pool-btns" class="lr-pool-btns" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
+            </div>
+            <div class="lr-sheet-box">
+                <div id="lr-sheet"></div>
+            </div>
+            <div class="lr-legend">※ 紅色字為新增（對比同一類別上一份更新表）</div>
+            <div class="lr-add-row">
+                <input type="text" id="ur-add-input" placeholder="手動新增台號，例如 NB0307, NB0810" onkeydown="if(event.key==='Enter'){urAddManual();}">
+                <button onclick="urAddManual()">➕ 加入台號</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="lr-imgbox" class="lr-imgbox" onclick="closeUrImage(event)">
+        <button class="lr-img-close" onclick="closeUrImage({})">✖ 關閉</button>
+        <p>長按圖片 → 儲存到相簿（或按下方按鈕下載）</p>
+        <img id="ur-img" alt="更新表">
+        <div><a id="ur-dl" download="更新表.png">⬇️ 下載圖片</a></div>
+    </div>
+
     <script>
         // ===== 登入失效（密碼被更改 / 被強制登出）自動踢回登入頁 =====
         (function () {
@@ -2012,6 +2111,451 @@ function updatePendingCardState(card) {
             alert("❌ 提交連線失敗！\n可能係 Render 伺服器正在喚醒（需時約 30 秒），或者微信網絡攔截。\n\n請稍後重新整理網頁再試，或改用「在瀏覽器打開」。");
         }); 
     }
+
+    // ================= 更新表（任何類別，一鍵生成） =================
+    let urState = null;
+    let urCatsDate = '';
+
+    function urMsg(t) {
+        const el = document.getElementById('ur-msg');
+        if (el) el.textContent = t || '';
+    }
+
+    function urTodayStr() {
+        const d = new Date();
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    }
+
+    function urEscape(s) {
+        return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');
+    }
+
+    function urAttr(s) {
+        return urEscape(s).replace(/'/g, '&#39;');
+    }
+
+    function urDateLabel(ds) {
+        const p = String(ds || '').split('-');
+        if (p.length !== 3) return ds || '';
+        return parseInt(p[0], 10) + '年' + parseInt(p[1], 10) + '月' + parseInt(p[2], 10) + '日';
+    }
+
+    function openUpdateReport() {
+        document.getElementById('layout-report-modal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        const d = document.getElementById('ur-date');
+        if (!d.value) d.value = urTodayStr();
+        loadUrCats().then(loadUpdateReport).catch(loadUpdateReport);
+    }
+
+    function closeUpdateReport() {
+        document.getElementById('layout-report-modal').style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    function urReload() {
+        if (!confirm('重新由交更紀錄抓取？未儲存的改動會消失。')) return;
+        urCatsDate = '';
+        loadUrCats().then(loadUpdateReport).catch(loadUpdateReport);
+    }
+
+    function loadUrCats() {
+        const d = document.getElementById('ur-date').value || urTodayStr();
+        if (urCatsDate === d) return Promise.resolve();
+        return fetch('/api/update_report_cats?date=' + encodeURIComponent(d), { cache: 'no-store' })
+            .then(r => r.json())
+            .then(function (data) {
+                if (!data || data.status !== 'success') return;
+                const sel = document.getElementById('ur-type');
+                const cur = sel.value;
+                let html = '<option value="layout">📐 Layout 更新表（三欄）' +
+                    (data.layout_mail ? '（' + data.layout_mail + '）' : '') + '</option>';
+                (data.cats || []).forEach(function (c) {
+                    html += '<option value="cat:' + urAttr(c.cat) + '">' + urEscape(c.short) + '（' + c.mail + '）</option>';
+                });
+                sel.innerHTML = html;
+                let ok = false;
+                for (let i = 0; i < sel.options.length; i++) {
+                    if (sel.options[i].value === cur) ok = true;
+                }
+                sel.value = ok ? cur : 'layout';
+                urCatsDate = d;
+            });
+    }
+
+    function loadUpdateReport() {
+        const d = document.getElementById('ur-date').value || urTodayStr();
+        const t = document.getElementById('ur-type').value || 'layout';
+        const mo = document.getElementById('ur-mail-only').checked ? '1' : '0';
+        urMsg('⏳ 讀取中…');
+        fetch('/api/update_report?date=' + encodeURIComponent(d) + '&type=' + encodeURIComponent(t) + '&mail_only=' + mo,
+              { cache: 'no-store' })
+            .then(r => r.json())
+            .then(function (data) {
+                if (!data || data.status !== 'success') {
+                    urMsg((data && data.message) || '❌ 讀取失敗，請稍後再試。');
+                    return;
+                }
+                document.getElementById('ur-date').value = data.date;
+                urState = {
+                    date: data.date,
+                    type: data.type,
+                    sent: !!data.sent,
+                    hasSaved: !!data.has_saved,
+                    columns: data.columns || [],
+                    pool: data.pool || [],
+                    excluded: data.excluded || [],
+                    baseline: data.baseline || [],
+                    detected: data.detected_count || 0
+                };
+                urUpdateSentBtn();
+                renderUpdateReport();
+                if (!data.detected_count) {
+                    urMsg('ℹ️ 截至 ' + data.date + '，呢個類別未有符合條件嘅台號。可先記錄，或用手動加入。');
+                } else {
+                    urMsg('✅ 已抓取 ' + data.detected_count + ' 個台號（' + (mo === '1' ? '只計已 Send mail' : '全部狀態') + '）。' +
+                          (data.has_saved ? '此日期已有儲存版本。' : ''));
+                }
+            })
+            .catch(function () { urMsg('❌ 連線失敗，請重新整理後再試。'); });
+    }
+
+    function urUpdateSentBtn() {
+        const b = document.getElementById('ur-sent-btn');
+        if (!b || !urState) return;
+        b.className = 'lr-b-sent' + (urState.sent ? ' on' : '');
+        b.textContent = urState.sent ? '✅ 已 Send Email' : '⬜ 未 Send Email';
+    }
+
+    function toggleUrSent() {
+        if (!urState) return;
+        urState.sent = !urState.sent;
+        urUpdateSentBtn();
+        renderUpdateReport();
+        urSave();
+    }
+
+    function urSortList(list) {
+        function num(v) {
+            const n = parseInt(v, 10);
+            return isNaN(n) ? 9999 : n;
+        }
+        list.sort(function (a, b) {
+            if (num(a.hall) !== num(b.hall)) return num(a.hall) - num(b.hall);
+            if (num(a.pit) !== num(b.pit)) return num(a.pit) - num(b.pit);
+            return a.table < b.table ? -1 : (a.table > b.table ? 1 : 0);
+        });
+    }
+
+    function urAllCodes() {
+        if (!urState) return [];
+        let out = [];
+        urState.columns.forEach(c => { out = out.concat(c.items.map(x => x.table)); });
+        out = out.concat(urState.pool.map(x => x.table));
+        return out;
+    }
+
+    function renderUpdateReport() {
+        const sheet = document.getElementById('lr-sheet');
+        if (!sheet || !urState) return;
+
+        const cols = urState.columns || [];
+        if (!cols.length) {
+            sheet.style.width = '';
+            sheet.innerHTML = '<div style="padding:30px;text-align:center;color:#999;font-size:13px;">（未有資料）</div>';
+            renderUrPool();
+            return;
+        }
+
+        const nc = cols.length;
+        const n = Math.max.apply(null, cols.map(c => (c.items || []).length).concat([0]));
+        const groups = [];
+        cols.forEach(function (c, i) {
+            if (!groups.length || groups[groups.length - 1].main !== c.main) {
+                groups.push({ main: c.main, from: i, to: i });
+            } else {
+                groups[groups.length - 1].to = i;
+            }
+        });
+        function groupIndex(i) {
+            for (let k = 0; k < groups.length; k++) if (i >= groups[k].from && i <= groups[k].to) return k;
+            return 0;
+        }
+        function isStart(i) {
+            for (let k = 0; k < groups.length; k++) if (groups[k].from === i) return i > 0;
+            return false;
+        }
+
+        const title = '更新-' + urDateLabel(urState.date) + (urState.sent ? '(已Send Email)' : '(未Send Email)');
+        sheet.style.width = Math.min(1000, Math.max(560, nc * 240)) + 'px';
+
+        const w1 = (100 / nc * 0.25).toFixed(3);
+        const w2 = (100 / nc * 0.21).toFixed(3);
+        const w3 = (100 / nc * 0.54).toFixed(3);
+
+        let html = '<table class="lr-table"><colgroup>';
+        for (let i = 0; i < nc; i++) {
+            html += '<col style="width:' + w1 + '%"><col style="width:' + w2 + '%"><col style="width:' + w3 + '%">';
+        }
+        html += '</colgroup>';
+
+        html += '<tr><td colspan="' + (nc * 3) + '" class="lr-title">' + urEscape(title) + '</td></tr>';
+
+        let mainRow = '<tr>';
+        groups.forEach(function (g, gi) {
+            const cls = (gi % 2 === 0 ? 'lr-h1' : 'lr-h2') + (g.from > 0 ? ' lr-sep' : '');
+            mainRow += '<td colspan="' + ((g.to - g.from + 1) * 3) + '" class="' + cls + '">' +
+                       urEscape(g.main || '') + '</td>';
+        });
+        mainRow += '</tr>';
+        html += mainRow;
+
+        let subRow = '<tr>';
+        cols.forEach(function (c, i) {
+            const gi = groupIndex(i);
+            const cls = (gi % 2 === 0 ? 'lr-sub' : 'lr-sub2') + (isStart(i) ? ' lr-sep' : '');
+            subRow += '<td colspan="3" class="' + cls + '">' + urEscape(c.sub || '') + '</td>';
+        });
+        subRow += '</tr>';
+        html += subRow;
+
+        let headRow = '<tr>';
+        cols.forEach(function (c, i) {
+            const gi = groupIndex(i);
+            const hc = (gi % 2 === 0 ? 'lr-ch' : 'lr-c2');
+            headRow += '<td class="' + hc + (isStart(i) ? ' lr-sep' : '') + '">Hall</td>' +
+                       '<td class="' + hc + '">Pit</td><td class="' + hc + '">table</td>';
+        });
+        headRow += '</tr>';
+        html += headRow;
+
+        function cells(ci, idx) {
+            const c = cols[ci];
+            const item = (c.items || [])[idx];
+            const sep = (isStart(ci) ? ' lr-sep' : '');
+            if (!item) {
+                return '<td class="lr-emp' + sep + '"></td><td class="lr-emp"></td><td class="lr-emp"></td>';
+            }
+            const cls = 'lr-td' + (item.is_new ? ' lr-new' : '');
+            const at = ' data-c="' + ci + '" data-i="' + idx + '"';
+            return '<td class="' + cls + sep + '"' + at + '>' + urEscape(item.hall) + '</td>' +
+                   '<td class="' + cls + '"' + at + '>' + urEscape(item.pit) + '</td>' +
+                   '<td class="' + cls + '"' + at + '>' + urEscape(item.table) + '</td>';
+        }
+
+        for (let i = 0; i < n; i++) {
+            html += '<tr>';
+            for (let ci = 0; ci < nc; ci++) html += cells(ci, i);
+            html += '</tr>';
+        }
+        if (n === 0) {
+            html += '<tr>';
+            for (let ci = 0; ci < nc; ci++) {
+                html += '<td class="lr-emp' + (isStart(ci) ? ' lr-sep' : '') + '"></td><td class="lr-emp"></td><td class="lr-emp"></td>';
+            }
+            html += '</tr>';
+        }
+
+        let countRow = '<tr>';
+        let total = 0;
+        cols.forEach(function (c, i) {
+            const cnt = (c.items || []).length;
+            total += cnt;
+            countRow += '<td class="lr-cnt' + (isStart(i) ? ' lr-sep' : '') + '" colspan="3">' + cnt + '</td>';
+        });
+        countRow += '</tr>';
+        html += countRow;
+
+        html += '<tr><td class="lr-total" colspan="' + (nc * 3) + '">總數 ' + total + '</td></tr>';
+        html += '</table>';
+        sheet.innerHTML = html;
+
+        renderUrPool();
+    }
+
+    function renderUrPool() {
+        const box = document.getElementById('ur-pool-box');
+        const el = document.getElementById('ur-pool');
+        const bt = document.getElementById('ur-pool-btns');
+        if (!box || !el || !bt) return;
+        if (!urState || !urState.pool.length) {
+            box.style.display = 'none';
+            el.innerHTML = '';
+            bt.innerHTML = '';
+            return;
+        }
+        box.style.display = 'block';
+        el.innerHTML = urState.pool.map(function (it, i) {
+            return '<span class="lr-chip" data-p="' + i + '">' + urEscape(it.table) +
+                   (it.problem ? ' <small>' + urEscape(it.problem) + '</small>' : '') + '</span>';
+        }).join('');
+        let bh = '';
+        urState.columns.slice(0, 4).forEach(function (c, i) {
+            bh += '<button onclick="urAssignAll(' + i + ')">全部 → ' + urEscape(c.sub || ('第 ' + (i + 1) + ' 欄')) + '</button>';
+        });
+        bt.innerHTML = bh;
+    }
+
+    function urCycle(ci, ii) {
+        if (!urState) return;
+        const cols = urState.columns;
+        const col = cols[ci];
+        if (!col) return;
+        const item = (col.items || []).splice(ii, 1)[0];
+        if (!item) return;
+        if (ci + 1 < cols.length) {
+            cols[ci + 1].items.push(item);
+            urSortList(cols[ci + 1].items);
+            urMsg('✏️ 已移到「' + (cols[ci + 1].sub || '下一欄') + '」，記得按「💾 儲存」。');
+        } else {
+            if (urState.excluded.indexOf(item.table) < 0) urState.excluded.push(item.table);
+            urMsg('🗑️ 已移除該台號，儲存後唔會再自動出現。');
+        }
+        renderUpdateReport();
+    }
+
+    function urCyclePool(i) {
+        if (!urState || !urState.columns.length) return;
+        const item = urState.pool.splice(i, 1)[0];
+        if (!item) return;
+        urState.columns[0].items.push(item);
+        urSortList(urState.columns[0].items);
+        renderUpdateReport();
+        urMsg('✏️ 已加入「' + (urState.columns[0].sub || '第一欄') + '」，記得儲存。');
+    }
+
+    function urAssignAll(ci) {
+        if (!urState || !urState.pool.length) return;
+        const col = urState.columns[ci];
+        if (!col) return;
+        col.items = col.items.concat(urState.pool);
+        urState.pool = [];
+        urSortList(col.items);
+        renderUpdateReport();
+        urMsg('✅ 已全部加入「' + (col.sub || '') + '」，記得按「💾 儲存」。');
+    }
+
+    function urGuessHP(code) {
+        const m = String(code).match(/^([A-Z]{1,4})?(\d{3,6})$/);
+        if (!m) return { hall: '', pit: '' };
+        const d = m[2];
+        const pit = d.length >= 5 ? d.slice(0, -2) : (d.length === 4 ? d.slice(0, 2) : d);
+        return { hall: '', pit: String(parseInt(pit, 10)) };
+    }
+
+    function urAddManual() {
+        if (!urState || !urState.columns.length) return;
+        const inp = document.getElementById('ur-add-input');
+        const raw = (inp.value || '').toUpperCase();
+        if (!raw.trim()) return;
+        const parts = raw.split(/[,，、;；\s]+/).filter(Boolean);
+        const exist = urAllCodes();
+        let added = 0;
+        parts.forEach(function (code) {
+            code = code.replace(/[（(].*?[)）]/g, '').trim();
+            if (!/^([A-Z]{1,4})?\d{3,6}$/.test(code)) return;
+            if (exist.indexOf(code) >= 0) return;
+            exist.push(code);
+            const hp = urGuessHP(code);
+            urState.columns[0].items.push({
+                table: code, hall: hp.hall, pit: hp.pit,
+                is_new: urState.baseline.indexOf(code) < 0,
+                problem: '', status: ''
+            });
+            added++;
+        });
+        urSortList(urState.columns[0].items);
+        inp.value = '';
+        renderUpdateReport();
+        if (!added) {
+            urMsg('⚠️ 未加入：請輸入有效台號（例：NB0307），或該台號已經在表內。');
+        } else {
+            urMsg('✅ 已加入 ' + added + ' 個台號到「' + (urState.columns[0].sub || '第一欄') + '」，記得按「💾 儲存」。');
+        }
+    }
+
+    function urSave() {
+        if (!urState) return;
+        const body = {
+            date: urState.date,
+            type: urState.type,
+            sent: !!urState.sent,
+            columns: urState.columns.map(function (c) {
+                return { main: c.main, sub: c.sub, codes: c.items.map(x => x.table) };
+            }),
+            excluded: urState.excluded || []
+        };
+        urMsg('⏳ 儲存中…');
+        fetch('/api/update_report/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        })
+            .then(r => r.json())
+            .then(function (d) {
+                urMsg((d && d.message) || '已儲存。');
+                if (d && d.status === 'success') {
+                    urCatsDate = '';
+                    setTimeout(loadUpdateReport, 400);
+                }
+            })
+            .catch(function () { urMsg('❌ 儲存失敗，請稍後再試。'); });
+    }
+
+    function urLoadScript(src, ok, fail) {
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = ok;
+        s.onerror = fail;
+        document.head.appendChild(s);
+    }
+
+    function urImage() {
+        if (!urState) return;
+        const go = function () { urCapture(); };
+        if (window.html2canvas) { go(); return; }
+        urMsg('⏳ 準備圖片中…');
+        urLoadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js', go, function () {
+            urLoadScript('https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js', go, function () {
+                urMsg('❌ 無法載入圖片組件（可能被網絡攔截）。可先儲存，再用手機截圖。');
+            });
+        });
+    }
+
+    function urCapture() {
+        const sheet = document.getElementById('lr-sheet');
+        if (!sheet) return;
+        html2canvas(sheet, { backgroundColor: '#ffffff', scale: 2, useCORS: true })
+            .then(function (canvas) {
+                const url = canvas.toDataURL('image/png');
+                document.getElementById('ur-img').src = url;
+                const a = document.getElementById('ur-dl');
+                a.href = url;
+                a.download = '更新表_' + (urState ? urState.date : '') + '.png';
+                document.getElementById('lr-imgbox').style.display = 'block';
+                urMsg('✅ 已產生圖片，長按圖片可儲存到相簿。');
+            })
+            .catch(function () {
+                urMsg('❌ 產生圖片失敗，可直接手機截圖。');
+            });
+    }
+
+    function closeUrImage(e) {
+        if (e && e.target && e.target.tagName === 'IMG') return;
+        document.getElementById('lr-imgbox').style.display = 'none';
+    }
+
+    document.getElementById('lr-sheet').addEventListener('click', function (e) {
+        const td = e.target.closest ? e.target.closest('td[data-c]') : null;
+        if (!td) return;
+        urCycle(parseInt(td.getAttribute('data-c'), 10), parseInt(td.getAttribute('data-i'), 10));
+    });
+
+    document.getElementById('ur-pool').addEventListener('click', function (e) {
+        const chip = e.target.closest ? e.target.closest('.lr-chip[data-p]') : null;
+        if (!chip) return;
+        urCyclePool(parseInt(chip.getAttribute('data-p'), 10));
+    });
 
     document.addEventListener("DOMContentLoaded", function() { 
         showList(); 
