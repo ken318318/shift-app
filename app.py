@@ -1640,6 +1640,467 @@ def clear_audit_logs():
             release_db_connection(conn)
 
 
+# ---------- 更新表（任何類別，一鍵生成） ----------
+# 交更表單記錄格式：  [賭檯 - Layout - 污跡] 位置: NB0201 [狀態:已 Send mail]
+# 本功能把「已 Send mail」的台號抽出，按類別／問題分欄，產生老細睇的更新表。
+_UP_KEY = 'update_reports'
+_UP_MAPKEY = 'update_map'
+_UP_EXCLKEY = 'update_excluded'
+_UP_LAYOUT_COLS = [
+    ('Layout', 'Stain Nearly Betting Area'),
+    ('Layout', 'Stain Nearly Dearly Area'),
+    ('Thin Layout', 'Thin Layout Affects Dealing'),
+]
+_UP_CODE_RE = re.compile(r'^([A-Z]{1,4})?(\d{3,6})$')
+_UP_MAX_COLS = 12
+
+
+def _up_today():
+    return datetime.datetime.now(pytz.timezone('Asia/Macau')).strftime('%Y-%m-%d')
+
+
+def _up_now_text():
+    return datetime.datetime.now(pytz.timezone('Asia/Macau')).strftime('%Y/%m/%d %H:%M:%S')
+
+
+def _up_norm(v):
+    s = '' if v is None else str(v)
+    s = s.replace('\u3000', ' ').strip().upper()
+    s = re.sub(r'\s+', '', s)
+    s = re.sub(r'[（(].*?[)）]', '', s)
+    return s
+
+
+def _up_is_code(s):
+    return bool(_UP_CODE_RE.match(s or ''))
+
+
+def _up_short_cat(cat):
+    c = (cat or '').strip()
+    if ' - ' in c:
+        return c.split(' - ', 1)[1].strip()
+    return c or '（未分類）'
+
+
+def _up_mailish(status):
+    s = (status or '').lower()
+    return ('send' in s) and ('mail' in s)
+
+
+def _up_is_layout(cat, problem):
+    t = ((cat or '') + ' ' + (problem or '')).lower()
+    return 'layout' in t
+
+
+def _up_layout_guess(problem):
+    p = (problem or '').lower()
+    if '薄' in p or 'thin' in p:
+        return 2
+    return None
+
+
+def _up_parse_note(note):
+    out = []
+    if not note:
+        return out
+    for line in str(note).split('\n'):
+        if '位置' not in line:
+            continue
+        m = re.search(r'\[([^\[\]]+?)\]\s*位置\s*[:：]\s*(.+)', line)
+        if not m:
+            continue
+        tag = m.group(1).strip()
+        loc_text = m.group(2)
+        st = re.search(r'\[狀態\s*[:：]\s*([^\]]*)\]', loc_text)
+        status = st.group(1).strip() if st else ''
+        if st:
+            loc_text = loc_text[:st.start()]
+        parts = [p.strip() for p in tag.split(' - ')]
+        problem = parts[-1] if parts else tag
+        category = ' - '.join(parts[:-1]).strip() if len(parts) > 1 else ''
+        for raw in re.split(r'[,，、;；]', loc_text):
+            code = _up_norm(raw)
+            if code and _up_is_code(code):
+                out.append({'code': code, 'category': category,
+                            'problem': problem, 'status': status})
+    return out
+
+
+def _up_detect(date_str):
+    """截至指定日期，每個台號最新一次的場面問題資料。"""
+    rows = []
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""SELECT note, (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date
+                     FROM records
+                     WHERE COALESCE(note, '') <> ''
+                       AND (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date <= %s
+                     ORDER BY id ASC""", (date_str,))
+        rows = c.fetchall()
+    except Exception as e:
+        print('更新表讀取紀錄失敗:', e)
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+    out = {}
+    for note, d in rows:
+        ds = d.strftime('%Y-%m-%d') if hasattr(d, 'strftime') else str(d)[:10]
+        for it in _up_parse_note(note):
+            if not it['category']:
+                continue
+            code = it['code']
+            rec = out.get(code)
+            if rec is None:
+                out[code] = {'category': it['category'], 'problem': it['problem'],
+                             'status': it['status'], 'first_seen': ds, 'last_seen': ds}
+            else:
+                rec['category'] = it['category']
+                rec['problem'] = it['problem']
+                rec['status'] = it['status']
+                if ds > rec['last_seen']:
+                    rec['last_seen'] = ds
+    return out
+
+
+def _up_table_lookup():
+    lut = {}
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT table_code, hall, pit FROM hall_tables")
+        for code, hall, pit in c.fetchall():
+            key = _up_norm(code)
+            if key and key not in lut:
+                h = str(hall or '')
+                h = re.sub(r'(?i)^hall\s*', '', h).strip()
+                lut[key] = {'hall': h, 'pit': str(pit)}
+    except Exception as e:
+        print('更新表讀取台號總表失敗:', e)
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+    return lut
+
+
+def _up_fallback_hp(code):
+    m = re.match(r'^([A-Z]{1,4})?(\d{3,6})$', code or '')
+    if not m:
+        return '', ''
+    d = m.group(2)
+    pit = d[:-2] if len(d) >= 5 else (d[:2] if len(d) == 4 else d)
+    try:
+        return '', str(int(pit))
+    except Exception:
+        return '', ''
+
+
+def _up_load_json(key, default):
+    raw = get_setting(key, '') or ''
+    try:
+        data = json.loads(raw) if raw.strip() else default
+    except Exception:
+        data = default
+    return data if isinstance(data, type(default)) else default
+
+
+def _up_load_reports():
+    return _up_load_json(_UP_KEY, {})
+
+
+def _up_store_reports(data):
+    try:
+        keys = sorted(data.keys())
+        for k in keys[:-400]:
+            data.pop(k, None)
+    except Exception:
+        pass
+    return set_setting(_UP_KEY, json.dumps(data, ensure_ascii=False))
+
+
+def _up_load_map():
+    return _up_load_json(_UP_MAPKEY, {})
+
+
+def _up_load_excl():
+    return _up_load_json(_UP_EXCLKEY, {})
+
+
+def _up_key(date_str, rtype):
+    return date_str + '|' + rtype
+
+
+@app.route('/api/update_report_cats', methods=['GET'])
+def update_report_cats():
+    date_str = (request.args.get('date') or '').strip()
+    if not re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+        date_str = _up_today()
+
+    det = _up_detect(date_str)
+    agg = {}
+    layout_mail = layout_all = 0
+    for code, e in det.items():
+        cat = e['category'] or ''
+        rec = agg.setdefault(cat, {'mail': 0, 'all': 0})
+        rec['all'] += 1
+        if _up_mailish(e['status']):
+            rec['mail'] += 1
+        if _up_is_layout(cat, e['problem']):
+            layout_all += 1
+            if _up_mailish(e['status']):
+                layout_mail += 1
+
+    cats = [{'cat': k, 'short': _up_short_cat(k), 'mail': v['mail'], 'all': v['all']}
+            for k, v in agg.items() if k and not _up_is_layout(k, '')]
+    cats.sort(key=lambda x: (-x['mail'], -x['all'], x['short']))
+    resp = jsonify({'status': 'success', 'date': date_str, 'cats': cats,
+                    'layout_mail': layout_mail, 'layout_all': layout_all})
+    resp.headers['Cache-Control'] = 'no-store, max-age=0'
+    return resp
+
+
+@app.route('/api/update_report', methods=['GET'])
+def update_report_get():
+    date_str = (request.args.get('date') or '').strip()
+    if not re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+        date_str = _up_today()
+    rtype = (request.args.get('type') or 'layout').strip()
+    if not (rtype == 'layout' or rtype.startswith('cat:')):
+        rtype = 'layout'
+    mail_only = (request.args.get('mail_only', '1') != '0')
+    is_layout = (rtype == 'layout')
+    cat_name = None if is_layout else rtype[4:]
+
+    reports = _up_load_reports()
+    saved = reports.get(_up_key(date_str, rtype)) or {}
+
+    excl = set()
+    for x in (_up_load_excl().get(rtype) or []):
+        c = _up_norm(x)
+        if c:
+            excl.add(c)
+
+    # 上一份同類報告 → 用來判斷「新增」（紅字）
+    prev_dates = []
+    for k in reports.keys():
+        if '|' in k:
+            d, t = k.split('|', 1)
+            if t == rtype and d < date_str:
+                prev_dates.append(d)
+    baseline = set()
+    if prev_dates:
+        prev = reports.get(_up_key(max(prev_dates), rtype)) or {}
+        for col in (prev.get('columns') or []):
+            for x in (col.get('codes') or []):
+                c = _up_norm(x)
+                if c:
+                    baseline.add(c)
+
+    det = _up_detect(date_str)
+    lut = _up_table_lookup()
+
+    def eligible(e):
+        if is_layout:
+            if not _up_is_layout(e['category'], e['problem']):
+                return False
+        else:
+            if (e['category'] or '') != cat_name:
+                return False
+        if mail_only and not _up_mailish(e['status']):
+            return False
+        return True
+
+    det = {c: e for c, e in det.items() if eligible(e) and c not in excl}
+
+    columns = []
+    for col in (saved.get('columns') or [])[:_UP_MAX_COLS]:
+        codes = []
+        for x in (col.get('codes') or []):
+            c = _up_norm(x)
+            if c and c not in excl:
+                codes.append(c)
+        columns.append({'main': col.get('main') or '', 'sub': col.get('sub') or '', 'codes': codes})
+    if is_layout and not columns:
+        columns = [{'main': m, 'sub': s, 'codes': []} for m, s in _UP_LAYOUT_COLS]
+
+    code_to_col = {}
+    for idx, col in enumerate(columns):
+        for c in col['codes']:
+            code_to_col[c] = idx
+
+    cmap = _up_load_map().get(rtype) or {}
+    pool = []
+    for code, e in det.items():
+        if code in code_to_col:
+            continue
+        target = None
+        saved_key = cmap.get(code)
+        if saved_key:
+            for idx, col in enumerate(columns):
+                if (col['main'] + '||' + col['sub']) == saved_key:
+                    target = idx
+                    break
+        if target is None and is_layout:
+            target = _up_layout_guess(e['problem'])
+        if target is None and not is_layout:
+            main = _up_short_cat(e['category'])
+            sub = e['problem'] or '（未填問題）'
+            for idx, col in enumerate(columns):
+                if col['main'] == main and col['sub'] == sub:
+                    target = idx
+                    break
+            if target is None and len(columns) < _UP_MAX_COLS:
+                columns.append({'main': main, 'sub': sub, 'codes': []})
+                target = len(columns) - 1
+        if target is None:
+            pool.append(code)
+        else:
+            columns[target]['codes'].append(code)
+
+    def make_item(code):
+        e = det.get(code) or {}
+        hp = lut.get(code) or {}
+        hall = hp.get('hall') or ''
+        pit = hp.get('pit') or ''
+        if not hall and not pit:
+            hall, pit = _up_fallback_hp(code)
+        return {
+            'table': code,
+            'hall': hall,
+            'pit': pit,
+            'problem': e.get('problem') or '',
+            'status': e.get('status') or '',
+            'is_new': code not in baseline,
+        }
+
+    def sort_items(items):
+        def k(it):
+            try: h = int(it['hall'])
+            except Exception: h = 9999
+            try: p = int(it['pit'])
+            except Exception: p = 9999
+            return (h, p, it['table'])
+        items.sort(key=k)
+
+    out_cols = []
+    counts = []
+    total = 0
+    for col in columns:
+        items = [make_item(c) for c in col['codes']]
+        sort_items(items)
+        out_cols.append({'main': col['main'], 'sub': col['sub'], 'items': items})
+        counts.append(len(items))
+        total += len(items)
+    pool_items = [make_item(c) for c in pool]
+    sort_items(pool_items)
+
+    resp = jsonify({
+        'status': 'success',
+        'date': date_str,
+        'today': _up_today(),
+        'type': rtype,
+        'mail_only': mail_only,
+        'sent': bool(saved.get('sent')),
+        'has_saved': bool(saved),
+        'saved_at': saved.get('updated_at') or '',
+        'columns': out_cols,
+        'pool': pool_items,
+        'counts': counts,
+        'total': total,
+        'baseline': sorted(baseline),
+        'excluded': sorted(excl),
+        'detected_count': len(det),
+    })
+    resp.headers['Cache-Control'] = 'no-store, max-age=0'
+    return resp
+
+
+@app.route('/api/update_report/save', methods=['POST'])
+def update_report_save():
+    data = request.json or {}
+    date_str = (data.get('date') or '').strip()
+    if not re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
+        return jsonify({'status': 'error', 'message': '❌ 日期格式不正確。'})
+    rtype = (data.get('type') or 'layout').strip()
+    if not (rtype == 'layout' or rtype.startswith('cat:')):
+        return jsonify({'status': 'error', 'message': '❌ 報表類型不正確。'})
+
+    cols_in = data.get('columns')
+    if not isinstance(cols_in, list):
+        cols_in = []
+    excl_in = data.get('excluded')
+    if not isinstance(excl_in, list):
+        excl_in = []
+
+    clean_cols = []
+    seen = set()
+    for col in cols_in[:_UP_MAX_COLS]:
+        if not isinstance(col, dict):
+            continue
+        main = (col.get('main') or '').strip()[:40]
+        sub = (col.get('sub') or '').strip()[:60]
+        codes = []
+        src = col.get('codes')
+        if not isinstance(src, list):
+            src = []
+        for x in src[:400]:
+            c = _up_norm(x)
+            if c and _up_is_code(c) and c not in seen:
+                seen.add(c)
+                codes.append(c)
+        clean_cols.append({'main': main, 'sub': sub, 'codes': codes})
+
+    excl = []
+    for x in excl_in[:400]:
+        c = _up_norm(x)
+        if c and c not in seen and c not in excl:
+            excl.append(c)
+
+    reports = _up_load_reports()
+    reports[_up_key(date_str, rtype)] = {
+        'date': date_str,
+        'type': rtype,
+        'sent': bool(data.get('sent')),
+        'columns': clean_cols,
+        'excluded': excl,
+        'updated_at': _up_now_text(),
+    }
+    if not _up_store_reports(reports):
+        return jsonify({'status': 'error', 'message': '❌ 儲存失敗，請稍後再試。'})
+
+    mp = _up_load_map()
+    tmap = mp.get(rtype) or {}
+    for col in clean_cols:
+        ck = col['main'] + '||' + col['sub']
+        for c in col['codes']:
+            tmap[c] = ck
+    for c in excl:
+        tmap.pop(c, None)
+    mp[rtype] = tmap
+    set_setting(_UP_MAPKEY, json.dumps(mp, ensure_ascii=False))
+
+    ex = _up_load_excl()
+    elist = set(ex.get(rtype) or [])
+    for c in excl:
+        elist.add(c)
+    for c in seen:
+        elist.discard(c)
+    ex[rtype] = sorted(elist)
+    set_setting(_UP_EXCLKEY, json.dumps(ex, ensure_ascii=False))
+
+    label = 'Layout' if rtype == 'layout' else rtype[4:]
+    log_action('更新表', '%s｜%s（%s）共 %d 台' % (date_str, label,
+                                                  '已 Send Email' if data.get('sent') else '未 Send Email',
+                                                  len(seen)))
+    return jsonify({'status': 'success',
+                    'message': '✅ 已儲存（%s）' % ('已 Send Email' if data.get('sent') else '未 Send Email')})
+
+
 @app.route('/')
 def index():
     # 將是否為管理員的狀態傳給前端
