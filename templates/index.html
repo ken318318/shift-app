@@ -1585,6 +1585,7 @@ function updatePendingCardState(card) {
                 let doneIssuesList = []; 
                 let pendingIssuesList = [];
                 let doneOldHtml = ""; 
+                let doneOldCount = 0;
                 
                 let processIssue = (text, defaultPrefix) => { 
                     if (!text) return; 
@@ -1654,7 +1655,7 @@ function updatePendingCardState(card) {
                 if (parsedNote.doneOld) {
                     parsedNote.doneOld.split('\n').forEach(line => {
                         line = line.replace(/\s*\[狀態:.*?\]/g, '').trim();
-                            if (line) doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 舊問題已處理: ${line}</span></div>`;
+                            if (line) { doneOldCount++; doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 舊問題已處理: ${line}</span></div>`; }
                     });
                 }
 
@@ -1704,7 +1705,7 @@ function updatePendingCardState(card) {
                 let doneBlock = '';
                 if (doneIssuesList.length > 0 || doneOldHtml) {
                     doneBlock = `<details style="margin-top:8px;">
-                        <summary style="cursor:pointer; font-size:13px; font-weight:bold; color:#2e7d32; padding:7px 9px; background:#f1fbf4; border:1px solid #c8ecd5; border-radius:6px;">✅ 已處理項目（${doneIssuesList.length} 項）</summary>
+                        <summary style="cursor:pointer; font-size:13px; font-weight:bold; color:#2e7d32; padding:7px 9px; background:#f1fbf4; border:1px solid #c8ecd5; border-radius:6px;">✅ 已處理項目（${doneIssuesList.length + doneOldCount} 項）</summary>
                         <div style="margin-top:6px;">${doneIssuesList.join('')}${doneOldHtml}</div>
                     </details>`;
                 }
