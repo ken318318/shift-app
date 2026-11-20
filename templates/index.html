@@ -122,9 +122,8 @@
             .ur-select { max-width: 100%; }
         }
     </style>
-    </style>
 </head>
-<body data-admin="{{ 'true' if is_admin else 'false' }}">
+<body data-admin="{{ 'true' if is_admin else 'false' }}" data-user="{{ user_name|e }}">
     <div id="bs-loading" role="status" aria-live="polite">
         <div class="bs-spinner"></div>
         <div class="bs-loading-text">載入中…</div>
@@ -144,7 +143,7 @@
         <div style="margin-bottom: 15px;">
             <h2 style="margin: 0 0 10px 0; font-size: 22px; text-align: center;">📋 BS歷史交更紀錄</h2>
             <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button onclick="window.location.href='/admin';" style="color: #1a73e8; background: #e3f2fd; padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer;">⚙️ 設定</button>
+                <button id="btn-admin" onclick="window.location.href='/admin';" style="color: #1a73e8; background: #e3f2fd; padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer;">⚙️ 設定</button>
                 <button onclick="window.location.href='/logout';" style="color: #e74c3c; background: #ffebee; padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer;">🚪 登出</button>
             </div>
         </div>
@@ -421,7 +420,7 @@
         </details>
 
         <label>負責跟進人 (可多選)：</label>
-        <div class="checkbox-group" style="display:block;">
+        <div class="checkbox-group" id="follower-list" style="display:block;">
             <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Carman" class="follower-item"> Carman</label>
             <label style="width:100%; margin-top:8px;"><input type="checkbox" value="David" class="follower-item"> David</label>
             <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Nam" class="follower-item"> Nam</label>
@@ -540,12 +539,22 @@
         })();
     // 安全獲取權限，防止 Jinja 語法錯誤導致死機
     let isAdmin = false;
+    let sessionUser = '';
     try {
         const adminAttr = document.body.getAttribute('data-admin');
         isAdmin = (adminAttr === 'true' || adminAttr === 'True' || adminAttr === '1');
+        sessionUser = document.body.getAttribute('data-user') || '';
     } catch (e) {
         isAdmin = false;
     }
+
+    // 普通帳號：隱藏只有管理員才可用的功能（設定頁）
+    document.addEventListener('DOMContentLoaded', function () {
+        if (!isAdmin) {
+            const b = document.getElementById('btn-admin');
+            if (b) b.style.display = 'none';
+        }
+    });
 
     let venueCategories = {}; 
     let allRecords = []; 
@@ -767,12 +776,13 @@ function setSubmitting(on) {
                         sides.push(((row.querySelector('.venue-side') || {}).value) || '');
                     }
                 });
-                if (c || l.length > 0) d.venue.push({ cat: c, prob: p, s: s, locs: l, sides: sides });
+                let vnote = ((i.querySelector('.venue-note') || {}).value || '').trim();
+                if (c || l.length > 0) d.venue.push({ cat: c, prob: p, s: s, locs: l, sides: sides, note: vnote });
             });
 
             d.guest = collectFeedback('guest');
             d.dlr = collectFeedback('dlr');
-            localStorage.setItem('bs_shift_draft', JSON.stringify(d));
+            localStorage.setItem(draftKey(), JSON.stringify(d));
         } catch(e) {
             console.error("Save draft failed", e);
         }
@@ -785,7 +795,20 @@ function setSubmitting(on) {
     }
 
     function loadDraft() {
-        let data = localStorage.getItem('bs_shift_draft');
+        let data = localStorage.getItem(draftKey());
+        if (!data && isPersonalUser()) {
+            // 舊版本草稿：若屬於自己，自動轉移過嚟
+            let old = localStorage.getItem('bs_shift_draft');
+            if (old) {
+                try {
+                    let od = JSON.parse(old);
+                    if (od && od.staffName === sessionUser) {
+                        data = old;
+                        localStorage.setItem(draftKey(), old);
+                    }
+                } catch (e) { }
+            }
+        }
         if (!data) return;
         try {
             let d = JSON.parse(data);
@@ -898,6 +921,8 @@ function setSubmitting(on) {
                     });
                     ensureVenueSideUI(lastItem);
                     applyVenueSides(lastItem, sideMap);
+                    let nEl = lastItem.querySelector('.venue-note');
+                    if (nEl) nEl.value = i.note || '';
                 });
             }
 
@@ -939,11 +964,23 @@ function setSubmitting(on) {
         }
     }
 
+    function applySessionUser() {
+        if (!isPersonalUser()) return;
+        const sel = document.getElementById('staffName');
+        if (!sel || sel.value) return;
+        for (let i = 0; i < sel.options.length; i++) {
+            if (sel.options[i].value === sessionUser) { sel.value = sessionUser; return; }
+        }
+        sel.insertAdjacentHTML('beforeend', '<option value="' + sessionUser + '">' + sessionUser + '</option>');
+        sel.value = sessionUser;
+    }
+
     function showForm(isNew = true) { 
         refreshConfigs();
         if (isNew) {
             resetForm(false);
             loadDraft();
+            applySessionUser();
         }
         document.getElementById('list-container').style.display = 'none'; 
         document.getElementById('form-container').style.display = 'block'; 
@@ -1188,6 +1225,21 @@ function setSubmitting(on) {
             problemSelect.innerHTML = `<option value="">-- 請選擇 --</option>` + items.map(item => `<option value="${item}">${item}</option>`).join(''); 
         }
         ensureVenueSideUI(selectEl.closest('.venue-item'));
+        ensureVenueNoteUI(selectEl.closest('.venue-item'));
+    }
+
+    // 每個場面問題項目一個備註框（唔影響台號解析）
+    function ensureVenueNoteUI(item) {
+        if (!item) return;
+        const container = item.querySelector('.venue-location-container');
+        if (!container || item.querySelector('.venue-note')) return;
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.className = 'venue-note';
+        inp.placeholder = '備註（可留空，例如：已拍照／位置較隱蔽）';
+        inp.style.cssText = 'margin-top:8px; padding:8px; font-size:13px; border:1px solid #90caf9; border-radius:8px; width:100%; box-sizing:border-box; background:#fff;';
+        inp.addEventListener('input', debouncedSaveDraft);
+        container.insertAdjacentElement('afterend', inp);
     }
 
     function isLayoutCat(cat) {
@@ -1309,7 +1361,7 @@ function setSubmitting(on) {
         let firstVenue = document.querySelector('.venue-category');
         if(firstVenue) initVenueCategory(firstVenue);
         transformInputs();
-        if (isNew) localStorage.removeItem('bs_shift_draft');
+        if (isNew) localStorage.removeItem(draftKey());
     }
 
     function toggleSelectAll(cb) {
@@ -1581,6 +1633,14 @@ function updatePendingCardState(card) {
             '<div style="height:12px;width:65%;background:#eef1f5;border-radius:4px;"></div></div>';
     }
 
+    // 是否個人帳號（非共用密碼登入）
+    function isPersonalUser() {
+        return !!sessionUser && sessionUser !== '同事' && sessionUser !== '管理員';
+    }
+    function draftKey() {
+        return isPersonalUser() ? ('bs_shift_draft::' + sessionUser) : 'bs_shift_draft';
+    }
+
     // ===== 已檢閱（👍，可多人累加） =====
     function staffNameList() {
         const sel = document.getElementById('staffName');
@@ -1603,11 +1663,20 @@ function updatePendingCardState(card) {
             return '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
                 '<span style="padding:8px 12px; border-radius:8px; background:#e8f5e9; color:#1b5e20; font-size:13px; font-weight:bold;">✅ 已檢閱' + who +
                 (at ? ' · ' + fmtDateTime(at) : '') + '</span>' +
-                '<button onclick="showReviewPicker(' + id + ')" style="padding:7px 10px; border:1px solid #a5d6a7; border-radius:8px; background:#fff; color:#2e7d32; font-size:12px; font-weight:bold; cursor:pointer;">＋ 我也檢閱</button>' +
+                '<button onclick="startReview(' + id + ')" style="padding:7px 10px; border:1px solid #a5d6a7; border-radius:8px; background:#fff; color:#2e7d32; font-size:12px; font-weight:bold; cursor:pointer;">＋ 我也檢閱</button>' +
                 '<button onclick="clearReview(' + id + ')" style="padding:7px 10px; border:1px solid #e0e0e0; border-radius:8px; background:#fafafa; color:#757575; font-size:12px; cursor:pointer;">✖ 取消</button>' +
                 '</div>';
         }
-        return '<div><button onclick="showReviewPicker(' + id + ')" style="padding:8px 12px; border:1px dashed #90caf9; border-radius:8px; background:#f5faff; color:#1565c0; font-size:13px; font-weight:bold; cursor:pointer;">👍 標記為已檢閱</button></div>';
+        return '<div><button onclick="startReview(' + id + ')" style="padding:8px 12px; border:1px dashed #90caf9; border-radius:8px; background:#f5faff; color:#1565c0; font-size:13px; font-weight:bold; cursor:pointer;">👍 標記為已檢閱</button></div>';
+    }
+
+    // 個人帳號：直接以自己的名義檢閱；共用密碼登入：彈出選擇器
+    function startReview(id) {
+        if (isPersonalUser()) {
+            postReview(id, 'add', sessionUser);
+        } else {
+            showReviewPicker(id);
+        }
     }
 
     function showReviewPicker(id) {
@@ -1615,7 +1684,7 @@ function updatePendingCardState(card) {
         if (!box) return;
         const staff = staffNameList();
         let opts = staff.map(function (n) {
-            return '<option value="' + n + '">' + n + '（' + (STAFF_GENDER[n] || '-') + '）</option>';
+            return '<option value="' + n + '">' + n + '</option>';
         }).join('');
         followerNameList().forEach(function (n) {
             if (staff.indexOf(n) >= 0) return;
@@ -1738,6 +1807,7 @@ function updatePendingCardState(card) {
                     let match = text.match(/\[狀態:(.*?)\]/); 
                     let status = match ? match[1] : '待處理'; 
                     let cleanText = text.replace(/\[狀態:.*?\]/g, '').trim(); 
+                    cleanText = cleanText.replace(/\s*備註\s*[:：]\s*/g, '｜備註：');
                     if (status === '已處理') { 
                         doneIssuesList.push(formatIssueText(cleanText, defaultPrefix, status)); 
                     } else { 
@@ -1889,7 +1959,7 @@ function updatePendingCardState(card) {
                 html += `${divider}<div class="record-card">
                     <div class="record-header" style="background: #f8f9fa; padding: 10px; border-radius: 6px 6px 0 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #1a73e8;">
                         <div style="flex: 1; min-width: 0;">
-                            <strong style="font-size: 16px; word-break: break-word;">${r.name} (${r.shift})</strong>${genderBadge(r.name)}${timeStr}
+                            <strong style="font-size: 16px; word-break: break-word;">${r.name} (${r.shift})</strong>${timeStr}
                         </div>
                         <div style="display: flex; flex-shrink: 0; gap: 5px; align-items: center;">
                             ${buttonsHtml}
@@ -2180,6 +2250,9 @@ function updatePendingCardState(card) {
                     try {
                         applyVenueSides(lastItem, JSON.parse(r.layout_side || '{}') || {});
                     } catch (e) { }
+                    let vn = lastItem.querySelector('.venue-note');
+                    let nm = line.match(/備註\s*[:：]\s*(.+)$/);
+                    if (vn && nm) vn.value = nm[1].trim();
                 }
             });
         }
@@ -2279,7 +2352,11 @@ function updatePendingCardState(card) {
             
             if (cat) {
                 if (locs.length > 0) {
-                    venueIssues.push(`[${cat} - ${prob}] 位置: ${locs.join(', ')} [狀態:${status}]`); 
+                    let vnoteEl = item.querySelector('.venue-note');
+                    let vnote = vnoteEl ? vnoteEl.value.trim() : '';
+                    let vline = `[${cat} - ${prob}] 位置: ${locs.join(', ')} [狀態:${status}]`;
+                    if (vnote) vline += ` 備註: ${vnote}`;
+                    venueIssues.push(vline); 
                 } else {
                     hasEmptyVenue = true;
                 }
@@ -2337,6 +2414,18 @@ function updatePendingCardState(card) {
         
         if (!data.name) { alert("請選擇交更人！"); return; }
 
+        // 當更同事必須最少揀一位
+        if (Array.from(document.querySelectorAll('.onduty-item:checked')).length === 0) {
+            const odBox = document.getElementById('on-duty-box');
+            if (odBox) {
+                odBox.open = true;
+                odBox.scrollIntoView({ block: 'center' });
+                updateOnDutyUI();
+            }
+            alert("⚠️ 請勾選當更同事（最少一位）！");
+            return;
+        }
+
         // 負責跟進人必須最少揀一位
         if (Array.from(document.querySelectorAll('.follower-item:checked')).length === 0) {
             let fb = document.querySelector('.follower-item');
@@ -2366,7 +2455,7 @@ function updatePendingCardState(card) {
                 if (res.status === 'success') { 
                     alert("✅ 修改成功！"); 
                     editingRecordId = null; 
-                    localStorage.removeItem('bs_shift_draft'); 
+                    localStorage.removeItem(draftKey()); 
                     showList(); 
                 } else { 
                     alert(res.message || "修改失敗"); 
@@ -2853,7 +2942,7 @@ function updatePendingCardState(card) {
     });
 
     // ===== 同事性別（只用作顯示，唔影響儲存嘅名） =====
-    const STAFF_GENDER = {
+    let STAFF_GENDER = {
         '龍ken (8000285)': '男',
         '陳ken (80571)': '男',
         'Fish (8047495)': '女',
@@ -2870,24 +2959,55 @@ function updatePendingCardState(card) {
         '炳 (6234)': '男'
     };
 
-    function genderBadge(name) {
-        const g = STAFF_GENDER[name];
-        if (!g) return '';
-        const female = (g === '女');
-        const color = female ? '#c2185b' : '#1565c0';
-        const bg = female ? '#fce4ec' : '#e3f2fd';
-        return ' <span style="font-size:11px; color:' + color + '; background:' + bg + '; padding:0 5px; border-radius:8px; white-space:nowrap;">' + g + '</span>';
-    }
+    // ===== 由資料庫載入成員名單（成員管理） =====
+    async function loadMembers() {
+        try {
+            const r = await fetch('/api/members?_t=' + Date.now());
+            const d = await r.json();
+            if (!d || d.status !== 'success' || !Array.isArray(d.members) || !d.members.length) return;
 
-    // 交更人下拉：名後面加（男）／（女）
-    function decorateStaffOptions() {
-        const sel = document.getElementById('staffName');
-        if (!sel) return;
-        Array.from(sel.options).forEach(function (o) {
-            if (!o.value) return;
-            const g = STAFF_GENDER[o.value];
-            o.textContent = g ? (o.value + '（' + g + '）') : o.value;
-        });
+            const staff = d.members.filter(m => m.mtype === 'staff');
+            const followers = d.members.filter(m => m.mtype === 'follower');
+
+            const gm = {};
+            d.members.forEach(m => { if (m.gender) gm[m.name] = m.gender; });
+            STAFF_GENDER = gm;
+
+            // 重建前先記住已勾選嘅項目（例如已還原嘅草稿），避免重建時清走
+            const checkedF = Array.from(document.querySelectorAll('.follower-item:checked')).map(c => c.value);
+            const checkedO = Array.from(document.querySelectorAll('.onduty-item:checked')).map(c => c.value);
+
+            const sel = document.getElementById('staffName');
+            if (sel) {
+                const cur = sel.value;
+                sel.innerHTML = '<option value="" disabled selected>請選擇...</option>' +
+                    staff.map(m => '<option value="' + m.name + '">' + m.name + '</option>').join('');
+                if (cur && !staff.some(m => m.name === cur)) {
+                    // 舊紀錄嘅姓名可能已被刪除／改名，保留一個臨時選項以免修改時遺失
+                    sel.insertAdjacentHTML('beforeend', '<option value="' + cur + '">' + cur + '（舊名）</option>');
+                }
+                if (cur) sel.value = cur;
+                applySessionUser();
+            }
+
+            const fbox = document.getElementById('follower-list');
+            if (fbox) {
+                fbox.innerHTML = followers.map(m =>
+                    '<label style="width:100%; margin-top:8px;"><input type="checkbox" value="' + m.name + '" class="follower-item"> ' + m.name + '</label>'
+                ).join('');
+                fbox.querySelectorAll('.follower-item').forEach(c => {
+                    if (checkedF.indexOf(c.value) >= 0) c.checked = true;
+                });
+            }
+
+            buildOnDutyList();
+            document.querySelectorAll('.onduty-item').forEach(c => {
+                if (checkedO.indexOf(c.value) >= 0) c.checked = true;
+            });
+            updateOnDutyUI();
+        } catch (e) {
+            // 失敗時沿用原有名單
+        }
     }
 
     // ===== 當更同事（用「交更人」一樣嘅名單） =====
@@ -2897,7 +3017,7 @@ function updatePendingCardState(card) {
         if (!box || !sel) return;
         const names = Array.from(sel.options).map(o => o.value).filter(Boolean);
         box.innerHTML = names.map(function (n) {
-            return '<label style="width:100%; margin-top:8px;"><input type="checkbox" class="onduty-item" value="' + n + '"> ' + n + genderBadge(n) + '</label>';
+            return '<label style="width:100%; margin-top:8px;"><input type="checkbox" class="onduty-item" value="' + n + '"> ' + n + '</label>';
         }).join('');
         updateOnDutyUI();
     }
@@ -2913,8 +3033,8 @@ function updatePendingCardState(card) {
     }
 
     document.addEventListener("DOMContentLoaded", function() { 
-        decorateStaffOptions();
         buildOnDutyList();
+        loadMembers();
         const ob = document.getElementById('on-duty-box');
         if (ob) ob.addEventListener('toggle', updateOnDutyUI);
         const ol = document.getElementById('on-duty-list');
