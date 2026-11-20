@@ -57,9 +57,18 @@
         .modal h3 { margin: 0 0 10px 0; font-size: 16px; }
         .msg { font-size: 12px; margin-top: 8px; min-height: 16px; }
         .hide { display: none !important; }
+        /* 載入中 */
+        #bs-loading { display: none; position: fixed; inset: 0; z-index: 10050; background: rgba(255,255,255,.9); align-items: center; justify-content: center; flex-direction: column; gap: 14px; }
+        #bs-loading .bs-spinner { width: 46px; height: 46px; border: 5px solid #dbeafe; border-top-color: #1a73e8; border-radius: 50%; animation: bs-spin .8s linear infinite; }
+        #bs-loading .bs-loading-text { font-size: 14px; color: #1565c0; font-weight: bold; background: #fff; padding: 6px 16px; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+        @keyframes bs-spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+    <div id="bs-loading" role="status" aria-live="polite">
+        <div class="bs-spinner"></div>
+        <div class="bs-loading-text">載入中…</div>
+    </div>
     <div class="card">
         <h2>⚙️ 系統設定</h2>
         <div class="tabs">
@@ -223,7 +232,7 @@
     <div class="card hide" id="panel-members">
         <h3 style="font-size:15px; margin:0 0 8px 0; color:#333;">＋ 新增成員</h3>
         <label style="margin-top:0;">姓名</label>
-        <input type="text" id="mem-name" placeholder="交更人請連職號，例：陳ken (80571)">
+        <input type="text" id="mem-name" placeholder="交更人請連職號，例：龍ken (8000285)">
         <div class="row" style="margin-top:8px;">
             <select id="mem-type">
                 <option value="staff">交更人／當更同事</option>
@@ -320,6 +329,22 @@
         let currentTab = 'options';
         let modalHandler = null;
 
+        /* ================= 載入中提示 ================= */
+        let __bsTimer = null;
+        function bsLoading(show, text) {
+            const el = document.getElementById('bs-loading');
+            if (!el) return;
+            const t = el.querySelector('.bs-loading-text');
+            if (show) {
+                if (text && t) t.textContent = text;
+                clearTimeout(__bsTimer);
+                __bsTimer = setTimeout(function () { el.style.display = 'flex'; }, 180);
+            } else {
+                clearTimeout(__bsTimer);
+                el.style.display = 'none';
+            }
+        }
+
         /* ================= 共用 ================= */
         function esc(s) {
             return String(s == null ? '' : s)
@@ -343,12 +368,19 @@
             ['options', 'records', 'progress', 'export', 'stats', 'hall', 'members', 'account'].forEach(k => {
                 document.getElementById('panel-' + k).classList.toggle('hide', k !== name);
             });
-            if (name === 'records') loadRecords();
-            if (name === 'progress') loadRecords().then(renderProgress);
-            if (name === 'stats') loadRecords().then(renderStats);
-            if (name === 'hall') { loadHallSummary(); loadHallTables(); }
-            if (name === 'members') loadMembers();
-            if (name === 'account') { loadAuthStatus(); loadAuditLogs(); }
+            let jobs = [];
+            if (name === 'records') jobs.push(loadRecords());
+            if (name === 'progress') jobs.push(loadRecords().then(renderProgress));
+            if (name === 'stats') jobs.push(loadRecords().then(renderStats));
+            if (name === 'hall') jobs.push(loadHallSummary(), loadHallTables());
+            if (name === 'members') jobs.push(loadMembers());
+            if (name === 'account') jobs.push(loadAuthStatus(), loadAuditLogs());
+            if (name === 'options') jobs.push(renderOptions());
+            if (jobs.length) {
+                bsLoading(true, '載入中…');
+                Promise.all(jobs.map(function (p) { return Promise.resolve(p).catch(function () { }); }))
+                    .then(function () { bsLoading(false); }, function () { bsLoading(false); });
+            }
         }
 
         function openModal(title, bodyHtml, handler) {
@@ -1466,9 +1498,14 @@
 
         /* ================= 啟動 ================= */
         (async function init() {
-            await renderOptions();
-            await loadRecords();
-            fillFilterOptions();
+            bsLoading(true, '載入中…');
+            try {
+                await renderOptions();
+                await loadRecords();
+                fillFilterOptions();
+            } finally {
+                bsLoading(false);
+            }
         })();
     </script>
 </body>
