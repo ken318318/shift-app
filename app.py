@@ -63,6 +63,54 @@ def ensure_tables():
                         detail TEXT,
                         created_at TIMESTAMPTZ DEFAULT NOW()
                      )""")
+        c.execute("""CREATE TABLE IF NOT EXISTS members (
+                        id SERIAL PRIMARY KEY,
+                        name TEXT NOT NULL UNIQUE,
+                        mtype TEXT NOT NULL DEFAULT 'staff',
+                        gender TEXT DEFAULT '',
+                        created_at TIMESTAMPTZ DEFAULT NOW()
+                     )""")
+        c.execute("SELECT COUNT(*) FROM members")
+        if (c.fetchone()[0] or 0) == 0:
+            seed = [
+                ('龍ken (8000285)', 'staff', '男'),
+                ('陳ken (80571)', 'staff', '男'),
+                ('Fish (8047495)', 'staff', '女'),
+                ('阿能 (8055532)', 'staff', '男'),
+                ('阿威 (8055475)', 'staff', '男'),
+                ('阿倫 (8017308)', 'staff', '男'),
+                ('世外高喵 (298)', 'staff', '女'),
+                ('Paco (8047393)', 'staff', '男'),
+                ('小信 (8056027)', 'staff', '女'),
+                ('kiko (1227)', 'staff', '女'),
+                ('Wawa (1145)', 'staff', '男'),
+                ('Ivy (8001161)', 'staff', '女'),
+                ('秋龍 (67162)', 'staff', '女'),
+                ('炳 (6234)', 'staff', '男'),
+                ('Carman', 'follower', ''),
+                ('David', 'follower', ''),
+                ('Nam', 'follower', ''),
+                ('Stella', 'follower', ''),
+            ]
+            c.executemany("""INSERT INTO members (name, mtype, gender) VALUES (%s, %s, %s)
+                            ON CONFLICT (name) DO NOTHING""", seed)
+
+        # 每人帳號（帳號＝員工ID，密碼＝BS＋員工ID）
+        c.execute("ALTER TABLE members ADD COLUMN IF NOT EXISTS account TEXT")
+        c.execute("ALTER TABLE members ADD COLUMN IF NOT EXISTS password TEXT")
+        c.execute("ALTER TABLE members ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'staff'")
+        c.execute("SELECT id, name, COALESCE(mtype, 'staff') FROM members WHERE COALESCE(account, '') = ''")
+        for mid, nm, mt in c.fetchall():
+            mm = re.search(r"[(（](\d+)[)）]", nm or '')
+            if mm:
+                acc = mm.group(1)
+                c.execute("""UPDATE members SET account = %s, password = %s,
+                                          role = COALESCE(NULLIF(role, ''), 'staff')
+                             WHERE id = %s""", (acc, 'BS' + acc, mid))
+            elif mt == 'follower':
+                c.execute("""UPDATE members SET account = %s, password = %s,
+                                          role = COALESCE(NULLIF(role, ''), 'staff')
+                             WHERE id = %s""", (nm, nm + '888', mid))
         conn.commit()
         print("系統資料表檢查完成（app_settings / audit_logs）")
     except Exception as e:
@@ -297,16 +345,44 @@ def login():
         if pwd and pwd == admin_pwd:
             session['logged_in'] = True
             session['role'] = 'admin'
+            session['user_name'] = '管理員'
             session['epoch'] = get_epoch('admin', force=True)
             log_action('登入', '管理員登入')
             return redirect(url_for('index'))
         elif pwd and pwd == staff_pwd:
             session['logged_in'] = True
             session['role'] = 'staff'
+            session['user_name'] = '同事'
             session['epoch'] = get_epoch('staff', force=True)
             log_action('登入', '同事登入')
             return redirect(url_for('index'))
         else:
+            # 個人帳號（帳號＝員工ID，密碼＝BS＋員工ID）
+            member = None
+            if pwd:
+                conn = None
+                try:
+                    conn = get_db_connection()
+                    c = conn.cursor()
+                    c.execute("""SELECT name, COALESCE(role, 'staff')
+                                 FROM members
+                                 WHERE password = %s AND COALESCE(account, '') <> ''
+                                 LIMIT 1""", (pwd,))
+                    member = c.fetchone()
+                except Exception as e:
+                    print('個人帳號登入檢查失敗:', e)
+                finally:
+                    if conn:
+                        release_db_connection(conn)
+
+            if member:
+                role = 'admin' if member[1] == 'admin' else 'staff'
+                session['logged_in'] = True
+                session['role'] = role
+                session['user_name'] = member[0]
+                session['epoch'] = get_epoch(role, force=True)
+                log_action('登入', '個人帳號：%s' % member[0])
+                return redirect(url_for('index'))
             error = "密碼錯誤！"
     return render_template('login.html', error=error)
 
@@ -318,7 +394,8 @@ def logout():
 @app.route('/admin')
 def admin():
     if session.get('role') != 'admin':
-        return "⚠️ 權限不足！", 403
+        # 普通帳號：直接返回首頁（前端亦已隱藏「設定」按鈕）
+        return redirect(url_for('index'))
     return render_template('admin.html')
 
 @app.route('/api/diag', methods=['GET'])
@@ -699,10 +776,12 @@ def overwrite_record():
         if not old_id:
             return jsonify({"status": "error", "message": "❌ 系統錯誤：找不到要覆蓋的舊紀錄。"})
 
-        c.execute("SELECT created_at FROM records WHERE id = %s", (old_id,))
+        c.execute("""SELECT created_at, COALESCE(reviewed, FALSE), reviewed_at, COALESCE(reviewed_by, '')
+                     FROM records WHERE id = %s""", (old_id,))
         row = c.fetchone()
         if not row:
             return jsonify({"status": "error", "message": "❌ 找不到該紀錄！"})
+        old_reviewed, old_reviewed_at, old_reviewed_by = row[1], row[2], row[3]
 
         if session.get('role') != 'admin':
             c.execute("SELECT NOW() - created_at < interval '5 minutes' FROM records WHERE id = %s", (old_id,))
@@ -714,13 +793,13 @@ def overwrite_record():
 
         now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
         c.execute("""INSERT INTO records 
-                     (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, created_at) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+                     (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, reviewed, reviewed_at, reviewed_by, created_at) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                    data.get('checklist'), data.get('status'), data.get('follower'), data.get('on_duty'), data.get('note'),
                    data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
                    data.get('guest_feedback'), data.get('dlr_feedback'),
-                   data.get('layout_side'), now_macau))
+                   data.get('layout_side'), old_reviewed, old_reviewed_at, old_reviewed_by, now_macau))
         
         conn.commit()
         cache_clear('pending')
@@ -1343,6 +1422,122 @@ def build_update_report_xlsx(data_rows):
     return buf.getvalue()
 
 
+# ---------- 完整備份 / 還原 ----------
+_BACKUP_COLUMNS = ['id', 'name', 'shift', 'lux', 'temp', 'bgm', 'checklist', 'status', 'follower',
+                   'on_duty', 'note', 'lux_issue', 'temp_issue', 'db_issue', 'guest_feedback',
+                   'dlr_feedback', 'layout_side', 'reviewed', 'reviewed_at', 'reviewed_by', 'created_at']
+
+
+def _rows_as_dicts(cur):
+    cols = [d[0] for d in cur.description]
+    return [dict(zip(cols, r)) for r in cur.fetchall()]
+
+
+@app.route('/api/backup/export', methods=['GET'])
+def backup_export():
+    """下載完整備份（JSON）：紀錄、選項、台號總表、系統設定、操作紀錄。"""
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以備份。'})
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT * FROM records ORDER BY id")
+        records = _rows_as_dicts(c)
+        c.execute("SELECT * FROM venue_configs ORDER BY id")
+        configs = _rows_as_dicts(c)
+        c.execute("SELECT * FROM hall_tables ORDER BY id")
+        halls = _rows_as_dicts(c)
+        c.execute("SELECT * FROM app_settings")
+        settings = _rows_as_dicts(c)
+        c.execute("SELECT * FROM audit_logs ORDER BY id DESC LIMIT 2000")
+        logs = _rows_as_dicts(c)
+
+        now = datetime.datetime.now(pytz.timezone('Asia/Macau'))
+        payload = {
+            'format': 'bs-shift-backup',
+            'version': 1,
+            'exported_at': now.strftime('%Y-%m-%d %H:%M:%S'),
+            'counts': {'records': len(records), 'configs': len(configs),
+                       'hall_tables': len(halls), 'settings': len(settings), 'audit_logs': len(logs)},
+            'records': records,
+            'venue_configs': configs,
+            'hall_tables': halls,
+            'app_settings': settings,
+            'audit_logs': logs,
+        }
+        body = json.dumps(payload, ensure_ascii=False, default=str, indent=1)
+        fname = 'bs_backup_' + now.strftime('%Y%m%d_%H%M') + '.json'
+        log_action('下載備份', '紀錄 %d 筆' % len(records))
+        return Response(body, mimetype='application/json',
+                        headers={'Content-Disposition': 'attachment; filename="%s"' % fname})
+    except Exception as e:
+        print('Backup Error:', e)
+        return jsonify({'status': 'error', 'message': '❌ 備份失敗，請稍後再試。'})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/backup/import_records', methods=['POST'])
+def backup_import_records():
+    """由備份還原交更紀錄（只新增，不覆蓋／不刪除）。"""
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以還原。'})
+
+    data = request.json or {}
+    rows = data.get('records')
+    if not isinstance(rows, list) or not rows:
+        return jsonify({'status': 'error', 'message': '❌ 備份檔內沒有紀錄。'})
+
+    allowed = set(_BACKUP_COLUMNS)
+    added = skipped = 0
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        for r in rows[:20000]:
+            if not isinstance(r, dict):
+                skipped += 1
+                continue
+            cols = [k for k in _BACKUP_COLUMNS if k in r]
+            if 'id' not in cols:
+                skipped += 1
+                continue
+            vals = [r[k] for k in cols]
+            sql = 'INSERT INTO records (%s) VALUES (%s) ON CONFLICT (id) DO NOTHING RETURNING id' % (
+                ','.join(cols), ','.join(['%s'] * len(cols)))
+            c.execute('SAVEPOINT sp')
+            try:
+                c.execute(sql, vals)
+                inserted = c.fetchone()
+                c.execute('RELEASE SAVEPOINT sp')
+                if inserted:
+                    added += 1
+                else:
+                    skipped += 1
+            except Exception as e:
+                print('還原單筆失敗:', e)
+                c.execute('ROLLBACK TO SAVEPOINT sp')
+                skipped += 1
+
+        c.execute("SELECT setval(pg_get_serial_sequence('records','id'), "
+                  "COALESCE((SELECT MAX(id) FROM records), 1))")
+        conn.commit()
+        log_action('還原紀錄', '新增 %d 筆，略過 %d 筆' % (added, skipped))
+        return jsonify({'status': 'success',
+                        'message': '✅ 還原完成：新增 %d 筆，略過 %d 筆（已存在或格式不符）。' % (added, skipped),
+                        'added': added, 'skipped': skipped})
+    except Exception as e:
+        print('Restore Error:', e)
+        if conn: conn.rollback()
+        return jsonify({'status': 'error', 'message': '❌ 還原失敗，請稍後再試。'})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
 @app.route('/api/export/report_update', methods=['GET'])
 def export_report_update():
     conn = None
@@ -1962,13 +2157,15 @@ def _up_detect(date_str):
         # 以「類別＋台號」判斷（因為有時同事冇填問題，只填台號）
         for line in secs.get('早前已處理', '').split('\n'):
             for it in _up_parse_line(line):
-                done_at[(it['category'], it['code'])] = ds
+                done_at[(it['category'], it['code'])] = (ds, it['problem'])
             for it in _up_parse_nfc(line, done=True):
                 if it['code']:
-                    done_at[('NFC', it['code'])] = ds
+                    done_at[('NFC', it['code'])] = (ds, _up_nfc_problem(it['boxes']))
 
         for name, seg in secs.items():
-            if name == '早前已處理':
+            # 「早前已處理」＝完成標記；「早前未處理」只係上一張紀錄嘅文字副本，
+            # 原始台號仍會喺原本嗰張紀錄抽出，所以兩段都唔當新項目，避免舊台號殘留。
+            if name in ('早前已處理', '早前未處理'):
                 continue
             for line in seg.split('\n'):
                 for it in _up_parse_line(line):
@@ -1978,10 +2175,14 @@ def _up_detect(date_str):
 
     for key in list(out.keys()):
         rec = out[key]
-        dd = done_at.get(key)
-        if dd and dd >= rec['last_seen']:
-            out.pop(key, None)
-            continue
+        info = done_at.get(key)
+        if info:
+            dd, dprob = info
+            if dd >= rec['last_seen']:
+                # 若「已完成」嘅問題與最新上報嘅問題不同，唔當佢完成（避免新問題被誤刪）
+                if (not dprob) or (not rec['problem']) or dprob == rec['problem']:
+                    out.pop(key, None)
+                    continue
         rec['side'] = sides.get(rec['code'], '')
 
     return out, done_at, nfc_nocode
@@ -2100,11 +2301,18 @@ def update_report_get():
     reports = _up_load_reports()
     saved = reports.get(_up_key(date_str, rtype)) or {}
 
-    excl = set()
-    for x in (_up_load_excl().get(rtype) or []):
-        c = _up_norm(x)
-        if c:
-            excl.add(c)
+    # 已移除台號：記住「移除日期」；日後有新紀錄就自動重新顯示（唔會永久隱藏）
+    excl_at = {}
+    for k, rep in reports.items():
+        if '|' not in k:
+            continue
+        d, t = k.split('|', 1)
+        if t != rtype or d > date_str:
+            continue
+        for x in (rep.get('excluded') or []):
+            c = _up_norm(x)
+            if c:
+                excl_at[c] = max(excl_at.get(c, ''), d)
 
     # 上一份同類報告 → 用來判斷「新增」（紅字）
     prev_dates = []
@@ -2125,6 +2333,17 @@ def update_report_get():
     det_all, done_map, nfc_nocode = _up_detect(date_str)
     lut = _up_table_lookup()
 
+    def resolve_hp(code):
+        """台號對應 Hall／Pit。若只輸入數字（例：0307），嘗試用結尾比對。"""
+        hp = lut.get(code)
+        if hp:
+            return hp.get('hall', ''), hp.get('pit', '')
+        if re.match(r'^\d{3,6}$', code or ''):
+            hits = [lut[k] for k in lut if k.endswith(code)]
+            if len(hits) == 1:
+                return hits[0].get('hall', ''), hits[0].get('pit', '')
+        return _up_fallback_hp(code)
+
     def eligible(e):
         if is_layout:
             if not _up_is_layout(e['category'], e['problem']):
@@ -2138,12 +2357,30 @@ def update_report_get():
 
     det = {}
     for (cat_key, code), e in det_all.items():
-        if eligible(e) and code not in excl:
-            det[code] = e
+        if not eligible(e):
+            continue
+        ed = excl_at.get(code)
+        if ed and e['last_seen'] <= ed:
+            continue
+        det[code] = e
+
+    # 仍然存在於紀錄內嘅台號（不分狀態、不分完成），用嚟清理舊儲存報表
+    present_all = set()
+    for (cat_key, code), e in det_all.items():
+        if is_layout:
+            if _up_is_layout(e['category'], e['problem']):
+                present_all.add(code)
+        elif e['category'] == cat_name:
+            present_all.add(code)
+    manual = set()
+    for x in (saved.get('manual') or []):
+        c = _up_norm(x)
+        if c:
+            manual.add(c)
 
     # 已標記完成、而且之後冇再上報嘅台號（只限當前類別）
     done_only = set()
-    for (c, code), _dt in done_map.items():
+    for (c, code), _info in done_map.items():
         if is_layout:
             if not _up_is_layout(c, ''):
                 continue
@@ -2162,8 +2399,15 @@ def update_report_get():
         codes = []
         for x in (col.get('codes') or []):
             c = _up_norm(x)
-            if c and c not in excl and c not in done_only:
-                codes.append(c)
+            if not c or c in done_only:
+                continue
+            ed = excl_at.get(c)
+            if ed and c not in det:
+                continue
+            # 台號已不在任何紀錄內（例如後來修正了台號）→ 自動移除；手動加入者保留
+            if c not in present_all and c not in manual:
+                continue
+            codes.append(c)
         columns.append({'main': col.get('main') or '',
                         'sub': (col.get('sub') or '').replace('Dearly', 'Dealer'),
                         'codes': codes})
@@ -2207,11 +2451,7 @@ def update_report_get():
 
     def make_item(code):
         e = det.get(code) or {}
-        hp = lut.get(code) or {}
-        hall = hp.get('hall') or ''
-        pit = hp.get('pit') or ''
-        if not hall and not pit:
-            hall, pit = _up_fallback_hp(code)
+        hall, pit = resolve_hp(code)
         return {
             'table': code,
             'hall': hall,
@@ -2257,7 +2497,7 @@ def update_report_get():
         'counts': counts,
         'total': total,
         'baseline': sorted(baseline),
-        'excluded': sorted(excl),
+        'excluded': sorted(excl_at),
         'nfc_missing': nfc_missing,
         'detected_count': len(det),
     })
@@ -2306,6 +2546,24 @@ def update_report_save():
         if c and c not in seen and c not in excl:
             excl.append(c)
 
+    # 記錄「手動加入」嘅台號（唔喺紀錄內），以免下次載入時被自動清除
+    manual = []
+    try:
+        det_save, _dm, _nc = _up_detect(date_str)
+        present = set()
+        for (cat_key, code), e in det_save.items():
+            if rtype == 'layout':
+                if _up_is_layout(e['category'], e['problem']):
+                    present.add(code)
+            elif e['category'] == rtype[4:]:
+                present.add(code)
+        for col in clean_cols:
+            for c in col['codes']:
+                if c not in present and c not in manual:
+                    manual.append(c)
+    except Exception as e:
+        print('更新表手動台號檢查失敗:', e)
+
     reports = _up_load_reports()
     reports[_up_key(date_str, rtype)] = {
         'date': date_str,
@@ -2313,6 +2571,7 @@ def update_report_save():
         'sent': bool(data.get('sent')),
         'columns': clean_cols,
         'excluded': excl,
+        'manual': manual,
         'updated_at': _up_now_text(),
     }
     if not _up_store_reports(reports):
@@ -2346,11 +2605,441 @@ def update_report_save():
                     'message': '✅ 已儲存（%s）' % ('已 Send Email' if data.get('sent') else '未 Send Email')})
 
 
+# ---------- 成員管理（交更人 / 跟進人） ----------
+@app.route('/api/members', methods=['GET'])
+def get_members():
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""SELECT id, name, mtype, COALESCE(gender, ''),
+                            COALESCE(account, ''), COALESCE(role, 'staff')
+                     FROM members ORDER BY mtype DESC, id ASC""")
+        rows = c.fetchall()
+        return jsonify({'status': 'success', 'members': [
+            {'id': r[0], 'name': r[1], 'mtype': r[2], 'gender': r[3],
+             'account': r[4], 'role': r[5]} for r in rows]})
+    except Exception as e:
+        print('讀取成員失敗:', e)
+        return jsonify({'status': 'error', 'message': '❌ 讀取成員失敗。', 'members': []})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/members/add', methods=['POST'])
+def add_member():
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以新增成員。'})
+    data = request.json or {}
+    name = (data.get('name') or '').strip()[:60]
+    mtype = (data.get('mtype') or 'staff').strip()
+    gender = (data.get('gender') or '').strip()
+    if not name:
+        return jsonify({'status': 'error', 'message': '❌ 請輸入姓名。'})
+    if mtype not in ('staff', 'follower'):
+        mtype = 'staff'
+    if gender not in ('男', '女'):
+        gender = ''
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT 1 FROM members WHERE name = %s", (name,))
+        if c.fetchone():
+            return jsonify({'status': 'error', 'message': '⚠️ 該成員已存在。'})
+        mm = re.search(r"[(（](\d+)[)）]", name)
+        if mtype == 'staff' and mm:
+            acc = mm.group(1)
+            c.execute("""INSERT INTO members (name, mtype, gender, account, password, role)
+                         VALUES (%s, %s, %s, %s, %s, 'staff')""",
+                      (name, mtype, gender, acc, 'BS' + acc))
+        elif mtype == 'follower':
+            c.execute("""INSERT INTO members (name, mtype, gender, account, password, role)
+                         VALUES (%s, %s, %s, %s, %s, 'staff')""",
+                      (name, mtype, gender, name, name + '888'))
+        else:
+            c.execute("INSERT INTO members (name, mtype, gender) VALUES (%s, %s, %s)", (name, mtype, gender))
+        conn.commit()
+        log_action('新增成員', '%s（%s）' % (name, '交更人' if mtype == 'staff' else '跟進人'))
+        return jsonify({'status': 'success', 'message': '✅ 已新增成員。'})
+    except Exception as e:
+        print('新增成員失敗:', e)
+        if conn: conn.rollback()
+        return jsonify({'status': 'error', 'message': '❌ 新增失敗，請稍後再試。'})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/members/update', methods=['POST'])
+def update_member():
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以修改成員。'})
+    data = request.json or {}
+    mid = data.get('id')
+    name = (data.get('name') or '').strip()[:60]
+    mtype = (data.get('mtype') or 'staff').strip()
+    gender = (data.get('gender') or '').strip()
+    if not mid or not name:
+        return jsonify({'status': 'error', 'message': '❌ 請輸入姓名。'})
+    if mtype not in ('staff', 'follower'):
+        mtype = 'staff'
+    if gender not in ('男', '女'):
+        gender = ''
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT name FROM members WHERE id = %s", (mid,))
+        old = c.fetchone()
+        if not old:
+            return jsonify({'status': 'error', 'message': '❌ 找不到該成員。'})
+        c.execute("SELECT 1 FROM members WHERE name = %s AND id <> %s", (name, mid))
+        if c.fetchone():
+            return jsonify({'status': 'error', 'message': '⚠️ 已有同名成員。'})
+        c.execute("UPDATE members SET name = %s, mtype = %s, gender = %s WHERE id = %s",
+                  (name, mtype, gender, mid))
+        conn.commit()
+        log_action('修改成員', '%s → %s' % (old[0], name))
+        return jsonify({'status': 'success', 'message': '✅ 已更新成員（只影響新交更，舊紀錄不變）。'})
+    except Exception as e:
+        print('修改成員失敗:', e)
+        if conn: conn.rollback()
+        return jsonify({'status': 'error', 'message': '❌ 修改失敗，請稍後再試。'})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/members/set_role', methods=['POST'])
+def set_member_role():
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以更改權限。'})
+    data = request.json or {}
+    mid = data.get('id')
+    role = (data.get('role') or '').strip()
+    if role not in ('admin', 'staff'):
+        return jsonify({'status': 'error', 'message': '❌ 權限類型不正確。'})
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""UPDATE members SET role = %s WHERE id = %s AND COALESCE(account, '') <> ''""",
+                  (role, mid))
+        if c.rowcount == 0:
+            conn.rollback()
+            return jsonify({'status': 'error', 'message': '❌ 該成員尚未設定帳號。'})
+        conn.commit()
+        log_action('更改權限', '成員 ID %s → %s' % (mid, '管理員' if role == 'admin' else '普通'))
+        return jsonify({'status': 'success', 'message': '✅ 已更改為「%s」。' % ('管理員' if role == 'admin' else '普通')})
+    except Exception as e:
+        print('更改權限失敗:', e)
+        if conn: conn.rollback()
+        return jsonify({'status': 'error', 'message': '❌ 更改失敗，請稍後再試。'})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/members/reset_password', methods=['POST'])
+def reset_member_password():
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以重設密碼。'})
+    data = request.json or {}
+    mid = data.get('id')
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT name FROM members WHERE id = %s", (mid,))
+        row = c.fetchone()
+        if not row:
+            return jsonify({'status': 'error', 'message': '❌ 找不到該成員。'})
+        mm = re.search(r"[(（](\d+)[)）]", row[0] or '')
+        if mm:
+            acc = mm.group(1)
+            pwd = 'BS' + acc
+        else:
+            # 負責人：帳號＝姓名，密碼＝姓名＋888
+            acc = row[0]
+            pwd = row[0] + '888'
+        c.execute("UPDATE members SET account = %s, password = %s WHERE id = %s", (acc, pwd, mid))
+        conn.commit()
+        log_action('重設密碼', row[0])
+        return jsonify({'status': 'success', 'message': '✅ 密碼已重設為 %s（帳號 %s）。' % (pwd, acc),
+                        'account': acc, 'password': pwd})
+    except Exception as e:
+        print('重設密碼失敗:', e)
+        if conn: conn.rollback()
+        return jsonify({'status': 'error', 'message': '❌ 重設失敗，請稍後再試。'})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/members/delete', methods=['POST'])
+def delete_member():
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以刪除成員。'})
+    data = request.json or {}
+    mid = data.get('id')
+    if not mid:
+        return jsonify({'status': 'error', 'message': '❌ 找不到成員。'})
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT name FROM members WHERE id = %s", (mid,))
+        row = c.fetchone()
+        if not row:
+            return jsonify({'status': 'error', 'message': '❌ 找不到該成員。'})
+        c.execute("DELETE FROM members WHERE id = %s", (mid,))
+        conn.commit()
+        log_action('刪除成員', row[0])
+        return jsonify({'status': 'success', 'message': '✅ 已刪除成員（舊紀錄不受影響）。'})
+    except Exception as e:
+        print('刪除成員失敗:', e)
+        if conn: conn.rollback()
+        return jsonify({'status': 'error', 'message': '❌ 刪除失敗，請稍後再試。'})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+# ---------- 台號狀態管理 ----------
+@app.route('/api/hall_tables', methods=['GET'])
+def list_hall_tables():
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以使用。'})
+    q = (request.args.get('q') or '').strip().upper()
+    hall = (request.args.get('hall') or '').strip()
+    pit = (request.args.get('pit') or '').strip()
+
+    where = []
+    params = []
+    if q:
+        where.append("UPPER(table_code) LIKE %s")
+        params.append('%' + q + '%')
+    if hall:
+        where.append("hall = %s")
+        params.append(hall)
+    if pit:
+        where.append("pit = %s")
+        params.append(pit)
+    sql_where = (' WHERE ' + ' AND '.join(where)) if where else ''
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM hall_tables" + sql_where, params)
+        total = c.fetchone()[0]
+        c.execute("""SELECT id, hall, pit, table_code, status
+                     FROM hall_tables""" + sql_where + " ORDER BY hall, pit, table_code LIMIT 300", params)
+        rows = c.fetchall()
+        return jsonify({'status': 'success', 'total': total, 'rows': [
+            {'id': r[0], 'hall': r[1], 'pit': r[2], 'table_code': r[3], 'status': r[4]} for r in rows]})
+    except Exception as e:
+        print('讀取台號總表失敗:', e)
+        return jsonify({'status': 'error', 'message': '❌ 讀取失敗。', 'rows': []})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/hall_tables/summary', methods=['GET'])
+def hall_tables_summary():
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以使用。'})
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""SELECT hall, pit, COUNT(*),
+                            COUNT(*) FILTER (WHERE status = '營運'),
+                            COUNT(*) FILTER (WHERE status = '停運')
+                     FROM hall_tables
+                     GROUP BY hall, pit
+                     ORDER BY hall, pit""")
+        rows = c.fetchall()
+        halls = []
+        by_hall = {}
+        total = {'total': 0, 'active': 0, 'inactive': 0}
+        for hall, pit, n, act, dea in rows:
+            n, act, dea = int(n), int(act or 0), int(dea or 0)
+            if hall not in by_hall:
+                by_hall[hall] = {'hall': hall, 'total': 0, 'active': 0, 'inactive': 0, 'pits': []}
+                halls.append(by_hall[hall])
+            h = by_hall[hall]
+            h['total'] += n
+            h['active'] += act
+            h['inactive'] += dea
+            h['pits'].append({'pit': pit, 'total': n, 'active': act, 'inactive': dea})
+            total['total'] += n
+            total['active'] += act
+            total['inactive'] += dea
+        return jsonify({'status': 'success', 'halls': halls, 'total': total})
+    except Exception as e:
+        print('台號統計失敗:', e)
+        return jsonify({'status': 'error', 'message': '❌ 讀取統計失敗。', 'halls': [], 'total': {}})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/hall_tables/add', methods=['POST'])
+def add_hall_table():
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以新增台號。'})
+    data = request.json or {}
+    hall = (data.get('hall') or '').strip()
+    code = (data.get('table_code') or '').strip().upper()
+    status = (data.get('status') or '營運').strip()
+    try:
+        pit = int(data.get('pit'))
+    except Exception:
+        return jsonify({'status': 'error', 'message': '❌ Pit 必須是數字。'})
+    if not hall or not code:
+        return jsonify({'status': 'error', 'message': '❌ Hall 及台號必須填寫。'})
+    if status not in ('營運', '停運'):
+        status = '營運'
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""INSERT INTO hall_tables (hall, pit, table_code, status)
+                     VALUES (%s, %s, %s, %s) ON CONFLICT (hall, pit, table_code) DO NOTHING RETURNING id""",
+                  (hall, pit, code, status))
+        row = c.fetchone()
+        if not row:
+            conn.rollback()
+            return jsonify({'status': 'error', 'message': '⚠️ 該 Hall／Pit／台號 已存在。'})
+        conn.commit()
+        log_action('新增台號', '%s / Pit %s / %s' % (hall, pit, code))
+        return jsonify({'status': 'success', 'message': '✅ 已新增台號 %s。' % code})
+    except Exception as e:
+        print('新增台號失敗:', e)
+        if conn: conn.rollback()
+        return jsonify({'status': 'error', 'message': '❌ 新增失敗，請稍後再試。'})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/hall_tables/update', methods=['POST'])
+def update_hall_table():
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以修改台號。'})
+    data = request.json or {}
+    rid = data.get('id')
+    hall = (data.get('hall') or '').strip()
+    code = (data.get('table_code') or '').strip().upper()
+    status = (data.get('status') or '').strip()
+    try:
+        pit = int(data.get('pit'))
+    except Exception:
+        return jsonify({'status': 'error', 'message': '❌ Pit 必須是數字。'})
+    if not rid:
+        return jsonify({'status': 'error', 'message': '❌ 找不到台號。'})
+    if not hall or not code:
+        return jsonify({'status': 'error', 'message': '❌ Hall 及台號必須填寫。'})
+    if status not in ('營運', '停運'):
+        status = '營運'
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""UPDATE hall_tables SET hall = %s, pit = %s, table_code = %s, status = %s, updated_at = NOW()
+                     WHERE id = %s""", (hall, pit, code, status, rid))
+        if c.rowcount == 0:
+            conn.rollback()
+            return jsonify({'status': 'error', 'message': '❌ 找不到該台號。'})
+        conn.commit()
+        log_action('修改台號', '%s / Pit %s / %s（%s）' % (hall, pit, code, status))
+        return jsonify({'status': 'success', 'message': '✅ 已更新台號。'})
+    except Exception as e:
+        print('修改台號失敗:', e)
+        if conn: conn.rollback()
+        if 'duplicate key' in str(e):
+            return jsonify({'status': 'error', 'message': '⚠️ 該 Hall／Pit／台號 組合已存在。'})
+        return jsonify({'status': 'error', 'message': '❌ 修改失敗，請稍後再試。'})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/hall_tables/delete', methods=['POST'])
+def delete_hall_table():
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以刪除台號。'})
+    data = request.json or {}
+    rid = data.get('id')
+    if not rid:
+        return jsonify({'status': 'error', 'message': '❌ 找不到台號。'})
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT table_code FROM hall_tables WHERE id = %s", (rid,))
+        row = c.fetchone()
+        if not row:
+            return jsonify({'status': 'error', 'message': '❌ 找不到該台號。'})
+        c.execute("DELETE FROM hall_tables WHERE id = %s", (rid,))
+        conn.commit()
+        log_action('刪除台號', row[0])
+        return jsonify({'status': 'success', 'message': '✅ 已刪除台號 %s。' % row[0]})
+    except Exception as e:
+        print('刪除台號失敗:', e)
+        if conn: conn.rollback()
+        return jsonify({'status': 'error', 'message': '❌ 刪除失敗，請稍後再試。'})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/hall_tables/status', methods=['POST'])
+def set_hall_status():
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以修改。'})
+    data = request.json or {}
+    status = (data.get('status') or '').strip()
+    ids = data.get('ids')
+    if not isinstance(ids, list):
+        ids = [data.get('id')] if data.get('id') else []
+    ids = [i for i in ids if isinstance(i, int) or (isinstance(i, str) and i.isdigit())]
+    if status not in ('營運', '停運'):
+        return jsonify({'status': 'error', 'message': '❌ 狀態不正確。'})
+    if not ids:
+        return jsonify({'status': 'error', 'message': '❌ 沒有選取台號。'})
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("UPDATE hall_tables SET status = %s, updated_at = NOW() WHERE id = ANY(%s)",
+                  (status, [int(i) for i in ids]))
+        updated = c.rowcount
+        conn.commit()
+        log_action('修改台號狀態', '%d 個台號 → %s' % (updated, status))
+        return jsonify({'status': 'success', 'message': '✅ 已更新 %d 個台號為「%s」。' % (updated, status),
+                        'updated': updated})
+    except Exception as e:
+        print('修改台號狀態失敗:', e)
+        if conn: conn.rollback()
+        return jsonify({'status': 'error', 'message': '❌ 更新失敗，請稍後再試。'})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
 @app.route('/')
 def index():
     # 將是否為管理員的狀態傳給前端
     is_admin = (session.get('role') == 'admin')
-    return render_template('index.html', is_admin=is_admin)
+    return render_template('index.html', is_admin=is_admin, user_name=session.get('user_name', ''))
 
 if __name__ == '__main__':
     app.run()
