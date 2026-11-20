@@ -414,7 +414,7 @@
             <label style="width:100%; margin-top:8px;"><input type="checkbox" value="Stella" class="follower-item"> Stella</label>
         </div>
         
-        <label>詳細交更事項：</label>
+        <label>特別交更事項：</label>
         <textarea id="notes" rows="4" placeholder="請輸入詳細問題、位置及跟進情況..."></textarea>
         
         <div id="pending-container" style="display: none; background: #fff3cd; padding: 15px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 30px; margin-bottom: 20px;">
@@ -2342,6 +2342,10 @@ function updatePendingCardState(card) {
                 } else {
                     urMsg('✅ 已抓取 ' + data.detected_count + ' 個台號（' + (mo === '1' ? '只計已 Send mail' : '全部狀態') + '）。' +
                           (data.has_saved ? '此日期已有儲存版本。' : ''));
+                }
+                if (data.nfc_missing) {
+                    const el = document.getElementById('ur-msg');
+                    if (el) el.textContent += ' ⚠️ 另有 ' + data.nfc_missing + ' 項 NFC 異常未填台號，未能上表（請在交更時填台號）。';
                 }
             })
             .catch(function () { bsLoading(false); urMsg('❌ 連線失敗，請重新整理後再試。'); });
