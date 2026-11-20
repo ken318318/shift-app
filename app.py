@@ -491,6 +491,15 @@ def reorder_config():
             release_db_connection(conn)
 
 
+def _cfg_prefix(name):
+    """用嚟判斷同一個群組（例：『賭檯 - xxx』、『燈-xxx』）。"""
+    n = (name or '').strip()
+    for sep in (' - ', '-'):
+        if sep in n:
+            return n.split(sep, 1)[0].strip()
+    return n
+
+
 @app.route('/api/add_config', methods=['POST'])
 def add_config():
     data = request.json or {}
@@ -513,11 +522,29 @@ def add_config():
         row = c.fetchone()
         cat_order = row[0] or 0
         item_order = (row[1] or 0) + 1
-        if not cat_order:
+        is_new_cat = (cat_order == 0)
+        if is_new_cat:
             c.execute("SELECT COALESCE(MAX(cat_order),0) FROM venue_configs")
             cat_order = (c.fetchone()[0] or 0) + 10
         c.execute("INSERT INTO venue_configs (category, problem, cat_order, item_order) VALUES (%s, %s, %s, %s)",
                   (category, problem, cat_order, item_order))
+
+        if is_new_cat:
+            # 新類別自動排入同一個群組後面（例：賭檯 - 新項目 會排喺其他「賭檯」類別之後）
+            c.execute("""SELECT category, MIN(COALESCE(cat_order,0)) AS o
+                         FROM venue_configs GROUP BY category ORDER BY o ASC, category ASC""")
+            order = [r[0] for r in c.fetchall() if r[0] != category]
+            pos = len(order)
+            prefix = _cfg_prefix(category)
+            if prefix:
+                for i, name in enumerate(order):
+                    if _cfg_prefix(name) == prefix:
+                        pos = i + 1
+            order.insert(pos, category)
+            for idx, name in enumerate(order):
+                c.execute("UPDATE venue_configs SET cat_order = %s WHERE category = %s",
+                          ((idx + 1) * 10, name))
+
         conn.commit()
         cache_clear('configs')
         log_action('新增選項', f"{category} / {problem}")
@@ -1746,6 +1773,33 @@ def _up_split_sections(note):
     return out
 
 
+_NFC_RE = re.compile(r'NFC\s*異常\s*[:：]\s*(.*?)\s*[（(]\s*Box\s*[:：]\s*(.*?)\s*[)）]\s*(?:\[狀態\s*[:：]\s*([^\]]*)\])?')
+_NFC_DONE_RE = re.compile(r'NFC\s*[-－]\s*(.*?)\s*[（(]\s*Box\s*[:：]\s*(.*?)\s*[)）]')
+
+
+def _up_parse_nfc(text, done=False):
+    """解析 NFC 異常： NFC異常: NB0201 (Box: Box 3) [狀態:...] / NFC - NB0201 (Box: Box 3)"""
+    out = []
+    if not text:
+        return out
+    rx = _NFC_DONE_RE if done else _NFC_RE
+    for m in rx.finditer(str(text)):
+        code = _up_norm(m.group(1))
+        boxes = (m.group(2) or '').strip()
+        status = ''
+        if not done and m.lastindex and m.lastindex >= 3:
+            status = (m.group(3) or '').strip()
+        out.append({'code': code, 'boxes': boxes, 'status': status})
+    return out
+
+
+def _up_nfc_problem(boxes):
+    b = (boxes or '').strip()
+    if not b:
+        return 'Box 未填'
+    return re.sub(r'\s*[,，]\s*', ' + ', b)
+
+
 def _up_parse_note(note):
     out = []
     if not note:
@@ -1756,16 +1810,20 @@ def _up_parse_note(note):
 
 
 def _up_detect(date_str):
-    """截至指定日期，每個台號最新一次的場面問題資料。"""
+    """截至指定日期，每個「類別＋台號」最新一次嘅資料。
+    回傳 (out, done_at, nfc_nocode)
+    """
     rows = []
     conn = None
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("""SELECT note, (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date,
-                            COALESCE(layout_side, '')
+        c.execute("""SELECT COALESCE(note, ''),
+                            (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date,
+                            COALESCE(layout_side, ''),
+                            COALESCE(checklist, '')
                      FROM records
-                     WHERE COALESCE(note, '') <> ''
+                     WHERE (COALESCE(note, '') <> '' OR COALESCE(checklist, '') <> '')
                        AND (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date <= %s
                      ORDER BY id ASC""", (date_str,))
         rows = c.fetchall()
@@ -1779,10 +1837,25 @@ def _up_detect(date_str):
     out = {}
     sides = {}
     done_at = {}
+    nfc_nocode = []
+
+    def upsert(cat, code, problem, status, ds):
+        key = (cat, code)
+        rec = out.get(key)
+        if rec is None:
+            out[key] = {'category': cat, 'code': code, 'problem': problem, 'status': status,
+                        'first_seen': ds, 'last_seen': ds}
+        else:
+            rec['problem'] = problem
+            rec['status'] = status
+            if ds > rec['last_seen']:
+                rec['last_seen'] = ds
+
     for row in rows:
         note = row[0]
         d = row[1]
         side_json = row[2] if len(row) > 2 else ''
+        checklist = row[3] if len(row) > 3 else ''
         ds = d.strftime('%Y-%m-%d') if hasattr(d, 'strftime') else str(d)[:10]
         if side_json:
             try:
@@ -1795,12 +1868,22 @@ def _up_detect(date_str):
             except Exception:
                 pass
 
+        # NFC 異常（存在 checklist 欄位）
+        for it in _up_parse_nfc(checklist):
+            if it['code']:
+                upsert('NFC', it['code'], _up_nfc_problem(it['boxes']), it['status'], ds)
+            else:
+                nfc_nocode.append(it['status'])
+
         secs = _up_split_sections(note)
         # 【早前已處理】＝已經搞掂，唔應該再出現在更新表
         # 以「類別＋台號」判斷（因為有時同事冇填問題，只填台號）
         for line in secs.get('早前已處理', '').split('\n'):
             for it in _up_parse_line(line):
                 done_at[(it['category'], it['code'])] = ds
+            for it in _up_parse_nfc(line, done=True):
+                if it['code']:
+                    done_at[('NFC', it['code'])] = ds
 
         for name, seg in secs.items():
             if name == '早前已處理':
@@ -1809,31 +1892,17 @@ def _up_detect(date_str):
                 for it in _up_parse_line(line):
                     if not it['category']:
                         continue
-                    code = it['code']
-                    rec = out.get(code)
-                    if rec is None:
-                        out[code] = {'category': it['category'], 'problem': it['problem'],
-                                     'status': it['status'], 'side': '',
-                                     'first_seen': ds, 'last_seen': ds}
-                    else:
-                        rec['category'] = it['category']
-                        rec['problem'] = it['problem']
-                        rec['status'] = it['status']
-                        if ds > rec['last_seen']:
-                            rec['last_seen'] = ds
+                    upsert(it['category'], it['code'], it['problem'], it['status'], ds)
 
-    for code in list(out.keys()):
-        rec = out[code]
-        dd = done_at.get((rec['category'], code))
+    for key in list(out.keys()):
+        rec = out[key]
+        dd = done_at.get(key)
         if dd and dd >= rec['last_seen']:
-            out.pop(code, None)
+            out.pop(key, None)
             continue
-        rec['side'] = sides.get(code, '')
+        rec['side'] = sides.get(rec['code'], '')
 
-    # 已標記完成、而且之後冇再上報嘅台號（用嚟清除之前已儲存的舊表）
-    done_only = set(done_at.keys())
-    done_only = set(k[1] for k in done_only) - set(out.keys())
-    return out, done_only
+    return out, done_at, nfc_nocode
 
 
 def _up_table_lookup():
@@ -1911,10 +1980,10 @@ def update_report_cats():
     if not re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
         date_str = _up_today()
 
-    det, done_only = _up_detect(date_str)
+    det, _done_map, _nfc_nocode = _up_detect(date_str)
     agg = {}
     layout_mail = layout_all = 0
-    for code, e in det.items():
+    for (cat_key, code), e in det.items():
         cat = e['category'] or ''
         rec = agg.setdefault(cat, {'mail': 0, 'all': 0})
         rec['all'] += 1
@@ -1971,7 +2040,7 @@ def update_report_get():
                 if c:
                     baseline.add(c)
 
-    det, done_only = _up_detect(date_str)
+    det_all, done_map, nfc_nocode = _up_detect(date_str)
     lut = _up_table_lookup()
 
     def eligible(e):
@@ -1985,7 +2054,26 @@ def update_report_get():
             return False
         return True
 
-    det = {c: e for c, e in det.items() if eligible(e) and c not in excl}
+    det = {}
+    for (cat_key, code), e in det_all.items():
+        if eligible(e) and code not in excl:
+            det[code] = e
+
+    # 已標記完成、而且之後冇再上報嘅台號（只限當前類別）
+    done_only = set()
+    for (c, code), _dt in done_map.items():
+        if is_layout:
+            if not _up_is_layout(c, ''):
+                continue
+        else:
+            if c != cat_name:
+                continue
+        if code not in det:
+            done_only.add(code)
+
+    nfc_missing = 0
+    if (not is_layout) and cat_name == 'NFC':
+        nfc_missing = sum(1 for s in nfc_nocode if (not mail_only or _up_mailish(s)))
 
     columns = []
     for col in (saved.get('columns') or [])[:_UP_MAX_COLS]:
@@ -2088,6 +2176,7 @@ def update_report_get():
         'total': total,
         'baseline': sorted(baseline),
         'excluded': sorted(excl),
+        'nfc_missing': nfc_missing,
         'detected_count': len(det),
     })
     resp.headers['Cache-Control'] = 'no-store, max-age=0'
