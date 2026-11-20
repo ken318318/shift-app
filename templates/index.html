@@ -455,8 +455,9 @@
             <div class="lr-msg" id="ur-msg"></div>
             <div class="lr-tip">
                 <b>用法：</b>① 先揀報表／類別，再揀日期；系統自動抽出該類別已 Send mail 嘅台號。<br>
-                ② 輕觸表格內台號＝去下一欄；去到最後一欄再撳＝移除。<br>
-                ③ 按「💾 儲存」，再按「🖼️ 存為圖片」，長按圖片儲存就可以 Send 俾老細。
+                ② 交更時有揀「方位」（客位／DLR位）嘅，污跡會自動分好欄；冇揀就會跌落下面嘅待分類區。<br>
+                ③ 輕觸表格內台號＝去下一欄；去到最後一欄再撳＝移除。<br>
+                ④ 按「💾 儲存」，再按「🖼️ 存為圖片」，長按圖片儲存就可以 Send 俾老細。
             </div>
             <div id="ur-pool-box" class="lr-pool" style="display: none;">
                 <b>🟡 待分類台號（未歸入任何一欄，撳一下即可加入第一欄）</b>
@@ -721,8 +722,16 @@ function setSubmitting(on) {
                 let c = i.querySelector('.venue-category').value;
                 let p = i.querySelector('.venue-problem').value;
                 let s = i.querySelector('.issue-status').value;
-                let l = Array.from(i.querySelectorAll('.venue-location')).map(n => n.value).filter(v => v);
-                if (c || l.length > 0) d.venue.push({ cat: c, prob: p, s: s, locs: l });
+                let l = [];
+                let sides = [];
+                i.querySelectorAll('.venue-loc-row').forEach(row => {
+                    let v = ((row.querySelector('.venue-location') || {}).value || '').trim();
+                    if (v) {
+                        l.push(v);
+                        sides.push(((row.querySelector('.venue-side') || {}).value) || '');
+                    }
+                });
+                if (c || l.length > 0) d.venue.push({ cat: c, prob: p, s: s, locs: l, sides: sides });
             });
 
             d.guest = collectFeedback('guest');
@@ -841,6 +850,12 @@ function setSubmitting(on) {
                         updateVenueProblem(catSelect);
                         if (i.prob) lastItem.querySelector('.venue-problem').value = i.prob;
                     }
+                    let sideMap = {};
+                    (i.sides || []).forEach(function (sd, idx) {
+                        if (i.locs[idx] && sd) sideMap[String(i.locs[idx]).trim().toUpperCase()] = sd;
+                    });
+                    ensureVenueSideUI(lastItem);
+                    applyVenueSides(lastItem, sideMap);
                 });
             }
 
@@ -869,10 +884,12 @@ function setSubmitting(on) {
             venueCategories = data;
             document.querySelectorAll('.venue-category').forEach(sel => {
                 let cur = sel.value;
+                let prob = (sel.nextElementSibling || {}).value || '';
                 initVenueCategory(sel);
                 if (cur && venueCategories[cur]) {
                     sel.value = cur;
                     updateVenueProblem(sel);
+                    if (prob) sel.nextElementSibling.value = prob;
                 }
             });
         } catch (e) {
@@ -1128,6 +1145,43 @@ function setSubmitting(on) {
         } else {
             problemSelect.innerHTML = `<option value="">-- 請選擇 --</option>` + items.map(item => `<option value="${item}">${item}</option>`).join(''); 
         }
+        ensureVenueSideUI(selectEl.closest('.venue-item'));
+    }
+
+    function isLayoutCat(cat) {
+        return /layout/i.test(cat || '');
+    }
+
+    // 「賭檯 - Layout」才顯示「方位」（客位／DLR位），每個台號可各自揀
+    function ensureVenueSideUI(item) {
+        if (!item) return;
+        const catSel = item.querySelector('.venue-category');
+        const show = isLayoutCat(catSel ? catSel.value : '');
+        item.querySelectorAll('.venue-loc-row').forEach(function (row) {
+            let sel = row.querySelector('.venue-side');
+            if (!sel) {
+                sel = document.createElement('select');
+                sel.className = 'venue-side';
+                sel.innerHTML = '<option value="">方位</option><option value="客位">客位</option><option value="DLR位">DLR位</option>';
+                sel.style.cssText = 'flex:0 0 78px; min-width:66px; padding:6px 2px; font-size:12px; border:1px solid #90caf9; border-radius:6px; color:#1565c0; background:#fff; height:38px;';
+                sel.onchange = function () { debouncedSaveDraft(); };
+                const addBtn = row.querySelector('.btn-add');
+                const rmBtn = row.querySelector('.btn-remove');
+                if (addBtn) row.insertBefore(sel, addBtn);
+                else if (rmBtn) row.insertBefore(sel, rmBtn);
+                else row.appendChild(sel);
+            }
+            sel.style.display = show ? '' : 'none';
+        });
+    }
+
+    function applyVenueSides(item, sideMap) {
+        if (!item || !sideMap) return;
+        item.querySelectorAll('.venue-loc-row').forEach(function (row) {
+            const code = ((row.querySelector('.venue-location') || {}).value || '').trim().toUpperCase();
+            const sel = row.querySelector('.venue-side');
+            if (sel && code && sideMap[code]) sel.value = sideMap[code];
+        });
     }
 
     function addVenueLocation(btn) { 
@@ -1139,6 +1193,7 @@ function setSubmitting(on) {
         newRow.innerHTML = `<input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5; margin-right: 25px;"><button type="button" class="btn-remove" style="right: 0; top: 8px;" onclick="this.parentElement.remove()">X</button>`; 
         container.appendChild(newRow); 
         transformInputs(); 
+        ensureVenueSideUI(container.closest('.venue-item'));
         newRow.querySelector('.venue-location').focus(); 
         debouncedSaveDraft(); 
     }
@@ -1575,6 +1630,17 @@ function updatePendingCardState(card) {
 
                 let parsedNote = parseNote(r.note || "");
                 let mainNote = parsedNote.main;
+
+                let sideInfoHtml = '';
+                if (r.layout_side) {
+                    try {
+                        let sm = JSON.parse(r.layout_side) || {};
+                        let parts = Object.keys(sm).map(function (k) { return escapeText(k) + ' ' + escapeText(sm[k]); });
+                        if (parts.length) {
+                            sideInfoHtml = `<div class="record-data" style="background:#e8f0fe; color:#174ea6; font-size:12px;">🧭 Layout 方位：${parts.join('、')}</div>`;
+                        }
+                    } catch (e) { }
+                }
                 
                 if (parsedNote.venue) {
                     parsedNote.venue.split('\n').forEach(line => {
@@ -1664,7 +1730,7 @@ function updatePendingCardState(card) {
                     </div>
                     <details${index === 0 ? ' open' : ''} style="margin-top: 4px;">
                         <summary style="cursor: pointer; font-size: 12px; color: #555; padding: 6px 2px; line-height: 1.6;">${quickInfo}｜${pendInfo}｜點擊展開詳細</summary>
-                        <div style="margin-top: 8px;">${dataHtml}${hallInfoHtml}${feedbackHtml}${checkItemsHtml}${noIssueBlock}${doneBlock}${pendingBlock}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div></div>
+                        <div style="margin-top: 8px;">${dataHtml}${hallInfoHtml}${feedbackHtml}${checkItemsHtml}${noIssueBlock}${doneBlock}${pendingBlock}${sideInfoHtml}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div></div>
                     </details></div>`;
             });
             listDiv.innerHTML = html;
@@ -1915,6 +1981,11 @@ function updatePendingCardState(card) {
                     
                     let statusSelect = lastItem.querySelector('.issue-status'); 
                     if (statusSelect) statusSelect.value = status;
+
+                    ensureVenueSideUI(lastItem);
+                    try {
+                        applyVenueSides(lastItem, JSON.parse(r.layout_side || '{}') || {});
+                    } catch (e) { }
                 }
             });
         }
@@ -1995,6 +2066,7 @@ function updatePendingCardState(card) {
         
         let venueIssues = []; 
         let hasEmptyVenue = false;
+        let layoutSide = {};
         document.querySelectorAll('.venue-item').forEach(item => { 
             let cat = item.querySelector('.venue-category').value; 
             let prob = item.querySelector('.venue-problem').value; 
@@ -2002,7 +2074,13 @@ function updatePendingCardState(card) {
             let locs = []; 
             item.querySelectorAll('.venue-loc-row').forEach(locRow => { 
                 let t = locRow.querySelector('.venue-location').value; 
-                if (t) locs.push(`${t}`); 
+                if (t) {
+                    locs.push(`${t}`); 
+                    if (/layout/i.test(cat)) {
+                        let sd = (locRow.querySelector('.venue-side') || {}).value || '';
+                        if (sd) layoutSide[t.trim().toUpperCase()] = sd;
+                    }
+                }
             }); 
             
             if (cat) {
@@ -2056,6 +2134,7 @@ function updatePendingCardState(card) {
             note: finalNote, 
             guest_feedback: collectFeedback('guest'),
             dlr_feedback: collectFeedback('dlr'),
+            layout_side: Object.keys(layoutSide).length ? JSON.stringify(layoutSide) : '',
             lux_issue: document.getElementById('skip-lux').checked ? "" : luxIssue, 
             temp_issue: document.getElementById('skip-temp').checked ? "" : tempIssue, 
             db_issue: document.getElementById('skip-bgm').checked ? "" : dbIssue 
@@ -2386,8 +2465,10 @@ function updatePendingCardState(card) {
         }
         box.style.display = 'block';
         el.innerHTML = urState.pool.map(function (it, i) {
+            let tag = it.problem || '';
+            if (it.side) tag = tag ? (tag + '·' + it.side) : it.side;
             return '<span class="lr-chip" data-p="' + i + '">' + urEscape(it.table) +
-                   (it.problem ? ' <small>' + urEscape(it.problem) + '</small>' : '') + '</span>';
+                   (tag ? ' <small>' + urEscape(tag) + '</small>' : '') + '</span>';
         }).join('');
         let bh = '';
         urState.columns.slice(0, 4).forEach(function (c, i) {
