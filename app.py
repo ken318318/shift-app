@@ -51,6 +51,7 @@ def ensure_tables():
         c.execute("ALTER TABLE venue_configs ADD COLUMN IF NOT EXISTS item_order INTEGER DEFAULT 0")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS guest_feedback TEXT")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS dlr_feedback TEXT")
+        c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS layout_side TEXT")
         c.execute("""CREATE TABLE IF NOT EXISTS audit_logs (
                         id BIGSERIAL PRIMARY KEY,
                         actor TEXT,
@@ -638,12 +639,13 @@ def submit():
         c = conn.cursor()
         now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
         c.execute("""INSERT INTO records 
-                     (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, created_at) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+                     (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, created_at) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                    data.get('checklist'), data.get('status'), data.get('follower'), data.get('note'),
                    data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
-                   data.get('guest_feedback'), data.get('dlr_feedback'), now_macau))
+                   data.get('guest_feedback'), data.get('dlr_feedback'),
+                   data.get('layout_side'), now_macau))
         conn.commit()
         cache_clear('pending')
         return jsonify({"message": "交更成功！", "status": "success"})
@@ -681,12 +683,13 @@ def overwrite_record():
 
         now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
         c.execute("""INSERT INTO records 
-                     (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, created_at) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+                     (name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, created_at) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                    data.get('checklist'), data.get('status'), data.get('follower'), data.get('note'),
                    data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
-                   data.get('guest_feedback'), data.get('dlr_feedback'), now_macau))
+                   data.get('guest_feedback'), data.get('dlr_feedback'),
+                   data.get('layout_side'), now_macau))
         
         conn.commit()
         cache_clear('pending')
@@ -743,7 +746,7 @@ def get_records_home():
         total = c.fetchone()[0]
 
         c.execute("""SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note,
-                            lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback,
+                            lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side,
                             created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau'
                      FROM records""" + sql_where + " ORDER BY id DESC LIMIT %s OFFSET %s",
                   params + [limit, offset])
@@ -752,8 +755,8 @@ def get_records_home():
             "id": r[0], "name": r[1], "shift": r[2], "lux": r[3], "temp": r[4], "bgm": r[5],
             "checklist": r[6], "status": r[7], "follower": r[8], "note": r[9],
             "lux_issue": r[10], "temp_issue": r[11], "db_issue": r[12],
-            "guest_feedback": r[13], "dlr_feedback": r[14],
-            "created_at": str(r[15]) if r[15] else None
+            "guest_feedback": r[13], "dlr_feedback": r[14], "layout_side": r[15],
+            "created_at": str(r[16]) if r[16] else None
         } for r in rows]
         resp = jsonify({"records": records, "total": total, "limit": limit, "offset": offset})
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
@@ -771,7 +774,7 @@ def get_records():
     conn = get_db_connection()
     c = conn.cursor()
     c.execute("""SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue,
-                 guest_feedback, dlr_feedback,
+                 guest_feedback, dlr_feedback, layout_side,
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
                  FROM records ORDER BY id DESC""")
     rows = c.fetchall()
@@ -782,8 +785,8 @@ def get_records():
             "id": row[0], "name": row[1], "shift": row[2], "lux": row[3], "temp": row[4], "bgm": row[5],
             "checklist": row[6], "status": row[7], "follower": row[8], "note": row[9],
             "lux_issue": row[10], "temp_issue": row[11], "db_issue": row[12],
-            "guest_feedback": row[13], "dlr_feedback": row[14],
-            "created_at": str(row[15]) if row[15] else None
+            "guest_feedback": row[13], "dlr_feedback": row[14], "layout_side": row[15],
+            "created_at": str(row[16]) if row[16] else None
         })
     return jsonify(records)
 
@@ -1648,7 +1651,7 @@ _UP_MAPKEY = 'update_map'
 _UP_EXCLKEY = 'update_excluded'
 _UP_LAYOUT_COLS = [
     ('Layout', 'Stain Nearly Betting Area'),
-    ('Layout', 'Stain Nearly Dearly Area'),
+    ('Layout', 'Stain Nearly Dealer Area'),
     ('Thin Layout', 'Thin Layout Affects Dealing'),
 ]
 _UP_CODE_RE = re.compile(r'^([A-Z]{1,4})?(\d{3,6})$')
@@ -1692,10 +1695,14 @@ def _up_is_layout(cat, problem):
     return 'layout' in t
 
 
-def _up_layout_guess(problem):
+def _up_layout_guess(problem, side=''):
     p = (problem or '').lower()
     if '薄' in p or 'thin' in p:
         return 2
+    if side == '客位':
+        return 0
+    if side == 'DLR位':
+        return 1
     return None
 
 
@@ -1733,7 +1740,8 @@ def _up_detect(date_str):
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("""SELECT note, (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date
+        c.execute("""SELECT note, (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date,
+                            COALESCE(layout_side, '')
                      FROM records
                      WHERE COALESCE(note, '') <> ''
                        AND (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date <= %s
@@ -1747,8 +1755,22 @@ def _up_detect(date_str):
             except Exception: pass
 
     out = {}
-    for note, d in rows:
+    sides = {}
+    for row in rows:
+        note = row[0]
+        d = row[1]
+        side_json = row[2] if len(row) > 2 else ''
         ds = d.strftime('%Y-%m-%d') if hasattr(d, 'strftime') else str(d)[:10]
+        if side_json:
+            try:
+                sd = json.loads(side_json)
+                if isinstance(sd, dict):
+                    for k, v in sd.items():
+                        ck = _up_norm(k)
+                        if ck and v in ('客位', 'DLR位'):
+                            sides[ck] = v
+            except Exception:
+                pass
         for it in _up_parse_note(note):
             if not it['category']:
                 continue
@@ -1756,13 +1778,17 @@ def _up_detect(date_str):
             rec = out.get(code)
             if rec is None:
                 out[code] = {'category': it['category'], 'problem': it['problem'],
-                             'status': it['status'], 'first_seen': ds, 'last_seen': ds}
+                             'status': it['status'], 'side': '',
+                             'first_seen': ds, 'last_seen': ds}
             else:
                 rec['category'] = it['category']
                 rec['problem'] = it['problem']
                 rec['status'] = it['status']
                 if ds > rec['last_seen']:
                     rec['last_seen'] = ds
+
+    for code, rec in out.items():
+        rec['side'] = sides.get(code, '')
     return out
 
 
@@ -1924,7 +1950,9 @@ def update_report_get():
             c = _up_norm(x)
             if c and c not in excl:
                 codes.append(c)
-        columns.append({'main': col.get('main') or '', 'sub': col.get('sub') or '', 'codes': codes})
+        columns.append({'main': col.get('main') or '',
+                        'sub': (col.get('sub') or '').replace('Dearly', 'Dealer'),
+                        'codes': codes})
     if is_layout and not columns:
         columns = [{'main': m, 'sub': s, 'codes': []} for m, s in _UP_LAYOUT_COLS]
 
@@ -1941,12 +1969,13 @@ def update_report_get():
         target = None
         saved_key = cmap.get(code)
         if saved_key:
+            saved_key = saved_key.replace('Dearly', 'Dealer')
             for idx, col in enumerate(columns):
                 if (col['main'] + '||' + col['sub']) == saved_key:
                     target = idx
                     break
         if target is None and is_layout:
-            target = _up_layout_guess(e['problem'])
+            target = _up_layout_guess(e['problem'], e.get('side') or '')
         if target is None and not is_layout:
             main = _up_short_cat(e['category'])
             sub = e['problem'] or '（未填問題）'
@@ -1975,6 +2004,7 @@ def update_report_get():
             'pit': pit,
             'problem': e.get('problem') or '',
             'status': e.get('status') or '',
+            'side': e.get('side') or '',
             'is_new': code not in baseline,
         }
 
