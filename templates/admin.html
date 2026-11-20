@@ -68,6 +68,8 @@
             <button class="tab" data-tab="progress" onclick="switchTab('progress')">檢查進度</button>
             <button class="tab" data-tab="export" onclick="switchTab('export')">匯出</button>
             <button class="tab" data-tab="stats" onclick="switchTab('stats')">統計</button>
+            <button class="tab" data-tab="hall" onclick="switchTab('hall')">台號狀態</button>
+            <button class="tab" data-tab="members" onclick="switchTab('members')">成員</button>
             <button class="tab" data-tab="account" onclick="switchTab('account')">帳號</button>
         </div>
         <button class="back-btn" onclick="window.location.href='/'">❌ 返回交更系統</button>
@@ -147,6 +149,18 @@
         <button class="btn btn-outline" style="width:100%; margin-top:8px;" onclick="exportOptionsExcel()">⬇️ 匯出選項清單（Excel .xls）</button>
         <div class="muted" style="margin-top:10px;">CSV 已加入 UTF-8 BOM，可直接以 Excel 開啟。<br>手機／微信內如未能下載，請點擊右上角「在瀏覽器打開」後再試。</div>
         <div class="msg" id="exp-msg"></div>
+
+        <hr style="border:none; border-top:1px solid #eef1f5; margin:20px 0;">
+        <h3 style="font-size:15px; margin:0 0 6px 0; color:#333;">💾 完整備份</h3>
+        <div class="muted" style="margin-bottom:10px;">包含：交更紀錄（全部欄位）、場面問題選項、台號總表、系統設定、操作紀錄。建議每次改功能或部署前先下載一份。</div>
+        <button class="btn btn-purple" style="width:100%;" onclick="backupDownload()">⬇️ 下載完整備份（JSON）</button>
+
+        <label style="margin-top:16px;">由備份還原交更紀錄</label>
+        <div class="muted" style="margin-bottom:6px; line-height:1.7;">還原步驟：① 選擇已下載的 <b>.json</b> 備份檔 → ② 按「♻️ 還原紀錄」 → ③ 按「確定」。</div>
+        <input type="file" id="backup-file" accept=".json,application/json" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; font-size:13px; background:#fff;">
+        <button class="btn btn-red" style="width:100%; margin-top:8px;" onclick="restoreRecords()">♻️ 還原紀錄</button>
+        <div class="muted" style="margin-top:6px;">只會補回系統沒有的紀錄（依 ID），<b>不會刪除或修改</b>現有紀錄，可安心重複執行。</div>
+        <div class="msg" id="backup-msg"></div>
     </div>
 
 
@@ -161,6 +175,72 @@
         <div id="stat-cats"></div>
         <h3 style="font-size:14px; margin:16px 0 8px 0; color:#444;">📡 NFC 異常台號（Top 5）</h3>
         <div id="stat-nfc"></div>
+    </div>
+
+    <!-- ================= 台號狀態 ================= -->
+    <div class="card hide" id="panel-hall">
+        <div id="hall-summary" style="margin-bottom:14px;"></div>
+        <h3 style="font-size:15px; margin:0 0 8px 0; color:#333;">＋ 新增台號</h3>
+        <div class="row">
+            <select id="add-hall">
+                <option>Hall1</option><option>Hall2</option><option>Hall3</option>
+                <option>Hall4</option><option>Hall5</option><option>Hall6</option>
+            </select>
+            <input type="number" id="add-pit" placeholder="Pit" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;">
+        </div>
+        <div class="row" style="margin-top:8px;">
+            <input type="text" id="add-code" placeholder="台號，例：NB0307" style="text-transform:uppercase;">
+            <select id="add-status"><option>營運</option><option>停運</option></select>
+        </div>
+        <button class="btn btn-green" style="width:100%; margin-top:8px;" onclick="addHallTable()">＋ 新增台號</button>
+        <div class="msg" id="hall-add-msg"></div>
+
+        <hr style="border:none; border-top:1px solid #eef1f5; margin:16px 0;">
+        <label style="margin-top:0;">搜尋台號</label>
+        <input type="text" id="hall-q" placeholder="例如 NB0307 或 0307">
+        <div class="row" style="margin-top:8px;">
+            <select id="hall-hall">
+                <option value="">全部 Hall</option>
+                <option>Hall1</option><option>Hall2</option><option>Hall3</option>
+                <option>Hall4</option><option>Hall5</option><option>Hall6</option>
+            </select>
+            <input type="number" id="hall-pit" placeholder="Pit（可不填）" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px;">
+        </div>
+        <div class="row" style="margin-top:10px;">
+            <button class="btn" onclick="loadHallTables()">🔍 搜尋</button>
+            <button class="btn btn-gray" onclick="resetHallFilters()">重設</button>
+        </div>
+        <div class="muted" id="hall-count" style="margin-top:10px;"></div>
+        <div class="row" style="margin-top:8px;">
+            <button class="btn btn-green" onclick="setHallStatus('營運')">✅ 設為營運</button>
+            <button class="btn btn-red" onclick="setHallStatus('停運')">⛔ 設為停運</button>
+        </div>
+        <div class="muted" style="margin-top:6px;">修改後，「交更報表（自動填數）」的數字會即時跟隨。</div>
+        <div id="hall-list" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- ================= 成員 ================= -->
+    <div class="card hide" id="panel-members">
+        <h3 style="font-size:15px; margin:0 0 8px 0; color:#333;">＋ 新增成員</h3>
+        <label style="margin-top:0;">姓名</label>
+        <input type="text" id="mem-name" placeholder="交更人請連職號，例：陳ken (80571)">
+        <div class="row" style="margin-top:8px;">
+            <select id="mem-type">
+                <option value="staff">交更人／當更同事</option>
+                <option value="follower">負責跟進人</option>
+            </select>
+            <select id="mem-gender">
+                <option value="">性別（可不填）</option>
+                <option value="男">男</option>
+                <option value="女">女</option>
+            </select>
+        </div>
+        <button class="btn btn-green" style="width:100%; margin-top:10px;" onclick="addMember()">＋ 新增成員</button>
+        <div class="msg" id="mem-msg"></div>
+
+        <h3 style="font-size:15px; margin:18px 0 8px 0; color:#333;">現有成員</h3>
+        <div id="mem-list"></div>
+        <div class="muted" style="margin-top:8px;">刪除成員不會影響已提交的舊紀錄（紀錄儲存的是文字姓名）。</div>
     </div>
 
     <!-- ================= 帳號 ================= -->
@@ -260,12 +340,14 @@
         function switchTab(name) {
             currentTab = name;
             document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-            ['options', 'records', 'progress', 'export', 'stats', 'account'].forEach(k => {
+            ['options', 'records', 'progress', 'export', 'stats', 'hall', 'members', 'account'].forEach(k => {
                 document.getElementById('panel-' + k).classList.toggle('hide', k !== name);
             });
             if (name === 'records') loadRecords();
             if (name === 'progress') loadRecords().then(renderProgress);
             if (name === 'stats') loadRecords().then(renderStats);
+            if (name === 'hall') { loadHallSummary(); loadHallTables(); }
+            if (name === 'members') loadMembers();
             if (name === 'account') { loadAuthStatus(); loadAuditLogs(); }
         }
 
@@ -719,6 +801,369 @@
             msg.textContent = hint;
             let w = window.open(url, '_blank');
             if (!w) window.location.href = url;
+        }
+
+        // ===== 完整備份 / 還原 =====
+        function backupDownload() {
+            let msg = document.getElementById('backup-msg');
+            msg.style.color = '#2e7d32';
+            msg.textContent = '⏳ 正在產生備份檔（紀錄較多時需數秒）…';
+            openExport('/api/backup/export', '📥 正在產生完整備份，如未自動下載，請稍候或改用「在瀏覽器打開」。');
+        }
+
+        function restoreRecords() {
+            let f = document.getElementById('backup-file');
+            let msg = document.getElementById('backup-msg');
+            if (!f.files || !f.files[0]) {
+                msg.style.color = '#d32f2f';
+                msg.textContent = '⚠️ 請先選擇備份檔（.json）';
+                return;
+            }
+            let reader = new FileReader();
+            reader.onload = function () {
+                let data;
+                try { data = JSON.parse(reader.result); } catch (e) {
+                    msg.style.color = '#d32f2f';
+                    msg.textContent = '❌ 檔案格式不正確（不是 JSON）';
+                    return;
+                }
+                let rows = data && data.records ? data.records : null;
+                if (!rows || !rows.length) {
+                    msg.style.color = '#d32f2f';
+                    msg.textContent = '❌ 備份檔內沒有交更紀錄';
+                    return;
+                }
+                if (!confirm('確定還原？\n\n備份檔共 ' + rows.length + ' 筆紀錄。\n只會補回系統沒有的紀錄（依 ID），不會刪除或修改現有紀錄。')) return;
+                msg.style.color = '#555';
+                msg.textContent = '⏳ 還原中，請稍候…';
+                fetch('/api/backup/import_records', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ records: rows })
+                })
+                .then(r => r.json())
+                .then(d => {
+                    msg.style.color = (d.status === 'success') ? '#2e7d32' : '#d32f2f';
+                    msg.textContent = d.message || '完成';
+                    if (d.status === 'success' && typeof loadRecords === 'function') loadRecords();
+                })
+                .catch(() => {
+                    msg.style.color = '#d32f2f';
+                    msg.textContent = '❌ 還原失敗，請檢查網絡後再試。';
+                });
+            };
+            reader.readAsText(f.files[0], 'utf-8');
+        }
+
+        // ===== 台號狀態 =====
+        let hallRows = [];
+        async function loadHallSummary() {
+            const box = document.getElementById('hall-summary');
+            if (!box) return;
+            try {
+                const r = await fetch('/api/hall_tables/summary?_t=' + Date.now());
+                const d = await r.json();
+                if (!d || d.status !== 'success') { box.innerHTML = ''; return; }
+                const t = d.total || { total: 0, active: 0, inactive: 0 };
+                let html = '<div style="background:#f7f9fc; border:1px solid #e3e9f2; border-radius:10px; padding:10px;">';
+                html += '<div style="font-weight:bold; font-size:14px; margin-bottom:8px;">📊 全場台號：' + t.total + ' 台　' +
+                    '<span style="color:#2e7d32;">營運 ' + t.active + '</span>　' +
+                    '<span style="color:#c62828;">停運 ' + t.inactive + '</span></div>';
+                html += '<div style="display:flex; flex-wrap:wrap; gap:6px;">';
+                (d.halls || []).forEach(function (h) {
+                    html += '<span style="background:#fff; border:1px solid #cfd8dc; border-radius:12px; padding:4px 10px; font-size:12px;">' +
+                        h.hall + '：<b>' + h.total + '</b> 台（' +
+                        '<span style="color:#2e7d32;">營 ' + h.active + '</span>／' +
+                        '<span style="color:#c62828;">停 ' + h.inactive + '</span>）</span>';
+                });
+                html += '</div>';
+                html += '<details style="margin-top:10px;"><summary style="cursor:pointer; font-size:12px; color:#555;">按 Hall／Pit 細分</summary>' +
+                    '<table style="margin-top:8px;"><tr><th>Hall</th><th>Pit</th><th>台數</th><th>營運</th><th>停運</th></tr>';
+                (d.halls || []).forEach(function (h) {
+                    h.pits.forEach(function (p) {
+                        html += '<tr><td>' + h.hall + '</td><td>' + p.pit + '</td><td><b>' + p.total + '</b></td><td>' + p.active + '</td><td>' + p.inactive + '</td></tr>';
+                    });
+                });
+                html += '</table></details></div>';
+                box.innerHTML = html;
+            } catch (e) { box.innerHTML = ''; }
+        }
+        async function loadHallTables() {
+            const box = document.getElementById('hall-list');
+            const q = document.getElementById('hall-q').value.trim();
+            const hall = document.getElementById('hall-hall').value;
+            const pit = document.getElementById('hall-pit').value;
+            let url = '/api/hall_tables?';
+            if (q) url += 'q=' + encodeURIComponent(q) + '&';
+            if (hall) url += 'hall=' + encodeURIComponent(hall) + '&';
+            if (pit) url += 'pit=' + encodeURIComponent(pit) + '&';
+            box.innerHTML = '<div class="muted">載入中…</div>';
+            try {
+                const r = await fetch(url + '_t=' + Date.now());
+                const d = await r.json();
+                if (!d || d.status !== 'success') { box.innerHTML = '<div class="muted">❌ 讀取失敗</div>'; return; }
+                hallRows = d.rows || [];
+                document.getElementById('hall-count').textContent =
+                    '共 ' + (d.total || hallRows.length) + ' 個台號' + ((d.total || 0) > hallRows.length ? '（顯示前 ' + hallRows.length + ' 個）' : '');
+                renderHallRows();
+            } catch (e) {
+                box.innerHTML = '<div class="muted">❌ 連線失敗</div>';
+            }
+        }
+        function resetHallFilters() {
+            document.getElementById('hall-q').value = '';
+            document.getElementById('hall-hall').value = '';
+            document.getElementById('hall-pit').value = '';
+            loadHallTables();
+        }
+        function renderHallRows() {
+            const box = document.getElementById('hall-list');
+            if (!hallRows.length) { box.innerHTML = '<div class="empty">沒有符合的台號</div>'; return; }
+            let html = '<table><tr><th style="width:32px;"><input type="checkbox" onclick="selectAllHall(this.checked)"></th><th>台號</th><th>Hall</th><th>Pit</th><th>狀態</th><th style="width:112px;">操作</th></tr>';
+            hallRows.forEach(function (r) {
+                const isStop = (r.status === '停運');
+                const color = isStop ? '#e67c73' : '#2ecc71';
+                html += '<tr>' +
+                    '<td><input type="checkbox" class="hall-chk" value="' + r.id + '"></td>' +
+                    '<td><b>' + r.table_code + '</b></td>' +
+                    '<td>' + String(r.hall).replace('Hall', '') + '</td>' +
+                    '<td>' + r.pit + '</td>' +
+                    '<td><span style="display:inline-block; padding:2px 8px; border-radius:10px; color:#fff; font-size:11px; background:' + color + ';">' + r.status + '</span></td>' +
+                    '<td style="white-space:nowrap;"><button class="btn btn-sm btn-outline" title="修改" onclick="editHall(' + r.id + ')">✏️</button> ' +
+                    '<button class="btn btn-sm btn-gray" title="切換狀態" onclick="toggleHallOne(' + r.id + ', \'' + r.status + '\')">' + (isStop ? '✅' : '⛔') + '</button> ' +
+                    '<button class="btn btn-sm btn-red" title="刪除" onclick="delHall(' + r.id + ', \'' + r.table_code + '\')">🗑️</button></td>' +
+                    '</tr>';
+            });
+            html += '</table>';
+            box.innerHTML = html;
+        }
+        function selectAllHall(on) {
+            document.querySelectorAll('.hall-chk').forEach(c => { c.checked = !!on; });
+        }
+        function hallCheckedIds() {
+            return Array.from(document.querySelectorAll('.hall-chk:checked'))
+                .map(x => parseInt(x.value, 10)).filter(n => !isNaN(n));
+        }
+        async function setHallStatus(status) {
+            const ids = hallCheckedIds();
+            if (!ids.length) { alert('請先勾選台號'); return; }
+            if (!confirm('確定把 ' + ids.length + ' 個台號設為「' + status + '」？')) return;
+            await postHallStatus(ids, status);
+        }
+        async function toggleHallOne(id, cur) {
+            const status = (cur === '停運') ? '營運' : '停運';
+            if (!confirm('確定把該台號設為「' + status + '」？')) return;
+            await postHallStatus([id], status);
+        }
+        async function postHallStatus(ids, status) {
+            try {
+                const r = await fetch('/api/hall_tables/status', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: ids, status: status })
+                });
+                const d = await r.json();
+                alert(d.message || '完成');
+                if (d.status === 'success') { loadHallSummary(); loadHallTables(); }
+            } catch (e) { alert('❌ 連線失敗'); }
+        }
+
+        async function addHallTable() {
+            const hall = document.getElementById('add-hall').value;
+            const pit = document.getElementById('add-pit').value;
+            const code = document.getElementById('add-code').value.trim().toUpperCase();
+            const status = document.getElementById('add-status').value;
+            const msg = document.getElementById('hall-add-msg');
+            if (!pit || !code) {
+                msg.style.color = '#d32f2f';
+                msg.textContent = '⚠️ 請填寫 Pit 及台號';
+                return;
+            }
+            try {
+                const r = await fetch('/api/hall_tables/add', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ hall: hall, pit: pit, table_code: code, status: status })
+                });
+                const d = await r.json();
+                msg.style.color = (d.status === 'success') ? '#2e7d32' : '#d32f2f';
+                msg.textContent = d.message || '';
+                if (d.status === 'success') {
+                    document.getElementById('add-code').value = '';
+                    document.getElementById('add-pit').value = '';
+                    loadHallSummary();
+                    loadHallTables();
+                }
+            } catch (e) {
+                msg.style.color = '#d32f2f';
+                msg.textContent = '❌ 連線失敗';
+            }
+        }
+
+        function editHall(id) {
+            const r = hallRows.find(x => x.id === id);
+            if (!r) return;
+            const halls = ['Hall1', 'Hall2', 'Hall3', 'Hall4', 'Hall5', 'Hall6'];
+            const opts = halls.map(h => '<option ' + (h === r.hall ? 'selected' : '') + '>' + h + '</option>').join('');
+            openModal('修改台號',
+                '<label>Hall</label><select id="eh-hall">' + opts + '</select>' +
+                '<label>Pit</label><input type="number" id="eh-pit" value="' + r.pit + '">' +
+                '<label>台號</label><input type="text" id="eh-code" value="' + r.table_code + '">' +
+                '<label>狀態</label><select id="eh-status">' +
+                '<option ' + (r.status === '營運' ? 'selected' : '') + '>營運</option>' +
+                '<option ' + (r.status === '停運' ? 'selected' : '') + '>停運</option></select>',
+                async function () {
+                    const hall = document.getElementById('eh-hall').value;
+                    const pit = document.getElementById('eh-pit').value;
+                    const code = document.getElementById('eh-code').value.trim().toUpperCase();
+                    const status = document.getElementById('eh-status').value;
+                    const msg = document.getElementById('md-msg');
+                    if (!pit || !code) { msg.textContent = '⚠️ 請填寫 Pit 及台號'; return; }
+                    try {
+                        const res = await fetch('/api/hall_tables/update', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: id, hall: hall, pit: pit, table_code: code, status: status })
+                        });
+                        const d = await res.json();
+                        if (d.status === 'success') { closeModal(); loadHallSummary(); loadHallTables(); }
+                        else { msg.textContent = d.message || '❌ 修改失敗'; }
+                    } catch (e) { msg.textContent = '❌ 連線失敗'; }
+                });
+        }
+
+        async function delHall(id, code) {
+            if (!confirm('確定刪除台號「' + code + '」？\n（已提交的舊紀錄不受影響）')) return;
+            try {
+                const r = await fetch('/api/hall_tables/delete', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+                const d = await r.json();
+                alert(d.message || '完成');
+                if (d.status === 'success') loadHallTables();
+            } catch (e) { alert('❌ 連線失敗'); }
+        }
+
+        // ===== 成員 =====
+        let membersCache = [];
+        async function loadMembers() {
+            const box = document.getElementById('mem-list');
+            box.innerHTML = '<div class="muted">載入中…</div>';
+            try {
+                const r = await fetch('/api/members?_t=' + Date.now());
+                const d = await r.json();
+                const list = (d && d.members) || [];
+                membersCache = list;
+                const staff = list.filter(m => m.mtype === 'staff');
+                const follow = list.filter(m => m.mtype === 'follower');
+                box.innerHTML = memberGroupHtml('交更人／當更同事（' + staff.length + '）', staff) +
+                                memberGroupHtml('負責跟進人（' + follow.length + '）', follow);
+            } catch (e) { box.innerHTML = '<div class="muted">❌ 載入失敗</div>'; }
+        }
+        function memberGroupHtml(title, arr) {
+            if (!arr.length) return '<div class="muted" style="margin-bottom:12px;">' + title + '：沒有成員</div>';
+            return '<div style="margin-bottom:14px;"><div style="font-weight:bold; font-size:13px; margin-bottom:6px;">' + title + '</div>' +
+                arr.map(function (m) {
+                    const nm = String(m.name).replace(/'/g, '');
+                    const acc = m.account ? ('帳號 ' + m.account) : '未設帳號';
+                    const roleTag = (m.role === 'admin')
+                        ? '<span style="color:#c62828; font-weight:bold;">管理員</span>'
+                        : '普通';
+                    return '<div class="ctl"><div class="name" style="flex:1 1 150px;">' + m.name +
+                        (m.gender ? ' <span class="muted">（' + m.gender + '）</span>' : '') +
+                        '<div class="muted" style="font-weight:normal; font-size:11px; margin-top:2px;">' +
+                        esc(acc) + '｜權限：' + roleTag + '</div></div>' +
+                        (m.account ? '<button class="btn btn-sm btn-gray" title="重設密碼" onclick="resetPassword(' + m.id + ')">🔑</button> ' : '') +
+                        (m.account ? '<button class="btn btn-sm btn-outline" onclick="setRole(' + m.id + ', \'' + (m.role === 'admin' ? 'staff' : 'admin') + '\')">' + (m.role === 'admin' ? '👤 設為普通' : '👑 設為管理員') + '</button> ' : '') +
+                        '<button class="btn btn-sm btn-outline" onclick="editMember(' + m.id + ')">✏️</button> ' +
+                        '<button class="btn btn-sm btn-red" onclick="delMember(' + m.id + ', \'' + nm + '\')">刪除</button></div>';
+                }).join('') + '</div>';
+        }
+        function editMember(id) {
+            const m = membersCache.find(x => x.id === id);
+            if (!m) return;
+            openModal('修改成員',
+                '<label>姓名</label><input type="text" id="em-name" value="' + esc(m.name) + '">' +
+                '<label>類別</label><select id="em-type">' +
+                '<option value="staff" ' + (m.mtype === 'staff' ? 'selected' : '') + '>交更人／當更同事</option>' +
+                '<option value="follower" ' + (m.mtype === 'follower' ? 'selected' : '') + '>負責跟進人</option></select>' +
+                '<label>性別</label><select id="em-gender">' +
+                '<option value="" ' + (!m.gender ? 'selected' : '') + '>不填</option>' +
+                '<option value="男" ' + (m.gender === '男' ? 'selected' : '') + '>男</option>' +
+                '<option value="女" ' + (m.gender === '女' ? 'selected' : '') + '>女</option></select>',
+                async function () {
+                    const name = document.getElementById('em-name').value.trim();
+                    const mtype = document.getElementById('em-type').value;
+                    const gender = document.getElementById('em-gender').value;
+                    const msg = document.getElementById('md-msg');
+                    if (!name) { msg.textContent = '⚠️ 請輸入姓名'; return; }
+                    try {
+                        const res = await fetch('/api/members/update', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: id, name: name, mtype: mtype, gender: gender })
+                        });
+                        const d = await res.json();
+                        if (d.status === 'success') { closeModal(); loadMembers(); }
+                        else { msg.textContent = d.message || '❌ 修改失敗'; }
+                    } catch (e) { msg.textContent = '❌ 連線失敗'; }
+                });
+        }
+
+        async function addMember() {
+            const name = document.getElementById('mem-name').value.trim();
+            const mtype = document.getElementById('mem-type').value;
+            const gender = document.getElementById('mem-gender').value;
+            const msg = document.getElementById('mem-msg');
+            if (!name) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 請輸入姓名'; return; }
+            try {
+                const r = await fetch('/api/members/add', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name, mtype: mtype, gender: gender })
+                });
+                const d = await r.json();
+                msg.style.color = (d.status === 'success') ? '#2e7d32' : '#d32f2f';
+                msg.textContent = d.message || '';
+                if (d.status === 'success') { document.getElementById('mem-name').value = ''; loadMembers(); }
+            } catch (e) { msg.style.color = '#d32f2f'; msg.textContent = '❌ 連線失敗'; }
+        }
+        async function resetPassword(id) {
+            if (!confirm('確定將該成員密碼重設為「BS＋員工ID」？')) return;
+            try {
+                const r = await fetch('/api/members/reset_password', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+                const d = await r.json();
+                alert(d.message || '完成');
+                if (d.status === 'success') loadMembers();
+            } catch (e) { alert('❌ 連線失敗'); }
+        }
+
+        async function setRole(id, role) {
+            const label = (role === 'admin') ? '管理員' : '普通';
+            if (!confirm('確定將該成員設為「' + label + '」？')) return;
+            try {
+                const r = await fetch('/api/members/set_role', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id, role: role })
+                });
+                const d = await r.json();
+                alert(d.message || '完成');
+                if (d.status === 'success') loadMembers();
+            } catch (e) { alert('❌ 連線失敗'); }
+        }
+
+        async function delMember(id, name) {
+            if (!confirm('確定刪除「' + name + '」？\n（不影響已提交的舊紀錄）')) return;
+            try {
+                const r = await fetch('/api/members/delete', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+                const d = await r.json();
+                const msg = document.getElementById('mem-msg');
+                msg.style.color = (d.status === 'success') ? '#2e7d32' : '#d32f2f';
+                msg.textContent = d.message || '';
+                if (d.status === 'success') loadMembers();
+            } catch (e) { alert('❌ 連線失敗'); }
         }
 
         async function exportRecords() {
