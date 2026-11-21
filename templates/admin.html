@@ -499,7 +499,9 @@
             }
             if (!confirm('確定新增？\n\n類別：' + category + '\n問題：' + problem)) return;
 
-            optMsg('處理中…', '#666');
+            optMsg('');
+            // 用全畫面「儲存中…」提示，同「載入中」一樣
+            bsLoading(true, '儲存中…');
             try {
                 let res = await fetch('/api/add_config', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -512,6 +514,8 @@
                 optMsg('✅ 已新增「' + problem + '」到「' + category + '」', '#2e7d32');
             } catch (e) {
                 optMsg('❌ 連線失敗，請稍後再試', '#d32f2f');
+            } finally {
+                bsLoading(false);
             }
         }
 
@@ -1011,6 +1015,7 @@
                 return;
             }
             try {
+                bsLoading(true, '儲存中…');
                 const r = await fetch('/api/hall_tables/add', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ hall: hall, pit: pit, table_code: code, status: status })
@@ -1027,6 +1032,8 @@
             } catch (e) {
                 msg.style.color = '#d32f2f';
                 msg.textContent = '❌ 連線失敗';
+            } finally {
+                bsLoading(false);
             }
         }
 
@@ -1146,6 +1153,7 @@
             const msg = document.getElementById('mem-msg');
             if (!name) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 請輸入姓名'; return; }
             try {
+                bsLoading(true, '儲存中…');
                 const r = await fetch('/api/members/add', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name: name, mtype: mtype, gender: gender })
@@ -1155,6 +1163,7 @@
                 msg.textContent = d.message || '';
                 if (d.status === 'success') { document.getElementById('mem-name').value = ''; loadMembers(); }
             } catch (e) { msg.style.color = '#d32f2f'; msg.textContent = '❌ 連線失敗'; }
+            finally { bsLoading(false); }
         }
         async function resetPassword(id) {
             if (!confirm('確定將該成員密碼重設為「BS＋員工ID」？')) return;
