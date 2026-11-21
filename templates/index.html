@@ -775,15 +775,17 @@ function setSubmitting(on) {
                 let s = i.querySelector('.issue-status').value;
                 let l = [];
                 let sides = [];
+                let notes = [];
                 i.querySelectorAll('.venue-loc-row').forEach(row => {
                     let v = ((row.querySelector('.venue-location') || {}).value || '').trim();
                     if (v) {
                         l.push(v);
                         sides.push(((row.querySelector('.venue-side') || {}).value) || '');
+                        notes.push(((row.querySelector('.venue-loc-note') || {}).value || '').trim());
                     }
                 });
-                let vnote = ((i.querySelector('.venue-note') || {}).value || '').trim();
-                if (c || l.length > 0) d.venue.push({ cat: c, prob: p, s: s, locs: l, sides: sides, note: vnote });
+                let vnote = ((i.querySelector('.venue-loc-note') || {}).value || '').trim();
+                if (c || l.length > 0) d.venue.push({ cat: c, prob: p, s: s, locs: l, sides: sides, notes: notes, note: vnote });
             });
 
             d.guest = collectFeedback('guest');
@@ -927,8 +929,12 @@ function setSubmitting(on) {
                     });
                     ensureVenueSideUI(lastItem);
                     applyVenueSides(lastItem, sideMap);
-                    let nEl = lastItem.querySelector('.venue-note');
-                    if (nEl) nEl.value = i.note || '';
+                    ensureVenueNoteUI(lastItem);
+                    let noteVals = i.notes || [];
+                    lastItem.querySelectorAll('.venue-loc-row').forEach(function (row, idx) {
+                        let inp = row.querySelector('.venue-loc-note');
+                        if (inp) inp.value = noteVals[idx] || ((idx === 0) ? (i.note || '') : '');
+                    });
                 });
             }
 
@@ -1240,15 +1246,20 @@ function setSubmitting(on) {
     // 每個場面問題項目一個備註框（不影響台號解析）
     function ensureVenueNoteUI(item) {
         if (!item) return;
-        const container = item.querySelector('.venue-location-container');
-        if (!container || item.querySelector('.venue-note')) return;
-        const inp = document.createElement('input');
-        inp.type = 'text';
-        inp.className = 'venue-note';
-        inp.placeholder = '備註（可留空，例如：已拍照／位置較隱蔽）';
-        inp.style.cssText = 'margin-top:8px; padding:8px; font-size:13px; border:1px solid #90caf9; border-radius:8px; width:100%; box-sizing:border-box; background:#fff;';
-        inp.addEventListener('input', debouncedSaveDraft);
-        container.insertAdjacentElement('afterend', inp);
+        // 舊版整個項目一個備註框 → 移除（改為每個台號一個）
+        let old = item.querySelector('.venue-note');
+        if (old) old.remove();
+        item.querySelectorAll('.venue-loc-row').forEach(function (row) {
+            if (row.querySelector('.venue-loc-note')) return;
+            row.style.flexWrap = 'wrap';
+            const inp = document.createElement('input');
+            inp.type = 'text';
+            inp.className = 'venue-loc-note';
+            inp.placeholder = '備註（可留空，例如：已拍照／位置較隱蔽）';
+            inp.style.cssText = 'flex:1 1 100%; margin-top:6px; padding:8px; font-size:13px; border:1px solid #90caf9; border-radius:8px; box-sizing:border-box; background:#fff;';
+            inp.addEventListener('input', debouncedSaveDraft);
+            row.appendChild(inp);
+        });
     }
 
     function isLayoutCat(cat) {
@@ -1293,9 +1304,11 @@ function setSubmitting(on) {
         newRow.className = 'issue-row venue-loc-row'; 
         newRow.style.marginTop = '5px'; 
         newRow.style.position = 'relative'; 
-        newRow.innerHTML = `<input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5; margin-right: 25px;"><button type="button" class="btn-remove" style="right: 0; top: 8px;" onclick="this.parentElement.remove()">X</button>`; 
-        container.appendChild(newRow); 
-        transformInputs(); 
+        newRow.style.flexWrap = 'wrap';
+        newRow.innerHTML = `<input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5; margin-right: 25px;"><button type="button" class="btn-remove" style="right: 0; top: 8px;" onclick="this.parentElement.remove()">X</button>`;
+        container.appendChild(newRow);
+        transformInputs();
+        ensureVenueNoteUI(container.closest('.venue-item'));
         ensureVenueSideUI(container.closest('.venue-item'));
         newRow.querySelector('.venue-location').focus(); 
         debouncedSaveDraft(); 
@@ -2323,13 +2336,15 @@ function updatePendingCardState(card) {
                     let statusSelect = lastItem.querySelector('.issue-status'); 
                     if (statusSelect) statusSelect.value = status;
 
+                    ensureVenueNoteUI(lastItem);
                     ensureVenueSideUI(lastItem);
                     try {
                         applyVenueSides(lastItem, JSON.parse(r.layout_side || '{}') || {});
                     } catch (e) { }
-                    let vn = lastItem.querySelector('.venue-note');
                     let nm = line.match(/備註\s*[:：]\s*(.+)$/);
-                    if (vn && nm) vn.value = nm[1].trim();
+                    if (nm) {
+                        lastItem.querySelectorAll('.venue-loc-note').forEach(function (inp) { inp.value = nm[1].trim(); });
+                    }
                 }
             });
         }
@@ -2420,29 +2435,22 @@ function updatePendingCardState(card) {
             let cat = item.querySelector('.venue-category').value; 
             let prob = item.querySelector('.venue-problem').value; 
             let status = item.querySelector('.issue-status').value; 
-            let locs = []; 
+            if (!cat) return;
+            let locCount = 0;
             item.querySelectorAll('.venue-loc-row').forEach(locRow => { 
-                let t = locRow.querySelector('.venue-location').value; 
-                if (t) {
-                    locs.push(`${t}`); 
-                    if (/layout/i.test(cat)) {
-                        let sd = (locRow.querySelector('.venue-side') || {}).value || '';
-                        if (sd) layoutSide[t.trim().toUpperCase()] = sd;
-                    }
+                let t = ((locRow.querySelector('.venue-location') || {}).value || '').trim(); 
+                if (!t) return;
+                locCount++;
+                if (/layout/i.test(cat)) {
+                    let sd = (locRow.querySelector('.venue-side') || {}).value || '';
+                    if (sd) layoutSide[t.toUpperCase()] = sd;
                 }
+                let ln = ((locRow.querySelector('.venue-loc-note') || {}).value || '').trim();
+                let vline = `[${cat} - ${prob}] 位置: ${t} [狀態:${status}]`;
+                if (ln) vline += ` 備註: ${ln}`;
+                venueIssues.push(vline);
             }); 
-            
-            if (cat) {
-                if (locs.length > 0) {
-                    let vnoteEl = item.querySelector('.venue-note');
-                    let vnote = vnoteEl ? vnoteEl.value.trim() : '';
-                    let vline = `[${cat} - ${prob}] 位置: ${locs.join(', ')} [狀態:${status}]`;
-                    if (vnote) vline += ` 備註: ${vnote}`;
-                    venueIssues.push(vline); 
-                } else {
-                    hasEmptyVenue = true;
-                }
-            }
+            if (locCount === 0) hasEmptyVenue = true;
         });
         
         if (venueIssues.length > 0) finalNote += `\n\n【場面問題】\n` + venueIssues.join('\n');
