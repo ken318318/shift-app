@@ -57,6 +57,15 @@
         .modal h3 { margin: 0 0 10px 0; font-size: 16px; }
         .msg { font-size: 12px; margin-top: 8px; min-height: 16px; }
         .hide { display: none !important; }
+        /* ===== 椅況圖 ===== */
+        .cm-cell { position: absolute; width: 26px; height: 22px; border: 1px solid #d6dde6; font-size: 11px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; cursor: pointer; background: #fff; }
+        .cm-cell.cm-off { background: #cfd8dc; }
+        .cm-cell.cm-guest { background: #99CCFF; }
+        .cm-cell.cm-new { background: #9933FF; color: #fff; border-color: #7b2fd0; }
+        .cm-cell.cm-old { background: #FF6600; color: #fff; border-color: #d95a00; }
+        .cm-pit { position: absolute; font-size: 10px; color: #c62828; font-weight: bold; white-space: nowrap; }
+        .cm-legend span { display: inline-flex; align-items: center; gap: 4px; margin: 2px 10px 2px 0; font-size: 11px; color: #555; }
+        .cm-dot { width: 12px; height: 12px; border: 1px solid #ccc; display: inline-block; }
         /* 檢查進度表：手機也要顯示完整 */
         #p-table { overflow-x: auto; }
         #p-table table { width: 100%; table-layout: fixed; }
@@ -85,6 +94,7 @@
             <button class="tab" data-tab="export" onclick="switchTab('export')">匯出</button>
             <button class="tab" data-tab="stats" onclick="switchTab('stats')">統計</button>
             <button class="tab" data-tab="hall" onclick="switchTab('hall')">台號狀態</button>
+            <button class="tab" data-tab="chairs" onclick="switchTab('chairs')">椅況圖</button>
             <button class="tab" data-tab="members" onclick="switchTab('members')">成員</button>
             <button class="tab" data-tab="account" onclick="switchTab('account')">帳號</button>
         </div>
@@ -235,6 +245,20 @@
         <div id="hall-list" style="margin-top:10px;"></div>
     </div>
 
+    <!-- ================= 椅況圖 ================= -->
+    <div class="card hide" id="panel-chairs">
+        <div class="row" style="margin-bottom:6px;">
+            <button class="btn" id="cm-mode-status" onclick="setChairMode('status')">🪑 好壞椅</button>
+            <button class="btn btn-gray" id="cm-mode-type" onclick="setChairMode('type')">🆕 新舊椅</button>
+        </div>
+        <div class="muted" id="cm-tip">好壞椅模式：由交更自動上色；新舊椅模式：點格仔可切換新／舊。</div>
+        <div class="cm-legend" id="cm-legend" style="margin-top:6px;"></div>
+        <div id="cm-scroll" style="overflow:auto; border:1px solid #e3e9f2; border-radius:8px; margin-top:8px; background:#fafbfc;">
+            <div id="cm-map" style="position:relative; width:1px; height:1px;"></div>
+        </div>
+        <div class="msg" id="cm-msg"></div>
+    </div>
+
     <!-- ================= 成員 ================= -->
     <div class="card hide" id="panel-members">
         <h3 style="font-size:15px; margin:0 0 8px 0; color:#333;">＋ 新增成員</h3>
@@ -372,7 +396,7 @@
         function switchTab(name) {
             currentTab = name;
             document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-            ['options', 'records', 'progress', 'export', 'stats', 'hall', 'members', 'account'].forEach(k => {
+            ['options', 'records', 'progress', 'export', 'stats', 'hall', 'chairs', 'members', 'account'].forEach(k => {
                 document.getElementById('panel-' + k).classList.toggle('hide', k !== name);
             });
             let jobs = [];
@@ -380,6 +404,7 @@
             if (name === 'progress') jobs.push(loadRecords().then(renderProgress));
             if (name === 'stats') jobs.push(loadRecords().then(renderStats));
             if (name === 'hall') jobs.push(loadHallSummary(), loadHallTables());
+            if (name === 'chairs') jobs.push(loadChairMap());
             if (name === 'members') jobs.push(loadMembers());
             if (name === 'account') jobs.push(loadAuthStatus(), loadAuditLogs());
             if (name === 'options') jobs.push(renderOptions());
@@ -945,6 +970,101 @@
                 box.innerHTML = html;
             } catch (e) { box.innerHTML = ''; }
         }
+        /* ===== 椅況圖 ===== */
+        let chairData = null;
+        let chairMode = 'status';
+        const CM_W = 26, CM_H = 22;
+
+        async function loadChairMap() {
+            const msg = document.getElementById('cm-msg');
+            if (msg) msg.textContent = '';
+            try {
+                const r = await fetch('/api/chair_map?_t=' + Date.now());
+                const d = await r.json();
+                if (!d || d.status !== 'success') { if (msg) msg.textContent = (d && d.message) || '讀取失敗'; return; }
+                chairData = d;
+                renderChairMap();
+            } catch (e) { if (msg) msg.textContent = '❌ 讀取失敗'; }
+        }
+
+        function setChairMode(m) {
+            chairMode = m;
+            const a = document.getElementById('cm-mode-status');
+            const b = document.getElementById('cm-mode-type');
+            if (a) a.className = 'btn' + (m === 'status' ? '' : ' btn-gray');
+            if (b) b.className = 'btn' + (m === 'type' ? '' : ' btn-gray');
+            const tip = document.getElementById('cm-tip');
+            if (tip) tip.textContent = (m === 'status')
+                ? '好壞椅模式：由交更自動上色（停運灰、好黑、壞紅、spare 綠、壞客椅藍）。'
+                : '新舊椅模式：點格仔切換（紫＝新、橙＝舊）。';
+            renderChairMap();
+        }
+
+        function renderChairMap() {
+            const map = document.getElementById('cm-map');
+            const legend = document.getElementById('cm-legend');
+            if (!map || !chairData) return;
+            map.innerHTML = '';
+            map.style.width = (chairData.maxC * CM_W + 20) + 'px';
+            map.style.height = (chairData.maxR * CM_H + 24) + 'px';
+
+            (chairData.pits || []).forEach(function (p) {
+                const el = document.createElement('div');
+                el.className = 'cm-pit';
+                el.style.left = ((p.c - 1) * CM_W) + 'px';
+                el.style.top = ((p.r - 1) * CM_H - 12) + 'px';
+                el.textContent = p.name || ('Pit ' + p.pit);
+                map.appendChild(el);
+            });
+
+            chairData.cells.forEach(function (c) {
+                const el = document.createElement('div');
+                el.className = 'cm-cell';
+                el.style.left = ((c.c - 1) * CM_W) + 'px';
+                el.style.top = ((c.r - 1) * CM_H) + 'px';
+                el.textContent = c.num;
+                el.title = c.code + '（' + c.status + '）';
+                if (chairMode === 'status') {
+                    if (c.guest_bad) el.classList.add('cm-guest');
+                    else if (c.status === '停運') el.classList.add('cm-off');
+                    el.style.color = c.dlr_bad ? '#e53935' : (c.status === '停運' ? '#2e7d32' : '#111');
+                } else {
+                    if (c.chair === 'new') el.classList.add('cm-new');
+                    else if (c.chair === 'old') el.classList.add('cm-old');
+                    if (c.status === '停運') el.style.opacity = '0.55';
+                }
+                el.onclick = function () { if (chairMode === 'type') toggleChairType(c); };
+                map.appendChild(el);
+            });
+
+            if (legend) {
+                if (chairMode === 'status') {
+                    legend.innerHTML = '<span><i class="cm-dot" style="background:#fff"></i>營運（好）</span>' +
+                        '<span><i class="cm-dot" style="background:#cfd8dc"></i>停運</span>' +
+                        '<span><i class="cm-dot" style="background:#99CCFF"></i>壞客椅</span>' +
+                        '<span style="color:#e53935">紅字＝壞 DLR 椅</span><span style="color:#2e7d32">綠字＝spare</span>';
+                } else {
+                    legend.innerHTML = '<span><i class="cm-dot" style="background:#9933FF"></i>新椅</span>' +
+                        '<span><i class="cm-dot" style="background:#FF6600"></i>舊椅</span><span>未設定＝白色</span>';
+                }
+            }
+        }
+
+        async function toggleChairType(cell) {
+            const order = ['', 'new', 'old'];
+            const next = order[(order.indexOf(cell.chair || '') + 1) % order.length];
+            try {
+                const r = await fetch('/api/chair_map/type', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: cell.code, type: next })
+                });
+                const d = await r.json();
+                if (!d || d.status !== 'success') { alert((d && d.message) || '儲存失敗'); return; }
+                cell.chair = next;
+                renderChairMap();
+            } catch (e) { alert('❌ 連線失敗'); }
+        }
+
         async function loadHallTables() {
             const box = document.getElementById('hall-list');
             const q = document.getElementById('hall-q').value.trim();
