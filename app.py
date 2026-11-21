@@ -3241,6 +3241,8 @@ def chair_map_set_type():
     """設定新舊 DLR 椅（存 app_settings）。"""
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以修改新舊椅。'})
     data = request.json or {}
     code = _up_norm(data.get('code'))
     typ = (data.get('type') or '').strip().lower()
