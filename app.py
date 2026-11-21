@@ -2040,6 +2040,12 @@ def _up_layout_guess(problem, side=''):
     return None
 
 
+def _up_take_note(line):
+    """抽出行尾的「備註：…」內容。"""
+    m = re.search(r'備註\s*[:：]\s*(.+)$', str(line or ''))
+    return m.group(1).strip() if m else ''
+
+
 def _up_parse_metric(raw):
     """解析 Lux／溫度／分貝 異常行：NB0201 (Box 1: 380) [狀態:已 Send mail]"""
     s = str(raw or '').strip()
@@ -2052,7 +2058,8 @@ def _up_parse_metric(raw):
     if not _up_is_code(code):
         return None
     st = re.search(r'\[狀態\s*[:：]\s*([^\]]*)\]', s)
-    return {'code': code, 'status': st.group(1).strip() if st else ''}
+    return {'code': code, 'status': st.group(1).strip() if st else '',
+            'note': _up_take_note(s)}
 
 
 def _up_parse_line(line):
@@ -2071,6 +2078,7 @@ def _up_parse_line(line):
     if st:
         loc_text = loc_text[:st.start()]
     out = []
+    note_text = _up_take_note(line)
     for raw in re.split(r'[,，、;；]', loc_text):
         code = _up_norm(raw)
         if not _up_is_code(code):
@@ -2079,7 +2087,7 @@ def _up_parse_line(line):
             code = (mm.group(1).upper() + mm.group(2)) if mm else ''
         if code and _up_is_code(code):
             out.append({'code': code, 'category': category,
-                        'problem': problem, 'status': status})
+                        'problem': problem, 'status': status, 'note': note_text})
     return out
 
 
@@ -2168,15 +2176,18 @@ def _up_detect(date_str):
     done_at = {}
     nfc_nocode = []
 
-    def upsert(cat, code, problem, status, ds):
+    def upsert(cat, code, problem, status, ds, note=''):
         key = (cat, code)
         rec = out.get(key)
         if rec is None:
             out[key] = {'category': cat, 'code': code, 'problem': problem, 'status': status,
+                        'note': note or '',
                         'first_seen': ds, 'last_seen': ds}
         else:
             rec['problem'] = problem
             rec['status'] = status
+            if note:
+                rec['note'] = note
             if ds > rec['last_seen']:
                 rec['last_seen'] = ds
 
@@ -2211,15 +2222,15 @@ def _up_detect(date_str):
         for raw in str(lux_issue).split(' | '):
             it = _up_parse_metric(raw)
             if it:
-                upsert('Lux 異常', it['code'], '數值異常', it['status'], ds)
+                upsert('Lux 異常', it['code'], '數值異常', it['status'], ds, it.get('note') or '')
         for raw in str(temp_issue).split(' | '):
             it = _up_parse_metric(raw)
             if it:
-                upsert('溫度 異常', it['code'], '數值異常', it['status'], ds)
+                upsert('溫度 異常', it['code'], '數值異常', it['status'], ds, it.get('note') or '')
         for raw in str(db_issue).split(' | '):
             it = _up_parse_metric(raw)
             if it:
-                upsert('分貝 異常', it['code'], '數值異常', it['status'], ds)
+                upsert('分貝 異常', it['code'], '數值異常', it['status'], ds, it.get('note') or '')
 
         secs = _up_split_sections(note)
         # 【早前已處理】＝已經完成，不應再出現在更新表
@@ -2245,7 +2256,7 @@ def _up_detect(date_str):
                 for it in _up_parse_line(line):
                     if not it['category']:
                         continue
-                    upsert(it['category'], it['code'], it['problem'], it['status'], ds)
+                    upsert(it['category'], it['code'], it['problem'], it['status'], ds, it.get('note') or '')
 
     for key in list(out.keys()):
         rec = out[key]
@@ -2533,6 +2544,7 @@ def update_report_get():
             'problem': e.get('problem') or '',
             'status': e.get('status') or '',
             'side': e.get('side') or '',
+            'note': e.get('note') or '',
             'is_new': code not in baseline,
         }
 
