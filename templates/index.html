@@ -111,6 +111,9 @@
         #bs-loading .bs-spinner { width: 48px; height: 48px; border: 5px solid #dbeafe; border-top-color: #1a73e8; border-radius: 50%; animation: bs-spin .8s linear infinite; }
         #bs-loading .bs-loading-text { font-size: 14px; color: #1565c0; font-weight: bold; letter-spacing: 1px; background: #fff; padding: 6px 16px; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
         @keyframes bs-spin { to { transform: rotate(360deg); } }
+        /* ===== 可摺疊標題 ===== */
+        .fold-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; cursor: pointer; padding: 9px 12px; background: #f5f7fa; border: 1px solid #dfe3e8; border-radius: 10px; font-weight: bold; font-size: 13px; color: #37474f; }
+        .fold-arrow { font-size: 12px; color: #607d8b; white-space: nowrap; }
 
         @media (max-width: 500px) {
             .card { padding: 12px !important; }
@@ -341,8 +344,10 @@
             </div>
         </div>
         
-        <label style="margin-top: 20px;">👥 客人意見收集（如不需要請留空）：</label>
-        <div class="issue-group" style="background: #f3e5f5; border-color: #ce93d8; display: block;">
+        <div class="fold-head" style="margin-top: 20px;" onclick="toggleFold('guest-body','guest-arrow')">
+            <span>👥 客人意見收集（如不需要請留空）</span><span id="guest-arrow" class="fold-arrow">▲ 收起</span>
+        </div>
+        <div id="guest-body" class="issue-group" style="background: #f3e5f5; border-color: #ce93d8; display: block; margin-top: 6px;">
             <div class="issue-title" style="color: #6a1b9a;">收集內容</div>
             <div class="checkbox-group" style="background: transparent; border: none; padding: 0; gap: 6px;">
                     <label style="width:30%;"><input type="checkbox" value="燈光" class="guest-topic"> 燈光</label>
@@ -360,8 +365,10 @@
             <textarea class="guest-note" rows="2" placeholder="備註／事情描述（可留空）" style="width:100%; margin-top:8px; padding:8px; border:1px solid #ce93d8; border-radius:8px; font-size:13px; font-family:inherit; box-sizing:border-box;"></textarea>
         </div>
 
-        <label style="margin-top: 20px;">👥 DLR 意見收集（如不需要請留空）：</label>
-        <div class="issue-group" style="background: #e0f2f1; border-color: #80cbc4; display: block;">
+        <div class="fold-head" style="margin-top: 14px;" onclick="toggleFold('dlr-body','dlr-arrow')">
+            <span>👥 DLR 意見收集（如不需要請留空）</span><span id="dlr-arrow" class="fold-arrow">▲ 收起</span>
+        </div>
+        <div id="dlr-body" class="issue-group" style="background: #e0f2f1; border-color: #80cbc4; display: block; margin-top: 6px;">
             <div class="issue-title" style="color: #00695c;">收集內容</div>
             <div class="checkbox-group" style="background: transparent; border: none; padding: 0; gap: 6px;">
                     <label style="width:30%;"><input type="checkbox" value="燈光" class="dlr-topic"> 燈光</label>
@@ -913,7 +920,7 @@ function setSubmitting(on) {
                             </div>`;
                         });
                     }
-                    html += `</div><div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; align-items: center; flex: 1;"><span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span><select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" ${i.s==='已處理'?'selected':''}>已處理</option><option value="觀察中" ${i.s==='觀察中'?'selected':''}>觀察中</option><option value="已 Send mail" ${i.s==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${i.s==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${i.s==='待處理'?'selected':''}>待處理</option></select></div><button type="button" class="btn-remove" style="position: static; margin-left: 10px;" onclick="this.parentElement.parentElement.remove()">X</button></div></div>`;
+                    html += `</div><div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; align-items: center; flex: 1;"><span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span><select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" ${i.s==='已處理'?'selected':''}>已處理</option><option value="觀察中" ${i.s==='觀察中'?'selected':''}>觀察中</option><option value="已 Send mail" ${i.s==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${i.s==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${i.s==='待處理'?'selected':''}>待處理</option></select></div><button type="button" class="btn-remove" style="position: static; margin-left: 10px;" onclick="(this.closest('.venue-item') || this.parentElement.parentElement).remove()">X</button></div></div>`;
                     container.insertAdjacentHTML('beforeend', html);
                     let lastItem = document.querySelectorAll('.venue-item')[document.querySelectorAll('.venue-item').length - 1];
                     let catSelect = lastItem.querySelector('.venue-category');
@@ -1244,6 +1251,87 @@ function setSubmitting(on) {
     }
 
     // 每個場面問題項目一個備註框（不影響台號解析）
+    function toggleFold(bodyId, arrowId, forceOpen) {
+        let body = document.getElementById(bodyId);
+        let arrow = document.getElementById(arrowId);
+        if (!body) return;
+        let open = (typeof forceOpen === 'boolean') ? forceOpen : (body.style.display === 'none');
+        body.style.display = open ? 'block' : 'none';
+        if (arrow) arrow.textContent = open ? '▲ 收起' : '▼ 展開';
+    }
+
+    function updateVenueHead(item) {
+        if (!item) return;
+        let head = item.querySelector('.venue-head-text');
+        if (!head) return;
+        let cat = (item.querySelector('.venue-category') || {}).value || '';
+        let prob = (item.querySelector('.venue-problem') || {}).value || '';
+        let tables = [];
+        item.querySelectorAll('.venue-location').forEach(function (inp) {
+            let v = (inp.value || '').trim();
+            if (v) tables.push(v.toUpperCase());
+        });
+        let st = (item.querySelector('.issue-status') || {}).value || '';
+        let parts = [cat ? (cat + (prob ? ' - ' + prob : '')) : '（未選擇問題）'];
+        if (tables.length) parts.push(tables.join(', '));
+        if (st) parts.push(st);
+        head.textContent = parts.join('｜');
+    }
+
+    function toggleVenueFold(item) {
+        let body = item.querySelector('.venue-body');
+        let arrow = item.querySelector('.venue-head-arrow');
+        if (!body) return;
+        let open = body.style.display === 'none';
+        body.style.display = open ? 'block' : 'none';
+        if (arrow) arrow.textContent = open ? '▲ 收起' : '▼ 展開';
+        if (!open) updateVenueHead(item);
+    }
+
+    function collapseOtherVenueItems(keep) {
+        document.querySelectorAll('.venue-item').forEach(function (it) {
+            if (it === keep) return;
+            let body = it.querySelector('.venue-body');
+            let arrow = it.querySelector('.venue-head-arrow');
+            if (body) body.style.display = 'none';
+            if (arrow) arrow.textContent = '▼ 展開';
+            try { updateVenueHead(it); } catch (e) { }
+        });
+    }
+
+    function ensureVenueFold(item) {
+        if (!item) return;
+        let head = item.querySelector('.venue-head');
+        let body = item.querySelector('.venue-body');
+        if (!head) {
+            head = document.createElement('div');
+            head.className = 'venue-head';
+            head.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:8px; cursor:pointer; font-weight:bold; font-size:13px; color:#1565c0; background:#e8f0fe; border:1px solid #90caf9; border-radius:8px; padding:8px 10px; margin-bottom:6px;';
+            head.innerHTML = '<span class="venue-head-text">場面問題</span><span class="venue-head-arrow" style="font-size:12px; color:#5c6bc0; white-space:nowrap;">▲ 收起</span>';
+            head.addEventListener('click', function () { toggleVenueFold(item); });
+            item.insertBefore(head, item.firstChild);
+        }
+        if (!body) {
+            body = document.createElement('div');
+            body.className = 'venue-body';
+            Array.prototype.slice.call(item.children).forEach(function (ch) {
+                if (ch !== head && ch !== body) body.appendChild(ch);
+            });
+            item.appendChild(body);
+        }
+        if (!item.dataset.foldBound) {
+            item.dataset.foldBound = '1';
+            item.addEventListener('input', function (ev) {
+                if (ev.target && ev.target.classList.contains('venue-location')) updateVenueHead(item);
+            });
+            item.addEventListener('change', function (ev) {
+                if (!ev.target) return;
+                if (ev.target.classList.contains('issue-status') || ev.target.classList.contains('venue-problem') || ev.target.classList.contains('venue-side')) updateVenueHead(item);
+            });
+        }
+        updateVenueHead(item);
+    }
+
     function ensureVenueNoteUI(item) {
         if (!item) return;
         // 舊版整個項目一個備註框 → 移除（改為每個台號一個）
@@ -1260,6 +1348,7 @@ function setSubmitting(on) {
             inp.addEventListener('input', debouncedSaveDraft);
             row.appendChild(inp);
         });
+        ensureVenueFold(item);
     }
 
     function isLayoutCat(cat) {
@@ -1347,7 +1436,8 @@ function setSubmitting(on) {
     }
 
     function addVenueRow() { 
-        let html = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="venue-category" onchange="updateVenueProblem(this)"></select><select class="venue-problem"></select></div><div class="venue-location-container"><div class="issue-row venue-loc-row" style="margin-top: 5px;"><input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5;"><button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px; font-size: 14px;" onclick="addVenueLocation(this)">+</button></div></div><div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; align-items: center; flex: 1;"><span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span><select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div><button type="button" class="btn-remove" style="position: static; margin-left: 10px;" onclick="this.parentElement.parentElement.remove()">X</button></div></div>`; 
+        collapseOtherVenueItems(null);
+        let html = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="venue-category" onchange="updateVenueProblem(this)"></select><select class="venue-problem"></select></div><div class="venue-location-container"><div class="issue-row venue-loc-row" style="margin-top: 5px;"><input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5;"><button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px; font-size: 14px;" onclick="addVenueLocation(this)">+</button></div></div><div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; align-items: center; flex: 1;"><span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span><select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div><button type="button" class="btn-remove" style="position: static; margin-left: 10px;" onclick="(this.closest('.venue-item') || this.parentElement.parentElement).remove()">X</button></div></div>`; 
         document.getElementById('venue-container').insertAdjacentHTML('beforeend', html); 
         initVenueCategory(document.querySelector('.venue-item:last-child .venue-category')); 
         transformInputs(); 
@@ -2536,6 +2626,89 @@ function updatePendingCardState(card) {
             }
         }
         
+        // 先顯示預覽，確認後才真正提交
+        showSubmitPreview(data);
+    }
+
+    let __previewData = null;
+
+    function closeSubmitPreview() {
+        let b = document.getElementById('submit-preview');
+        if (b) b.remove();
+        document.body.style.overflow = '';
+    }
+
+    function confirmSubmitPreview() {
+        let d = __previewData;
+        closeSubmitPreview();
+        if (d) doSubmit(d);
+    }
+
+    function showSubmitPreview(data) {
+        closeSubmitPreview();
+        __previewData = data;
+        let venueLines = [];
+        let mv = (data.note || '').match(/【場面問題】([\s\S]*?)(?=【|$)/);
+        if (mv) venueLines = mv[1].split('\n').map(function (x) { return x.trim(); }).filter(Boolean);
+        let nfcHall = '';
+        let nh = (data.checklist || '').match(/NFC正常[:：]\s*([^|]*)/);
+        if (nh) nfcHall = nh[1].trim();
+        let nfcCount = 0;
+        String(data.checklist || '').split(' | ').forEach(function (seg) { if (seg.indexOf('NFC異常') >= 0) nfcCount++; });
+        let fbText = function (v) {
+            if (!v) return '（無）';
+            try {
+                let d = JSON.parse(v);
+                let parts = [];
+                if (d.items && d.items.length) parts.push('內容：' + d.items.join('、'));
+                parts.push('好評 ' + (d.good || 0) + '／中評 ' + (d.normal || 0) + '／差評 ' + (d.bad || 0));
+                if (d.note) parts.push('備註：' + d.note);
+                return parts.join('；');
+            } catch (e) { return String(v); }
+        };
+        let rows = [
+            ['交更人', data.name || '—'],
+            ['更份', data.shift || '—'],
+            ['全場 Lux', data.lux ? data.lux : '無需檢測'],
+            ['全場 溫度', data.temp ? data.temp : '無需檢測'],
+            ['全場 分貝', data.bgm ? data.bgm : '無需檢測'],
+            ['NFC 檢測 Hall', nfcHall ? nfcHall : '無需檢測'],
+            ['NFC 異常', nfcCount ? (nfcCount + ' 項') : '無'],
+            ['場面問題', venueLines.length ? (venueLines.length + ' 項') : '無'],
+            ['當更同事', data.on_duty || '—'],
+            ['負責跟進人', data.follower || '—'],
+            ['客人意見', fbText(data.guest_feedback)],
+            ['DLR 意見', fbText(data.dlr_feedback)]
+        ];
+        let rowsHtml = rows.map(function (r) {
+            return '<tr><td style="padding:6px 8px; border-bottom:1px solid #eef1f5; color:#666; white-space:nowrap; vertical-align:top;">' + escapeText(r[0]) + '</td><td style="padding:6px 8px; border-bottom:1px solid #eef1f5; word-break:break-word;">' + escapeText(r[1]) + '</td></tr>';
+        }).join('');
+        let venueHtml = '';
+        if (venueLines.length) {
+            venueHtml = '<div style="margin-top:12px; font-weight:bold; font-size:13px; color:#333;">🧾 場面問題</div>' +
+                '<div style="margin-top:6px; background:#f7f9fc; border:1px solid #e3e9f2; border-radius:8px; padding:8px 10px; font-size:12px; line-height:1.7; color:#37474f;">' +
+                venueLines.map(function (x) { return '<div style="word-break:break-word;">' + escapeText(x) + '</div>'; }).join('') + '</div>';
+        }
+        let box = document.createElement('div');
+        box.id = 'submit-preview';
+        box.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10100; overflow:auto; padding:12px;';
+        box.innerHTML =
+            '<div style="max-width:520px; margin:12px auto; background:#fff; border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);">' +
+            '<h3 style="margin:0 0 6px; font-size:17px; color:#1a73e8;">📋 ' + (editingRecordId ? '修改前預覽' : '提交前預覽') + '</h3>' +
+            '<div style="font-size:12px; color:#777; margin-bottom:10px;">請先核對以下內容，確認無誤才按「確定提交」。</div>' +
+            '<table style="width:100%; border-collapse:collapse; font-size:13px;">' + rowsHtml + '</table>' +
+            venueHtml +
+            '<div style="margin-top:12px; font-weight:bold; font-size:13px; color:#333;">📝 備註／特別交更事項（將送出的文字）</div>' +
+            '<pre style="white-space:pre-wrap; word-break:break-word; background:#f7f9fc; border:1px solid #e3e9f2; border-radius:8px; padding:10px; font-size:12px; max-height:180px; overflow:auto; margin:6px 0 0;">' + escapeText(data.note || '（無）') + '</pre>' +
+            '<div style="display:flex; gap:8px; margin-top:14px;">' +
+            '<button onclick="closeSubmitPreview()" style="flex:1; padding:12px; background:#eceff1; color:#455a64; border:none; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">← 返回修改</button>' +
+            '<button onclick="confirmSubmitPreview()" style="flex:1; padding:12px; background:#1a73e8; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer;">✅ 確定提交</button>' +
+            '</div></div>';
+        document.body.appendChild(box);
+        document.body.style.overflow = 'hidden';
+    }
+
+    function doSubmit(data) {
         if (isSubmitting) return;
         setSubmitting(true);
 
@@ -2572,7 +2745,7 @@ function updatePendingCardState(card) {
         })
         .catch(error => {
             setSubmitting(false);
-            alert("❌ 提交連線失敗！\n可能為 Render 伺服器正在喚醒（需時約 30 秒），或微信網絡攔截。\n\n請稍後重新整理網頁再試，或改用「在瀏覽器打開」。");
+            alert("❌ 提交連線失敗！\n可能為 Render 伺服器正在喚醒（需時約 30 秒），或微信網絡攔截。\n\n請稍後重新整理網頁再試，或改用「在瀏覽器開啟」。");
         }); 
     }
 
