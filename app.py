@@ -1583,6 +1583,36 @@ def export_report_template():
     })
 
 
+def _unit_temp_text(v):
+    s = str(v or '').strip()
+    if not s:
+        return ''
+    if '°' in s or '℃' in s:
+        return s
+    if '偏低' in s:
+        return '偏低（< 22.5 °C）'
+    if '偏高' in s:
+        return '偏高（> 24.5 °C）'
+    if '正常' in s:
+        return '正常（22.5–24.5 °C）'
+    return s
+
+
+def _unit_bgm_text(v):
+    s = str(v or '').strip()
+    if not s:
+        return ''
+    if 'db' in s.lower():
+        return s
+    if '偏低' in s:
+        return '偏低（< 65 dB）'
+    if '偏高' in s:
+        return '偏高（> 75 dB）'
+    if '正常' in s:
+        return '正常（65–75 dB）'
+    return s
+
+
 @app.route('/api/export/records', methods=['GET'])
 def export_records_file():
     date_from = (request.args.get('from') or '').strip()
@@ -1625,7 +1655,7 @@ def export_records_file():
                 hall = s.replace('NFC正常:', '').replace('NFC正常：', '').strip()
                 break
         out.append([
-            str(r[15]) if r[15] else '', r[1], r[2], r[3], r[4], r[5], r[7], hall,
+            str(r[15]) if r[15] else '', r[1], r[2], r[3], _unit_temp_text(r[4]), _unit_bgm_text(r[5]), r[7], hall,
             checklist, r[9] or '', r[10] or '', r[11] or '', r[12] or '',
             _feedback_text(r[13]), _feedback_text(r[14])
         ])
