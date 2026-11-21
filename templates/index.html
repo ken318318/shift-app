@@ -93,6 +93,22 @@
         .lr-td.lr-new { color: #FF0000; }
         .lr-emp { background: #FDE9E9; }
         .lr-note { font-size: 8px; line-height: 1.2; color: #777; font-weight: normal; margin-top: 2px; word-break: break-word; }
+        /* ===== 椅況圖 ===== */
+        .cm-modal { display: none; position: fixed; inset: 0; background: #eef2f7; z-index: 10001; overflow: auto; -webkit-overflow-scrolling: touch; }
+        .cm-wrap { padding: 8px 8px 40px; }
+        .cm-bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; background: #fff; padding: 8px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 8px; position: sticky; top: 0; z-index: 3; }
+        .cm-bar button { padding: 8px 10px; border: none; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .cm-cell { position: absolute; width: 26px; height: 22px; border: 1px solid #d6dde6; font-size: 11px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; background: #fff; }
+        .cm-cell.off { background: #cfd8dc; }
+        .cm-cell.guest { background: #99CCFF; }
+        .cm-cell.newc { background: #9933FF; color: #fff; }
+        .cm-cell.oldc { background: #FF6600; color: #fff; }
+        .cm-cell.cashier { background: #FFFF00; border-color: #d4c400; font-size: 9px; }
+        .cm-cell.event { background: #FF99CC; border-color: #e07fa8; font-size: 9px; }
+        .cm-box { position: absolute; border: 2px solid #000; box-sizing: border-box; pointer-events: none; }
+        .cm-pit { position: absolute; font-size: 10px; color: #c62828; font-weight: bold; white-space: nowrap; }
+        .cm-legend span { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; font-size: 11px; color: #555; }
+        .cm-dot { width: 12px; height: 12px; border: 1px solid #ccc; display: inline-block; }
         .lr-cnt { background: #FDE9E9; font-weight: bold; font-size: 14px; }
         .lr-total { font-size: 16px; font-weight: bold; border-top: 3px solid #000 !important; border-bottom: 3px solid #000 !important; padding: 7px 4px !important; }
         .lr-sep { border-left: 3px solid #000 !important; }
@@ -154,6 +170,7 @@
         </div>
         <button class="submit-btn" onclick="showForm()" style="margin-top: 0; margin-bottom: 10px; background-color: #2ecc71;">📝 新增BS交更紀錄</button>
         <button class="lr-btn2" onclick="openUpdateReport()">📋 一鍵生成更新表（Layout／各類別）</button>
+        <button class="lr-btn2" onclick="openChairMap()" style="border-color:#7b1fa2; color:#6a1b9a;">🪑 椅況圖（好壞／新舊）</button>
         
         <div id="home-pending-container" style="display: none; background: #fff3cd; padding: 9px 12px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 14px;">
             <div onclick="toggleHomePending()" style="cursor: pointer;">
@@ -526,6 +543,22 @@
         <p>長按圖片 → 儲存到相簿（或按下方按鈕下載）</p>
         <img id="ur-img" alt="更新表">
         <div><a id="ur-dl" download="更新表.png">⬇️ 下載圖片</a></div>
+    </div>
+
+    <!-- ===== 椅況圖 ===== -->
+    <div id="chair-modal" class="cm-modal">
+        <div class="cm-wrap">
+            <div class="cm-bar">
+                <button class="lr-b-close" onclick="closeChairMap()">✖ 返回</button>
+                <button id="cm-b-status" class="lr-b-blue" onclick="setChairMode('status')">🪑 好壞椅</button>
+                <button id="cm-b-type" class="lr-b-gray" onclick="setChairMode('type')">🆕 新舊椅</button>
+                <span class="cm-legend" id="cm-legend"></span>
+            </div>
+            <div id="cm-tip" class="lr-msg"></div>
+            <div id="cm-scroll" style="overflow:auto; background:#fff; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,.08);">
+                <div id="cm-map" style="position:relative; width:1px; height:1px; margin:10px;"></div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -2748,6 +2781,144 @@ function updatePendingCardState(card) {
             setSubmitting(false);
             alert("❌ 提交連線失敗！\n可能為 Render 伺服器正在喚醒（需時約 30 秒），或微信網絡攔截。\n\n請稍後重新整理網頁再試，或改用「在瀏覽器開啟」。");
         }); 
+    }
+
+    // ================= 椅況圖 =================
+    let cmData = null;
+    let cmMode = 'status';
+    const CM_W = 26, CM_H = 22;
+
+    function openChairMap() {
+        const m = document.getElementById('chair-modal');
+        if (!m) return;
+        m.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        loadChairMap();
+    }
+
+    function closeChairMap() {
+        const m = document.getElementById('chair-modal');
+        if (m) m.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    async function loadChairMap() {
+        const tip = document.getElementById('cm-tip');
+        if (tip) tip.textContent = '載入中…';
+        try {
+            const r = await fetch('/api/chair_map?_t=' + Date.now());
+            const d = await r.json();
+            if (!d || d.status !== 'success') { if (tip) tip.textContent = (d && d.message) || '讀取失敗'; return; }
+            cmData = d;
+            renderChairMap();
+        } catch (e) { if (tip) tip.textContent = '❌ 讀取失敗'; }
+    }
+
+    function setChairMode(m) {
+        cmMode = m;
+        const a = document.getElementById('cm-b-status');
+        const b = document.getElementById('cm-b-type');
+        if (a) a.className = m === 'status' ? 'lr-b-blue' : 'lr-b-gray';
+        if (b) b.className = m === 'type' ? 'lr-b-blue' : 'lr-b-gray';
+        renderChairMap();
+    }
+
+    function renderChairMap() {
+        const map = document.getElementById('cm-map');
+        const legend = document.getElementById('cm-legend');
+        const tip = document.getElementById('cm-tip');
+        if (!map || !cmData) return;
+        map.innerHTML = '';
+        map.style.width = (cmData.maxC * CM_W + 24) + 'px';
+        map.style.height = (cmData.maxR * CM_H + 30) + 'px';
+
+        if (tip) {
+            tip.textContent = cmMode === 'status'
+                ? '好壞椅：由交更自動上色（紅字＝壞 DLR、藍底＝壞客椅、綠字＝spare）'
+                : (isAdmin ? '新舊椅：點格仔切換（紫＝新、橙＝舊、白＝未設定）' : '新舊椅：紫＝新、橙＝舊（只有管理員可修改）');
+        }
+
+        (cmData.boxes || []).forEach(function (bx) {
+            const el = document.createElement('div');
+            el.className = 'cm-box';
+            el.style.left = ((bx.c0 - 1) * CM_W - 3) + 'px';
+            el.style.top = ((bx.r0 - 1) * CM_H - 3) + 'px';
+            el.style.width = ((bx.c1 - bx.c0 + 1) * CM_W + 6) + 'px';
+            el.style.height = ((bx.r1 - bx.r0 + 1) * CM_H + 6) + 'px';
+            map.appendChild(el);
+        });
+
+        (cmData.pits || []).forEach(function (p) {
+            const el = document.createElement('div');
+            el.className = 'cm-pit';
+            el.style.left = ((p.c - 1) * CM_W) + 'px';
+            el.style.top = ((p.r - 1) * CM_H - 12) + 'px';
+            el.textContent = p.name || ('Pit ' + p.pit);
+            map.appendChild(el);
+        });
+
+        (cmData.extras || []).forEach(function (x) {
+            const el = document.createElement('div');
+            el.className = 'cm-cell ' + (x.kind === 'cashier' ? 'cashier' : 'event');
+            el.style.left = ((x.c - 1) * CM_W) + 'px';
+            el.style.top = ((x.r - 1) * CM_H) + 'px';
+            el.textContent = x.kind === 'cashier' ? '帳' : '活';
+            el.title = x.kind === 'cashier' ? '帳房' : '活動區（原停運台，活動後恢復）';
+            map.appendChild(el);
+        });
+
+        (cmData.cells || []).forEach(function (c) {
+            const el = document.createElement('div');
+            el.className = 'cm-cell';
+            el.style.left = ((c.c - 1) * CM_W) + 'px';
+            el.style.top = ((c.r - 1) * CM_H) + 'px';
+            el.textContent = c.num;
+            el.title = c.code + '（' + c.status + '）';
+            if (cmMode === 'status') {
+                if (c.guest_bad) el.classList.add('guest');
+                else if (c.status === '停運') el.classList.add('off');
+                el.style.color = c.dlr_bad ? '#e53935' : (c.status === '停運' ? '#2e7d32' : '#111');
+            } else {
+                if (c.chair === 'new') el.classList.add('newc');
+                else if (c.chair === 'old') el.classList.add('oldc');
+                if (c.status === '停運') el.style.opacity = '0.55';
+            }
+            el.onclick = function () {
+                if (cmMode !== 'type') return;
+                if (!isAdmin) { alert('只有管理員可以修改新舊椅。'); return; }
+                toggleChairType(c);
+            };
+            map.appendChild(el);
+        });
+
+        if (legend) {
+            if (cmMode === 'status') {
+                legend.innerHTML = '<span><i class="cm-dot" style="background:#fff"></i>營運（好）</span>' +
+                    '<span><i class="cm-dot" style="background:#cfd8dc"></i>停運</span>' +
+                    '<span><i class="cm-dot" style="background:#99CCFF"></i>壞客椅</span>' +
+                    '<span style="color:#e53935">紅字＝壞 DLR</span><span style="color:#2e7d32">綠字＝spare</span>' +
+                    '<span><i class="cm-dot" style="background:#FFFF00"></i>帳房</span>' +
+                    '<span><i class="cm-dot" style="background:#FF99CC"></i>活動區</span>';
+            } else {
+                legend.innerHTML = '<span><i class="cm-dot" style="background:#9933FF"></i>新椅</span>' +
+                    '<span><i class="cm-dot" style="background:#FF6600"></i>舊椅</span><span>白＝未設定</span>';
+            }
+        }
+    }
+
+    async function toggleChairType(cell) {
+        const order = ['', 'new', 'old'];
+        const next = order[(order.indexOf(cell.chair || '') + 1) % order.length];
+        try {
+            const r = await fetch('/api/chair_map/type', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: cell.code, type: next })
+            });
+            const d = await r.json();
+            if (!d || d.status !== 'success') { alert((d && d.message) || '儲存失敗'); return; }
+            cell.chair = next;
+            renderChairMap();
+        } catch (e) { alert('❌ 連線失敗'); }
     }
 
     // ================= 更新表（任何類別，一鍵生成） =================
