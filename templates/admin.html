@@ -57,7 +57,7 @@
         .modal h3 { margin: 0 0 10px 0; font-size: 16px; }
         .msg { font-size: 12px; margin-top: 8px; min-height: 16px; }
         .hide { display: none !important; }
-        /* 檢查進度表：手機都要睇得齊 */
+        /* 檢查進度表：手機也要顯示完整 */
         #p-table { overflow-x: auto; }
         #p-table table { width: 100%; table-layout: fixed; }
         #p-table th, #p-table td { padding: 8px 4px; word-break: break-word; }
@@ -145,7 +145,7 @@
             <option value="14" selected>最近 14 日</option>
             <option value="30">最近 30 日</option>
         </select>
-        <div class="muted" style="margin-top:8px; line-height:1.7;">※ 本表<b>只計 NFC</b>（每日揀一個 Hall）；Lux／溫度／分貝係<b>全場檢測</b>，唔會逐個 Hall 分開記錄。<br>※ 依紀錄實際填寫的「無需檢測」判斷，不預設任何星期規則。</div>
+        <div class="muted" style="margin-top:8px; line-height:1.7;">※ 本表<b>只計 NFC</b>（每日選一個 Hall）；Lux／溫度／分貝為<b>全場檢測</b>，不會逐個 Hall 分開記錄。<br>※ 依紀錄實際填寫的「無需檢測」判斷，不預設任何星期規則。</div>
         <div class="stat-grid" id="p-stats"></div>
         <div id="p-table" style="margin-top:10px;"></div>
     </div>
@@ -161,7 +161,7 @@
         <button class="btn btn-outline" style="width:100%; margin-top:8px;" onclick="exportOptions()">⬇️ 匯出選項清單 CSV</button>
         <button class="btn btn-green" style="width:100%; margin-top:8px;" onclick="exportRecordsExcel()">⬇️ 匯出交更紀錄（Excel .xls）</button>
         <button class="btn btn-purple" style="width:100%; margin-top:8px;" onclick="openExport('/api/export/report_update', '📥 正在產生交更報表模板（Update 表）…')">⬇️ 交更報表（自動填數）</button>
-        <div class="muted" style="margin-top:6px;">數字自動由「台號總表」計算（營運／停運），Hall1–6 及 Pit 已排好，一撳即出。</div>
+        <div class="muted" style="margin-top:6px;">數字自動由「台號總表」計算（營運／停運），Hall1–6 及 Pit 已排好，一按即出。</div>
         <button class="btn btn-outline" style="width:100%; margin-top:8px;" onclick="exportOptionsExcel()">⬇️ 匯出選項清單（Excel .xls）</button>
         <div class="muted" style="margin-top:10px;">CSV 已加入 UTF-8 BOM，可直接以 Excel 開啟。<br>手機／微信內如未能下載，請點擊右上角「在瀏覽器打開」後再試。</div>
         <div class="msg" id="exp-msg"></div>
