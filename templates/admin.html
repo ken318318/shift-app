@@ -901,7 +901,7 @@
         // ===== 台號狀態 =====
         let hallRows = [];
         // 台號前綴 → 檯種類名稱（未列出的會直接顯示前綴）
-        const TABLE_TYPE_NAMES = { NB: '百家樂', BJ: '廿一點', RL: '輪盤', FP: '番攤', CR: '花旗骰', DS: '大小' };
+        const TABLE_TYPE_NAMES = { NB: '百家樂', BJ: '廿一點', DS: '大小', LT: '電子百家樂', FP: '富貴三寶', CS: '加勒比海', RL: '輪盤', CR: '花旗骰' };
         async function loadHallSummary() {
             const box = document.getElementById('hall-summary');
             if (!box) return;
