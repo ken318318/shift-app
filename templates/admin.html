@@ -900,6 +900,8 @@
 
         // ===== 台號狀態 =====
         let hallRows = [];
+        // 台號前綴 → 檯種類名稱（未列出的會直接顯示前綴）
+        const TABLE_TYPE_NAMES = { NB: '百家樂', BJ: '廿一點', RL: '輪盤', FP: '番攤', CR: '花旗骰', DS: '大小' };
         async function loadHallSummary() {
             const box = document.getElementById('hall-summary');
             if (!box) return;
@@ -920,6 +922,18 @@
                         '<span style="color:#c62828;">停 ' + h.inactive + '</span>）</span>';
                 });
                 html += '</div>';
+                if (d.types && d.types.length) {
+                    html += '<div style="margin-top:10px; font-weight:bold; font-size:13px; color:#333;">🎲 按檯種類</div>';
+                    html += '<div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">';
+                    d.types.forEach(function (tp) {
+                        const nm = TABLE_TYPE_NAMES[tp.type] || '';
+                        html += '<span style="background:#fff; border:1px solid #cfd8dc; border-radius:12px; padding:4px 10px; font-size:12px;">' +
+                            (nm ? (nm + '（' + tp.type + '）') : tp.type) + '：<b>' + tp.total + '</b> 台（' +
+                            '<span style="color:#2e7d32;">營 ' + tp.active + '</span>／' +
+                            '<span style="color:#c62828;">停 ' + tp.inactive + '</span>）</span>';
+                    });
+                    html += '</div>';
+                }
                 html += '<details style="margin-top:10px;"><summary style="cursor:pointer; font-size:12px; color:#555;">按 Hall／Pit 細分</summary>' +
                     '<table style="margin-top:8px;"><tr><th>Hall</th><th>Pit</th><th>台數</th><th>營運</th><th>停運</th></tr>';
                 (d.halls || []).forEach(function (h) {
