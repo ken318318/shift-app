@@ -438,13 +438,8 @@
                 <h3 id="pending-title" style="margin: 0; font-size: 15px; color: #856404;">⚠️ 未完成跟進項目</h3>
                 <span id="pending-arrow" style="color: #856404; font-weight: bold;">▼ 展開</span>
             </div>
+            <div style="font-size: 12px; color: #856404; margin-top: 6px;">勾選表示本更已完成；未勾選的項目會繼續保留在首頁「待跟進」，不會寫入本紀錄。</div>
             <div id="pending-list" style="display: none; margin-top: 15px; border-top: 1px dashed #e0c97e; padding-top: 15px;"></div>
-            <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #ffeeba; font-size: 13px; color: #856404;">
-                <label style="display: flex; align-items: flex-start; cursor: pointer; margin: 0;">
-                    <input type="checkbox" id="confirm-pending" style="margin-right: 8px; margin-top: 2px; width: 16px; height: 16px;">
-                    <span>我確定未打勾的項目仍然未處理</span>
-                </label>
-            </div>
         </div>
         <button class="submit-btn" id="submit-btn-main" onclick="submitForm()">提交交更</button>
         <div id="result"></div>
@@ -1833,6 +1828,7 @@ function updatePendingCardState(card) {
                 let doneIssuesList = []; 
                 let pendingIssuesList = [];
                 let watchIssuesList = [];
+                let oldPendingList = [];
                 let doneOldHtml = ""; 
                 let doneOldCount = 0;
                 
@@ -1920,8 +1916,8 @@ function updatePendingCardState(card) {
 
                 if (parsedNote.pendingOld) {
                     parsedNote.pendingOld.split('\n').forEach(line => {
-                        line = line.trim();
-                        if (line) pendingIssuesList.push(formatIssueText(line.replace(/\s*\[狀態:.*?\]/g, '').trim(), '', '未處理'));
+                        line = line.replace(/\s*\[狀態:.*?\]/g, '').trim();
+                        if (line) oldPendingList.push(`<div class="issue-data" style="background:#eceff1; color:#37474f;"><span>📌 ${line}</span><span class="status-badge" style="background:#90a4ae;">早前未處理</span></div>`);
                     });
                 }
 
@@ -1986,6 +1982,13 @@ function updatePendingCardState(card) {
                         <div style="margin-top:6px;">${watchIssuesList.join('')}</div>
                     </details>`;
                 }
+                let oldPendingBlock = '';
+                if (oldPendingList.length > 0) {
+                    oldPendingBlock = `<details style="margin-top:8px;">
+                        <summary style="cursor:pointer; font-size:13px; font-weight:bold; color:#37474f; padding:7px 9px; background:#eceff1; border:1px solid #cfd8dc; border-radius:6px;">📌 早前未處理（${oldPendingList.length} 項）｜並非本更新增</summary>
+                        <div style="margin-top:6px;">${oldPendingList.join('')}</div>
+                    </details>`;
+                }
                 let noIssueBlock = '';
                 if (pendingIssuesList.length === 0 && watchIssuesList.length === 0 && doneIssuesList.length === 0 && !doneOldHtml) {
                     noIssueBlock = `<div style="margin-top:8px; background:#f1fbf4; border:1px solid #c8ecd5; border-radius:6px; padding:9px 10px; font-size:12px; color:#2e7d32;">✅ 本更未發現異常項目</div>`;
@@ -2008,6 +2011,7 @@ function updatePendingCardState(card) {
                 let pendInfo = [];
                 if (pendingIssuesList.length > 0) pendInfo.push('⚠️ ' + pendingIssuesList.length + ' 項未處理');
                 if (watchIssuesList.length > 0) pendInfo.push('👀 ' + watchIssuesList.length + ' 項觀察中');
+                if (oldPendingList.length > 0) pendInfo.push('📌 ' + oldPendingList.length + ' 項早前未處理');
                 if (pendingIssuesList.length === 0 && watchIssuesList.length === 0) pendInfo.push('✅ 全部已處理');
                 pendInfo = pendInfo.join('｜');
 
@@ -2022,7 +2026,7 @@ function updatePendingCardState(card) {
                     </div>
                     <details${index === 0 ? ' open' : ''} style="margin-top: 4px;">
                         <summary style="cursor: pointer; font-size: 12px; color: #555; padding: 6px 2px; line-height: 1.6;">${quickInfo}｜${pendInfo}｜點擊展開詳細</summary>
-                        <div style="margin-top: 8px;">${dataHtml}${hallInfoHtml}${feedbackHtml}${checkItemsHtml}${noIssueBlock}${doneBlock}${pendingBlock}${watchBlock}${sideInfoHtml}${onDutyHtml}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div><div id="review-${r.id}" style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e0e6ed;">${reviewButtonHtml(r.id, r.reviewed, r.reviewed_at, r.reviewed_by)}</div></div>
+                        <div style="margin-top: 8px;">${dataHtml}${hallInfoHtml}${feedbackHtml}${checkItemsHtml}${noIssueBlock}${doneBlock}${pendingBlock}${watchBlock}${oldPendingBlock}${sideInfoHtml}${onDutyHtml}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div><div id="review-${r.id}" style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e0e6ed;">${reviewButtonHtml(r.id, r.reviewed, r.reviewed_at, r.reviewed_by)}</div></div>
                     </details></div>`;
             });
             listDiv.innerHTML = html;
@@ -2336,33 +2340,33 @@ function updatePendingCardState(card) {
 
     function submitForm() {
         let pendingCheckboxes = document.querySelectorAll('.pending-checkbox'); 
-        let hasUnresolved = false; 
         let doneOldItems = []; 
-        let pendingOldItems = [];
         
         pendingCheckboxes.forEach(cb => { 
             if (cb.offsetParent !== null) { 
                 let text = cb.getAttribute('data-text'); 
                 if (cb.checked) {
                     doneOldItems.push(text); 
-                } else {
-                    pendingOldItems.push(text); 
-                    hasUnresolved = true; 
                 }
             }
         });
-
-        if (hasUnresolved) { 
-            let isConfirmed = document.getElementById('confirm-pending').checked; 
-            if (!isConfirmed) { 
-                alert("⚠️ 請注意：仍有未完成的跟進項目。\n\n如確定該等問題仍未處理，請於頁面最下方勾選「我確定未打勾的項目仍然未處理」，然後再次提交。"); 
-                return; 
-            } 
-        }
         
         let finalNote = document.getElementById('notes').value; 
         if (doneOldItems.length > 0) finalNote += `\n\n【早前已處理】\n` + doneOldItems.join('\n');
-        if (pendingOldItems.length > 0) finalNote += `\n\n【早前未處理】\n` + pendingOldItems.join('\n');
+        // 未勾選的舊問題不再寫入本紀錄（首頁黃色「待跟進」框已列出）
+        // 修改紀錄時，保留原有「早前未處理」段落（已標記完成的則移除）
+        if (editingRecordId) {
+            let origNote = ((allRecords.find(x => String(x.id) === String(editingRecordId)) || {}).note) || '';
+            let mOld = origNote.match(/【早前未處理】([\s\S]*?)(?=【|$)/);
+            if (mOld) {
+                let doneNorm = doneOldItems.map(t => t.replace(/\s*\[狀態:.*?\]/g, '').trim().toUpperCase());
+                let kept = mOld[1].split('\n').map(s => s.trim()).filter(Boolean).filter(line => {
+                    let norm = line.replace(/\s*\[狀態:.*?\]/g, '').trim().toUpperCase();
+                    return !doneNorm.some(d => d === norm || d.includes(norm) || norm.includes(d));
+                });
+                if (kept.length) finalNote += `\n\n【早前未處理】\n` + kept.join('\n');
+            }
+        }
         
         let luxIssue = ""; 
         if (document.getElementById('lux-issue-group').style.display === 'block') { 
