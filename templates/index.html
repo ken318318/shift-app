@@ -236,16 +236,16 @@
         <!-- 2. 溫度 獨立一行 -->
         <div style="margin-top: 15px;">
             <div style="display: flex; justify-content: space-between; align-items: center; min-height: 24px; margin-bottom: 5px;">
-                <label style="margin: 0; white-space: nowrap;">全場 溫度：</label>
+                <label style="margin: 0; white-space: nowrap;">全場 溫度 (°C)：</label>
                 <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
                     <input type="checkbox" id="skip-temp" onchange="toggleSkip('temp')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
                 </label>
             </div>
             <div id="temp-input-area" style="margin-top: 5px;">
                 <select id="temp" onchange="toggleIssue('temp')">
-                    <option value="偏低 (<22.5)">偏低 (&lt;22.5)</option>
-                    <option value="正常 (22.5-24.5)" selected>正常 (22.5-24.5)</option>
-                    <option value="偏高 (>24.5)">偏高 (&gt;24.5)</option>
+                    <option value="偏低 (<22.5)">偏低（&lt; 22.5 °C）</option>
+                    <option value="正常 (22.5-24.5)" selected>正常（22.5–24.5 °C）</option>
+                    <option value="偏高 (>24.5)">偏高（&gt; 24.5 °C）</option>
                 </select>
                 <div id="temp-issue-group" class="issue-group">
                     <div class="issue-title">溫度異常紀錄：</div>
@@ -265,16 +265,16 @@
         <!-- 3. BGM 分貝 獨立一行 -->
         <div style="margin-top: 15px;">
             <div style="display: flex; justify-content: space-between; align-items: center; min-height: 24px; margin-bottom: 5px;">
-                <label style="margin: 0; white-space: nowrap;">全場 BGM 分貝：</label>
+                <label style="margin: 0; white-space: nowrap;">全場 BGM 分貝 (dB)：</label>
                 <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
                     <input type="checkbox" id="skip-bgm" onchange="toggleSkip('bgm')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
                 </label>
             </div>
             <div id="bgm-input-area" style="margin-top: 5px;">
                 <select id="bgm" onchange="toggleIssue('bgm')">
-                    <option value="偏低 (<65)">偏低 (&lt;65)</option>
-                    <option value="正常 (65-75)" selected>正常 (65-75)</option>
-                    <option value="偏高 (>75)">偏高 (&gt;75)</option>
+                    <option value="偏低 (<65)">偏低（&lt; 65 dB）</option>
+                    <option value="正常 (65-75)" selected>正常（65–75 dB）</option>
+                    <option value="偏高 (>75)">偏高（&gt; 75 dB）</option>
                 </select>
                 <div id="bgm-issue-group" class="issue-group">
                     <div class="issue-title">分貝異常紀錄：</div>
@@ -1757,6 +1757,26 @@ function updatePendingCardState(card) {
         .catch(function () { alert('❌ 連線失敗，請稍後再試。'); });
     }
 
+    // ===== 溫度／分貝：舊紀錄都補上正規單位 =====
+    function unitTempText(v) {
+        v = String(v == null ? '' : v).trim();
+        if (!v) return '';
+        if (v.indexOf('°') >= 0 || v.indexOf('℃') >= 0) return v;
+        if (v.indexOf('偏低') >= 0) return '偏低（低於 22.5 °C）';
+        if (v.indexOf('偏高') >= 0) return '偏高（高於 24.5 °C）';
+        if (v.indexOf('正常') >= 0) return '正常（22.5–24.5 °C）';
+        return v;
+    }
+    function unitBgmText(v) {
+        v = String(v == null ? '' : v).trim();
+        if (!v) return '';
+        if (/dB/i.test(v)) return v;
+        if (v.indexOf('偏低') >= 0) return '偏低（低於 65 dB）';
+        if (v.indexOf('偏高') >= 0) return '偏高（高於 75 dB）';
+        if (v.indexOf('正常') >= 0) return '正常（65–75 dB）';
+        return v;
+    }
+
     function displayRecords() {
         let firstDiv = document.getElementById('recordList');
         let isFirstLoad = !firstDiv || firstDiv.getAttribute('data-loaded') !== '1';
@@ -1896,8 +1916,8 @@ function updatePendingCardState(card) {
 
                 let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${fmtDateTime(r.created_at)}</div>` : "";
                 let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : 'Lux數值大致在於450-650之間';
-                let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常' || r.temp_issue) ? '溫度數值大致在於 22.5°-24.5°' : `溫度: ${r.temp}`;
-                let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常' || r.db_issue) ? '分貝數值大致在於 65-75' : `分貝: ${r.bgm}`;
+                let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常' || r.temp_issue) ? '溫度數值大致在於 22.5–24.5 °C' : `溫度: ${unitTempText(r.temp)}`;
+                let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常' || r.db_issue) ? '分貝數值大致在於 65–75 dB' : `分貝: ${unitBgmText(r.bgm)}`;
                 let dataHtml = `<div class="record-data">📊 全場檢測：${luxStr} ｜ ${tempStr} ｜ ${bgmStr}</div>`;
                 
                 let onDutyHtml = '';
