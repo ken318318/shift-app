@@ -92,6 +92,7 @@
         .lr-td { cursor: pointer; }
         .lr-td.lr-new { color: #FF0000; }
         .lr-emp { background: #FDE9E9; }
+        .lr-note { font-size: 8px; line-height: 1.2; color: #777; font-weight: normal; margin-top: 2px; word-break: break-word; }
         .lr-cnt { background: #FDE9E9; font-weight: bold; font-size: 14px; }
         .lr-total { font-size: 16px; font-weight: bold; border-top: 3px solid #000 !important; border-bottom: 3px solid #000 !important; padding: 7px 4px !important; }
         .lr-sep { border-left: 3px solid #000 !important; }
@@ -2983,7 +2984,8 @@ function updatePendingCardState(card) {
             const at = ' data-c="' + ci + '" data-i="' + idx + '"';
             return '<td class="' + cls + sep + '"' + at + '>' + urEscape(item.hall) + '</td>' +
                    '<td class="' + cls + '"' + at + '>' + urEscape(item.pit) + '</td>' +
-                   '<td class="' + cls + '"' + at + '>' + urEscape(item.table) + '</td>';
+                   '<td class="' + cls + '"' + at + '>' + urEscape(item.table) +
+                   (item.note ? '<div class="lr-note">' + urEscape(item.note) + '</div>' : '') + '</td>';
         }
 
         for (let i = 0; i < n; i++) {
