@@ -3131,6 +3131,132 @@ def set_hall_status():
             release_db_connection(conn)
 
 
+_CHAIR_TYPE_KEY = 'chair_types'
+_CHAIR_LAYOUT_CACHE = None
+
+
+def _chair_layout():
+    global _CHAIR_LAYOUT_CACHE
+    if _CHAIR_LAYOUT_CACHE is None:
+        try:
+            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'chair_map.json')
+            with open(path, 'r', encoding='utf-8') as f:
+                _CHAIR_LAYOUT_CACHE = json.load(f)
+        except Exception as e:
+            print('椅況圖版面讀取失敗:', e)
+            _CHAIR_LAYOUT_CACHE = {'maxR': 0, 'maxC': 0, 'pits': [], 'cells': []}
+    return _CHAIR_LAYOUT_CACHE
+
+
+def _chair_types():
+    raw = get_setting(_CHAIR_TYPE_KEY, '') or ''
+    try:
+        data = json.loads(raw) if raw.strip() else {}
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _chair_issues():
+    """由交更紀錄推算每張台的最新椅況（只計未處理項目）。"""
+    out = {}
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT note FROM records WHERE note LIKE '%【場面問題】%' ORDER BY id ASC")
+        rows = c.fetchall()
+    except Exception as e:
+        print('椅況圖讀取紀錄失敗:', e)
+        rows = []
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+    for (note,) in rows:
+        secs = _up_split_sections(note or '')
+        for line in secs.get('場面問題', '').split('\n'):
+            for it in _up_parse_line(line):
+                cat = it.get('category') or ''
+                is_dlr = ('DLR' in cat and ('櫈' in cat or '椅' in cat))
+                is_guest = ('客櫈' in cat or '客椅' in cat)
+                if not (is_dlr or is_guest):
+                    continue
+                key = _up_norm(it['code'])
+                rec = out.setdefault(key, {'dlr_bad': False, 'guest_bad': False})
+                bad = (it.get('status') != '已處理')
+                if is_dlr:
+                    rec['dlr_bad'] = bad
+                if is_guest:
+                    rec['guest_bad'] = bad
+    return out
+
+
+@app.route('/api/chair_map', methods=['GET'])
+def chair_map_get():
+    """椅況圖：回傳每張台的椅況（停運／好／壞 DLR／壞客椅）及新舊椅設定。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+
+    layout = _chair_layout()
+    hall_status = {}
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT table_code, status FROM hall_tables")
+        for code, st in c.fetchall():
+            hall_status[_up_norm(code)] = st
+    except Exception as e:
+        print('椅況圖讀取台號失敗:', e)
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+    issues = _chair_issues()
+    types = _chair_types()
+
+    cells = []
+    for cell in layout.get('cells', []):
+        code = cell.get('code') or ''
+        key = _up_norm(code)
+        st = hall_status.get(key, '營運')
+        iss = issues.get(key, {})
+        cells.append({
+            'r': cell.get('r'), 'c': cell.get('c'), 'pit': cell.get('pit'),
+            'num': cell.get('num'), 'code': code,
+            'status': st,
+            'dlr_bad': bool(iss.get('dlr_bad')),
+            'guest_bad': bool(iss.get('guest_bad')),
+            'chair': types.get(key) or ''
+        })
+    return jsonify({'status': 'success', 'maxR': layout.get('maxR'), 'maxC': layout.get('maxC'),
+                    'pits': layout.get('pits', []), 'cells': cells})
+
+
+@app.route('/api/chair_map/type', methods=['POST'])
+def chair_map_set_type():
+    """設定新舊 DLR 椅（存 app_settings）。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    data = request.json or {}
+    code = _up_norm(data.get('code'))
+    typ = (data.get('type') or '').strip().lower()
+    if typ not in ('new', 'old', ''):
+        return jsonify({'status': 'error', 'message': '類型錯誤'})
+    if not code:
+        return jsonify({'status': 'error', 'message': '缺少台號'})
+    types = _chair_types()
+    if typ:
+        types[code] = typ
+    else:
+        types.pop(code, None)
+    return jsonify({'status': 'success'} if set_setting(_CHAIR_TYPE_KEY, json.dumps(types, ensure_ascii=False)) else
+                   {'status': 'error', 'message': '儲存失敗'})
+
+
 @app.route('/')
 def index():
     # 將是否為管理員的狀態傳給前端
