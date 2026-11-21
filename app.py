@@ -1614,7 +1614,7 @@ def export_records_file():
         if conn:
             release_db_connection(conn)
 
-    out = [['日期時間', '交更人', '更份', 'Lux', '溫度', '分貝', '狀態', '檢測Hall',
+    out = [['日期時間', '交更人', '更份', '全場Lux', '全場溫度', '全場分貝', '狀態', 'NFC檢測Hall',
             'Checklist', '詳細事項', 'Lux異常', '溫度異常', '分貝異常', '客人意見', 'DLR意見']]
     for r in rows:
         checklist = r[6] or ''
