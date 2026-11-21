@@ -61,7 +61,7 @@
             var sent = false;
 
             form.addEventListener('submit', function (e) {
-                // 已撳過就唔再提交，避免重複登入
+                // 已按過就不再提交，避免重複登入
                 if (sent) { e.preventDefault(); return; }
                 sent = true;
                 btn.disabled = true;
