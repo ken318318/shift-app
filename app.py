@@ -36,7 +36,7 @@ def release_db_connection(conn):
     DB_POOL.putconn(conn)
 
 
-# ---------- 系統設定 / 稽核（自動建表，唔需要手動改資料庫） ----------
+# ---------- 系統設定 / 稽核（自動建表，無須手動修改資料庫） ----------
 def ensure_tables():
     conn = None
     try:
@@ -184,7 +184,7 @@ def log_action(action, detail=""):
 
 # ---------- 強制登出（session 版本控制） ----------
 _EPOCH_CACHE = {'staff': (0.0, None), 'admin': (0.0, None)}
-EPOCH_TTL = 10  # 秒；即係改密碼後最多 10 秒內所有舊 session 失效
+EPOCH_TTL = 10  # 秒；即修改密碼後最多 10 秒內所有舊 session 失效
 
 
 def get_epoch(role, force=False):
@@ -233,7 +233,7 @@ def cache_clear(*keys):
 
 
 def init_config_order():
-    """第一次啟動時，按舊有顯示次序寫入 cat_order / item_order（之後唔會再動）。"""
+    """第一次啟動時，按舊有顯示次序寫入 cat_order / item_order（之後不會再改動）。"""
     conn = None
     try:
         conn = get_db_connection()
@@ -278,7 +278,7 @@ PRIMARY_HOST = (os.environ.get('PRIMARY_HOST') or 'bs-shift.xyz').strip().lower(
 @app.before_request
 def force_primary_domain():
     """
-    shift-app-wvgf.onrender.com 之類嘅舊網址 → 301 跳去新域名。
+    shift-app-wvgf.onrender.com 之類的舊網址 → 301 跳轉至新域名。
     保留：/healthz、任何 .txt（微信域名驗證檔）、/static/ 資源。
     """
     host = (request.host or '').split(':')[0].strip().lower()
@@ -321,7 +321,7 @@ def require_login():
             return
         if request.path.startswith('/api/'):
             return jsonify({"status": "error", "kick": True,
-                            "message": "⏰ 你嘅登入已失效（密碼已被更改），請重新登入。"}), 401
+                            "message": "⏰ 你的登入已失效（密碼已被更改），請重新登入。"}), 401
         return redirect(url_for('login'))
 
 @app.route('/bf392e0c1abdaeb5d994c628262a24a2.txt')
@@ -400,7 +400,7 @@ def admin():
 
 @app.route('/api/diag', methods=['GET'])
 def diag():
-    """診斷（純文字，方便手機睇）。"""
+    """診斷（純文字，方便手機查看）。"""
     cache_clear('configs')
     conn = None
     lines = []
@@ -532,7 +532,7 @@ def reorder_config():
             i = names.index(category)
             j = i - 1 if direction == 'up' else i + 1
             if j < 0 or j >= len(names):
-                return jsonify({"status": "success", "message": "已經喺最" + ('前' if direction == 'up' else '後') + "面。"})
+                return jsonify({"status": "success", "message": "已移至最" + ('前' if direction == 'up' else '後') + "面。"})
             names[i], names[j] = names[j], names[i]
             for k, name in enumerate(names, start=1):
                 c.execute("UPDATE venue_configs SET cat_order = %s WHERE category = %s", (k * 10, name))
@@ -554,7 +554,7 @@ def reorder_config():
             i = ids.index(rid)
             j = i - 1 if direction == 'up' else i + 1
             if j < 0 or j >= len(ids):
-                return jsonify({"status": "success", "message": "已經喺最" + ('前' if direction == 'up' else '後') + "面。"})
+                return jsonify({"status": "success", "message": "已移至最" + ('前' if direction == 'up' else '後') + "面。"})
             ids[i], ids[j] = ids[j], ids[i]
             for k, oid in enumerate(ids, start=1):
                 c.execute("UPDATE venue_configs SET item_order = %s WHERE id = %s", (k, oid))
@@ -573,7 +573,7 @@ def reorder_config():
 
 
 def _cfg_prefix(name):
-    """用嚟判斷同一個群組（例：『賭檯 - xxx』、『燈-xxx』）。"""
+    """用於判斷同一個群組（例：『賭檯 - xxx』、『燈-xxx』）。"""
     n = (name or '').strip()
     for sep in (' - ', '-'):
         if sep in n:
@@ -596,7 +596,7 @@ def add_config():
         c = conn.cursor()
         c.execute("SELECT 1 FROM venue_configs WHERE category = %s AND problem = %s", (category, problem))
         if c.fetchone():
-            return jsonify({"status": "error", "message": "⚠️ 呢個選項已經存在。"})
+            return jsonify({"status": "error", "message": "⚠️ 此選項已經存在。"})
 
         c.execute("""SELECT COALESCE(MAX(cat_order),0), COALESCE(MAX(item_order),0)
                      FROM venue_configs WHERE category = %s""", (category,))
@@ -611,7 +611,7 @@ def add_config():
                   (category, problem, cat_order, item_order))
 
         if is_new_cat:
-            # 新類別自動排入同一個群組後面（例：賭檯 - 新項目 會排喺其他「賭檯」類別之後）
+            # 新類別自動排入同一個群組後面（例：賭檯 - 新項目 會排在其他「賭檯」類別之後）
             c.execute("""SELECT category, MIN(COALESCE(cat_order,0)) AS o
                          FROM venue_configs GROUP BY category ORDER BY o ASC, category ASC""")
             order = [r[0] for r in c.fetchall() if r[0] != category]
@@ -642,10 +642,10 @@ def add_config():
 @app.route('/api/delete_config', methods=['POST'])
 def delete_config():
     """
-    刪除場面問題選項（任何已登入嘅同事都可以用）。
-    problem 有值 → 只刪該類別下嘅該個選項；
+    刪除場面問題選項（任何已登入的同事均可使用）。
+    problem 有值 → 只刪該類別下的該個選項；
     problem 留空 → 刪除整個類別（連同該類別底下所有選項）。
-    已提交嘅舊紀錄唔受影響（紀錄係存文字，唔係存 id）。
+    已提交的舊紀錄不受影響（紀錄儲存文字，不是儲存 id）。
     """
     data = request.json or {}
     category = (data.get('category') or '').strip()
@@ -667,7 +667,7 @@ def delete_config():
         conn.commit()
 
         if deleted == 0:
-            return jsonify({"status": "error", "message": "⚠️ 搵唔到要刪除嘅選項（可能已經被其他人刪除）。"})
+            return jsonify({"status": "error", "message": "⚠️ 找不到要刪除的選項（可能已被其他人刪除）。"})
 
         cache_clear('configs')
         log_action('刪除選項', f"{category} / {problem or '整個類別'}（共 {deleted}）")
@@ -724,7 +724,7 @@ def rename_config():
         conn.commit()
 
         if updated == 0:
-            return jsonify({"status": "error", "message": "⚠️ 搵唔到要修改嘅資料。"})
+            return jsonify({"status": "error", "message": "⚠️ 找不到要修改的資料。"})
 
         cache_clear('configs')
         log_action('修改選項名稱', f"{rtype} / 更新 {updated} 筆")
@@ -1891,11 +1891,11 @@ def change_password():
     bump_epoch('staff' if target == 'staff' else 'admin')
 
     if target == 'admin':
-        # 保持目前呢個管理員 session 有效，唔會自己踢自己
+        # 保持目前這個管理員 session 有效，不會將自己登出
         session['epoch'] = get_epoch('admin', force=True)
-        msg = "✅ 管理員密碼已更新（其他已登入嘅管理員會被強制登出）。"
+        msg = "✅ 管理員密碼已更新（其他已登入的管理員會被強制登出）。"
     else:
-        msg = "✅ 同事密碼已更新，所有已登入嘅同事已被強制登出（最多 10 秒內生效）。"
+        msg = "✅ 同事密碼已更新，所有已登入的同事已被強制登出（最多 10 秒內生效）。"
 
     log_action('更改密碼', '帳號：' + ('同事' if target == 'staff' else '管理員'))
     return jsonify({"status": "success", "message": msg})
@@ -1903,7 +1903,7 @@ def change_password():
 
 @app.route('/api/kick_sessions', methods=['POST'])
 def kick_sessions():
-    """唔改密碼，直接踢走所有已登入嘅同事（適合有人離職）。"""
+    """不修改密碼，直接登出所有已登入的同事（適合有人離職）。"""
     if session.get('role') != 'admin':
         return jsonify({"status": "error", "message": "⚠️ 只有管理員可以強制登出。"})
 
@@ -1979,7 +1979,7 @@ def clear_audit_logs():
 
 # ---------- 更新表（任何類別，一鍵生成） ----------
 # 交更表單記錄格式：  [賭檯 - Layout - 污跡] 位置: NB0201 [狀態:已 Send mail]
-# 本功能把「已 Send mail」的台號抽出，按類別／問題分欄，產生老細睇的更新表。
+# 本功能把「已 Send mail」的台號抽出，按類別／問題分欄，產生主管查看的更新表。
 _UP_KEY = 'update_reports'
 _UP_MAPKEY = 'update_map'
 _UP_EXCLKEY = 'update_excluded'
@@ -2117,7 +2117,7 @@ def _up_parse_note(note):
 
 
 def _up_detect(date_str):
-    """截至指定日期，每個「類別＋台號」最新一次嘅資料。
+    """截至指定日期，每個「類別＋台號」最新一次的資料。
     回傳 (out, done_at, nfc_nocode)
     """
     rows = []
@@ -2183,8 +2183,8 @@ def _up_detect(date_str):
                 nfc_nocode.append(it['status'])
 
         secs = _up_split_sections(note)
-        # 【早前已處理】＝已經搞掂，唔應該再出現在更新表
-        # 以「類別＋台號」判斷（因為有時同事冇填問題，只填台號）
+        # 【早前已處理】＝已經完成，不應再出現在更新表
+        # 以「類別＋台號」判斷（因為有時同事沒有填寫問題，只填台號）
         for line in secs.get('早前已處理', '').split('\n'):
             for it in _up_parse_line(line):
                 done_at[(it['category'], it['code'])] = (ds, it['problem'])
@@ -2193,8 +2193,8 @@ def _up_detect(date_str):
                     done_at[('NFC', it['code'])] = (ds, _up_nfc_problem(it['boxes']))
 
         for name, seg in secs.items():
-            # 「早前已處理」＝完成標記；「早前未處理」只係上一張紀錄嘅文字副本，
-            # 原始台號仍會喺原本嗰張紀錄抽出，所以兩段都唔當新項目，避免舊台號殘留。
+            # 「早前已處理」＝完成標記；「早前未處理」只是上一張紀錄的文字副本，
+            # 原始台號仍會從原本那張紀錄抽出，所以兩段都不作新項目，避免舊台號殘留。
             if name in ('早前已處理', '早前未處理'):
                 continue
             for line in seg.split('\n'):
@@ -2209,7 +2209,7 @@ def _up_detect(date_str):
         if info:
             dd, dprob = info
             if dd >= rec['last_seen']:
-                # 若「已完成」嘅問題與最新上報嘅問題不同，唔當佢完成（避免新問題被誤刪）
+                # 若「已完成」的問題與最新上報的問題不同，不當作已完成（避免新問題被誤刪）
                 if (not dprob) or (not rec['problem']) or dprob == rec['problem']:
                     out.pop(key, None)
                     continue
@@ -2331,7 +2331,7 @@ def update_report_get():
     reports = _up_load_reports()
     saved = reports.get(_up_key(date_str, rtype)) or {}
 
-    # 已移除台號：記住「移除日期」；日後有新紀錄就自動重新顯示（唔會永久隱藏）
+    # 已移除台號：記住「移除日期」；日後有新紀錄就自動重新顯示（不會永久隱藏）
     excl_at = {}
     for k, rep in reports.items():
         if '|' not in k:
@@ -2394,7 +2394,7 @@ def update_report_get():
             continue
         det[code] = e
 
-    # 仍然存在於紀錄內嘅台號（不分狀態、不分完成），用嚟清理舊儲存報表
+    # 仍然存在於紀錄內的台號（不分狀態、不分完成），用於清理舊儲存報表
     present_all = set()
     for (cat_key, code), e in det_all.items():
         if is_layout:
@@ -2408,7 +2408,7 @@ def update_report_get():
         if c:
             manual.add(c)
 
-    # 已標記完成、而且之後冇再上報嘅台號（只限當前類別）
+    # 已標記完成、而且之後沒有再上報的台號（只限當前類別）
     done_only = set()
     for (c, code), _info in done_map.items():
         if is_layout:
@@ -2576,7 +2576,7 @@ def update_report_save():
         if c and c not in seen and c not in excl:
             excl.append(c)
 
-    # 記錄「手動加入」嘅台號（唔喺紀錄內），以免下次載入時被自動清除
+    # 記錄「手動加入」的台號（不在紀錄內），以免下次載入時被自動清除
     manual = []
     try:
         det_save, _dm, _nc = _up_detect(date_str)
