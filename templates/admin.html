@@ -26,9 +26,9 @@
         .row > * { flex: 1; min-width: 120px; }
         .muted { font-size: 12px; color: #888; }
         .stat-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
-        .stat { flex: 1 1 70px; background: #f7f9fc; border: 1px solid #e8eef7; border-radius: 10px; padding: 10px; text-align: center; }
+        .stat { flex: 1 1 70px; min-width: 0; background: #f7f9fc; border: 1px solid #e8eef7; border-radius: 10px; padding: 10px; text-align: center; }
         .stat b { display: block; font-size: 20px; color: #1a73e8; }
-        .stat span { font-size: 11px; color: #666; }
+        .stat span { font-size: 11px; color: #666; display: block; word-break: break-word; }
         .ctl { display: flex; align-items: center; gap: 8px; background: #fafbfc; border: 1px solid #eceff1; border-radius: 10px; padding: 10px; margin-top: 10px; flex-wrap: wrap; }
         .ctl .name { flex: 1; min-width: 120px; font-weight: bold; font-size: 14px; word-break: break-word; }
         .opt-row { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #f0f2f5; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; }
@@ -57,6 +57,13 @@
         .modal h3 { margin: 0 0 10px 0; font-size: 16px; }
         .msg { font-size: 12px; margin-top: 8px; min-height: 16px; }
         .hide { display: none !important; }
+        /* 檢查進度表：手機都要睇得齊 */
+        #p-table { overflow-x: auto; }
+        #p-table table { width: 100%; table-layout: fixed; }
+        #p-table th, #p-table td { padding: 8px 4px; word-break: break-word; }
+        #p-table th:nth-child(1), #p-table td:nth-child(1) { width: 58px; }
+        #p-table th:nth-child(2), #p-table td:nth-child(2) { width: 38px; }
+        #p-table th:nth-child(3), #p-table td:nth-child(3) { width: 92px; }
         /* 載入中 */
         #bs-loading { display: none; position: fixed; inset: 0; z-index: 10050; background: rgba(255,255,255,.9); align-items: center; justify-content: center; flex-direction: column; gap: 14px; }
         #bs-loading .bs-spinner { width: 46px; height: 46px; border: 5px solid #dbeafe; border-top-color: #1a73e8; border-radius: 50%; animation: bs-spin .8s linear infinite; }
@@ -138,7 +145,7 @@
             <option value="14" selected>最近 14 日</option>
             <option value="30">最近 30 日</option>
         </select>
-        <div class="muted" style="margin-top:8px;">※ 依紀錄實際填寫的「無需檢測」判斷，不預設任何星期規則。</div>
+        <div class="muted" style="margin-top:8px; line-height:1.7;">※ 本表<b>只計 NFC</b>（每日揀一個 Hall）；Lux／溫度／分貝係<b>全場檢測</b>，唔會逐個 Hall 分開記錄。<br>※ 依紀錄實際填寫的「無需檢測」判斷，不預設任何星期規則。</div>
         <div class="stat-grid" id="p-stats"></div>
         <div id="p-table" style="margin-top:10px;"></div>
     </div>
@@ -713,7 +720,7 @@
                         <div class="who">
                             <b>${esc(r.name || '未填')}</b> <span class="muted">(${esc(r.shift || '')})</span><br>
                             <span class="muted">🕒 ${esc(fmtDateTime(r.created_at))}</span><br>
-                            ${hall ? `<span class="hall-chip">🛰️ ${esc(hall)}</span>` : '<span class="badge b-gray">無需檢測 Hall</span>'}
+                            ${hall ? `<span class="hall-chip">🛰️ NFC: ${esc(hall)}</span>` : '<span class="badge b-gray">本更無需 NFC</span>'}
                             ${statusBadge}
                         </div>
                         <div style="display:flex; flex-direction:column; gap:6px;">
@@ -789,7 +796,7 @@
                 else if (info.halls.size > 0) {
                     state = 'checked';
                     hallHtml = [...info.halls].sort().map(h => `<span class="hall-chip">${esc(h)}</span>`).join('');
-                } else { state = 'no-need'; hallHtml = '<span class="badge b-info">無需檢測</span>'; }
+                } else { state = 'no-need'; hallHtml = '<span class="badge b-info">本更無需 NFC</span>'; }
 
                 if (state === 'checked') checkedDays++;
                 if (state === 'no-need') noNeedDays++;
@@ -804,12 +811,12 @@
             }
 
             document.getElementById('p-stats').innerHTML =
-                `<div class="stat"><b>${checkedDays}</b><span>已檢查 Hall</span></div>
-                 <div class="stat"><b>${noNeedDays}</b><span>無需檢測</span></div>
+                `<div class="stat"><b>${checkedDays}</b><span>已做 NFC 日數</span></div>
+                 <div class="stat"><b>${noNeedDays}</b><span>本更無需 NFC</span></div>
                  <div class="stat"><b>${missingDays}</b><span>未有交更</span></div>`;
 
             document.getElementById('p-table').innerHTML = `<table>
-                <thead><tr><th>日期</th><th>星期</th><th>檢測 Hall</th><th>交更人</th></tr></thead>
+                <thead><tr><th>日期</th><th>星期</th><th>NFC 檢測 Hall</th><th>交更人</th></tr></thead>
                 <tbody>${rows.join('')}</tbody></table>`;
         }
 
