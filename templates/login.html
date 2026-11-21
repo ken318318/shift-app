@@ -21,23 +21,64 @@
         input[type="password"] { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         button { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
         button:active { background: #1557b0; }
+        button:disabled { background: #9bbcf0; cursor: default; }
         .error { color: #e74c3c; margin-bottom: 15px; font-size: 14px; }
+
+        /* ===== 全畫面「登入中」提示（同主頁載入中一樣） ===== */
+        #bs-loading { display: none; position: fixed; inset: 0; z-index: 10050; background: rgba(255,255,255,.9); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); align-items: center; justify-content: center; flex-direction: column; gap: 14px; }
+        #bs-loading .bs-spinner { width: 48px; height: 48px; border: 5px solid #dbeafe; border-top-color: #1a73e8; border-radius: 50%; animation: bs-spin .8s linear infinite; }
+        #bs-loading .bs-loading-text { font-size: 14px; color: #1565c0; font-weight: bold; letter-spacing: 1px; background: #fff; padding: 6px 16px; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+        @keyframes bs-spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+    <div id="bs-loading" role="status" aria-live="polite">
+        <div class="bs-spinner"></div>
+        <div class="bs-loading-text">登入中…</div>
+    </div>
+
     <div class="login-card">
         <h2>🔒 BS交更系統</h2>
         {% if error %}
         <div class="error">{{ error }}</div>
         {% endif %}
-        <form method="POST">
+        <form method="POST" id="login-form">
             <input type="password" name="password" placeholder="請輸入系統密碼" required autofocus>
-            <button type="submit">登入</button>
+            <button type="submit" id="login-btn">登入</button>
         </form>
         <div style="margin-top: 14px; font-size: 12px; color: #888; line-height: 1.6;">
             如忘記密碼，請向主管查詢。<br>
             如顯示「未完成 ICP 備案」提示，請點擊「繼續前往」即可登入。
         </div>
     </div>
+
+    <script>
+        (function () {
+            var form = document.getElementById('login-form');
+            var btn = document.getElementById('login-btn');
+            var loading = document.getElementById('bs-loading');
+            var txt = loading.querySelector('.bs-loading-text');
+            var sent = false;
+
+            form.addEventListener('submit', function (e) {
+                // 已撳過就唔再提交，避免重複登入
+                if (sent) { e.preventDefault(); return; }
+                sent = true;
+                btn.disabled = true;
+                btn.textContent = '登入中…';
+                if (txt) txt.textContent = '登入中…';
+                loading.style.display = 'flex';
+            });
+
+            // 用返回鍵返到登入頁（bfcache）時，還原做未登入狀態
+            window.addEventListener('pageshow', function (e) {
+                if (!e.persisted) return;
+                sent = false;
+                btn.disabled = false;
+                btn.textContent = '登入';
+                loading.style.display = 'none';
+            });
+        })();
+    </script>
 </body>
 </html>
