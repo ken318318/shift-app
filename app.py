@@ -3139,12 +3139,15 @@ def _chair_layout():
     global _CHAIR_LAYOUT_CACHE
     if _CHAIR_LAYOUT_CACHE is None:
         try:
-            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'chair_map.json')
+            base = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+            path = os.path.join(base, 'chair_grid.json')
+            if not os.path.exists(path):
+                path = os.path.join(base, 'chair_map.json')
             with open(path, 'r', encoding='utf-8') as f:
                 _CHAIR_LAYOUT_CACHE = json.load(f)
         except Exception as e:
             print('椅況圖版面讀取失敗:', e)
-            _CHAIR_LAYOUT_CACHE = {'maxR': 0, 'maxC': 0, 'pits': [], 'cells': []}
+            _CHAIR_LAYOUT_CACHE = {'maxR': 0, 'maxC': 0, 'pits': [], 'cells': [], 'extras': []}
     return _CHAIR_LAYOUT_CACHE
 
 
@@ -3222,18 +3225,43 @@ def chair_map_get():
     for cell in layout.get('cells', []):
         code = cell.get('code') or ''
         key = _up_norm(code)
-        st = hall_status.get(key, '營運')
-        iss = issues.get(key, {})
+        st = hall_status.get(key, '營運') if key else ''
+        iss = issues.get(key, {}) if key else {}
         cells.append({
-            'r': cell.get('r'), 'c': cell.get('c'), 'pit': cell.get('pit'),
-            'num': cell.get('num'), 'code': code,
+            'r': cell.get('r'), 'c': cell.get('c'),
+            'v': cell.get('v', ''),
+            't': cell.get('t', 0), 'l': cell.get('l', 0),
+            'rr': cell.get('rr', 0), 'b': cell.get('b', 0),
+            'code': code,
             'status': st,
             'dlr_bad': bool(iss.get('dlr_bad')),
             'guest_bad': bool(iss.get('guest_bad')),
-            'chair': types.get(key) or ''
+            'chair': types.get(key) or '' if key else ''
         })
+    cnt = {'total': 0, 'active': 0, 'inactive': 0, 'dlr_bad': 0, 'guest_bad': 0, 'spare': 0}
+    for x in cells:
+        if not x.get('code'):
+            continue
+        cnt['total'] += 1
+        if x.get('status') == '停運':
+            cnt['inactive'] += 1
+            if not x.get('dlr_bad'):
+                cnt['spare'] += 1
+        else:
+            cnt['active'] += 1
+        if x.get('dlr_bad'):
+            cnt['dlr_bad'] += 1
+        if x.get('guest_bad'):
+            cnt['guest_bad'] += 1
+
     return jsonify({'status': 'success', 'maxR': layout.get('maxR'), 'maxC': layout.get('maxC'),
-                    'pits': layout.get('pits', []), 'cells': cells})
+                    'minR': layout.get('minR', 1), 'minC': layout.get('minC', 1),
+                    'maxRu': layout.get('maxRu', layout.get('maxR')),
+                    'maxCu': layout.get('maxCu', layout.get('maxC')),
+                    'cols': layout.get('cols', []), 'rows': layout.get('rows', []),
+                    'today': _up_today(), 'counts': cnt,
+                    'pits': layout.get('pits', []), 'extras': layout.get('extras', []),
+                    'merges': layout.get('merges', []), 'cells': cells})
 
 
 @app.route('/api/chair_map/type', methods=['POST'])
