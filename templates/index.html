@@ -53,6 +53,7 @@
         .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; color: white; white-space: nowrap; }
         .status-pending { background: #e67c73; }
         .status-done { background: #2ecc71; }
+        .status-watch { background: #f0a30a; }
         .issue-status { padding: 6px; font-size: 12px; border-radius: 6px; border: 1px solid #ccc; background: #fff; color: #d32f2f; font-weight: bold; }
         .pending-card { background: #fff8e1; border-left: 4px solid #ffa000; padding: 10px; margin-bottom: 10px; border-radius: 4px; font-size: 13px; }
         .btn-remove { background: #ff4d4f; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; position: absolute; right: 0; top: 0; }
@@ -129,7 +130,7 @@
         <div class="bs-loading-text">載入中…</div>
     </div>
     <script>
-        // 一開頁即顯示「載入中」，唔使等主程式解析完
+        // 一開啟頁面即顯示「載入中」，無須等待主程式解析完成
         (function () {
             var el = document.getElementById('bs-loading');
             if (!el) return;
@@ -252,8 +253,9 @@
                     <div id="temp-container">
                         <div class="issue-item temp-item">
                             <div class="issue-row"><input type="text" class="table-num temp-table" placeholder="輸入數字(如0201)"><input type="text" class="value temp-value" placeholder="數值"></div>
+                            <div class="issue-row" style="margin-top: 8px;"><input type="text" class="issue-note temp-note" placeholder="備註（例：觀察 3 日後再跟進）"></div>
                             <div class="issue-row" style="margin-top: 8px;">
-                                <select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
+                                <select class="issue-status"><option value="已處理" selected>已處理</option><option value="觀察中">觀察中</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
                             </div>
                         </div>
                     </div>
@@ -281,8 +283,9 @@
                     <div id="bgm-container">
                         <div class="issue-item bgm-item">
                             <div class="issue-row"><input type="text" class="table-num bgm-table" placeholder="輸入數字(如0201)"><input type="text" class="value bgm-value" placeholder="數值"></div>
+                            <div class="issue-row" style="margin-top: 8px;"><input type="text" class="issue-note bgm-note" placeholder="備註（例：觀察 3 日後再跟進）"></div>
                             <div class="issue-row" style="margin-top: 8px;">
-                                <select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
+                                <select class="issue-status"><option value="已處理" selected>已處理</option><option value="觀察中">觀察中</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select>
                             </div>
                         </div>
                     </div>
@@ -488,13 +491,13 @@
             </div>
             <div class="lr-msg" id="ur-msg"></div>
             <div class="lr-tip">
-                <b>用法：</b>① 先揀報表／類別，再揀日期；系統自動抽出該類別已 Send mail 嘅台號。<br>
-                ② 交更時有揀「方位」（客位／DLR位）嘅，污跡會自動分好欄；冇揀就會跌落下面嘅待分類區。<br>
-                ③ 輕觸表格內台號＝去下一欄；去到最後一欄再撳＝移除。<br>
-                ④ 按「💾 儲存」，再按「🖼️ 存為圖片」，長按圖片儲存就可以 Send 俾老細。
+                <b>用法：</b>① 先選擇報表／類別，再選擇日期；系統自動抽出該類別已 Send mail 的台號。<br>
+                ② 交更時有選擇「方位」（客位／DLR位）的，污跡會自動分好欄；沒有選擇則會歸入下方的待分類區。<br>
+                ③ 輕觸表格內台號＝去下一欄；去到最後一欄再按＝移除。<br>
+                ④ 按「💾 儲存」，再按「🖼️ 存為圖片」，長按圖片儲存即可 Send 給主管。
             </div>
             <div id="ur-pool-box" class="lr-pool" style="display: none;">
-                <b>🟡 待分類台號（未歸入任何一欄，撳一下即可加入第一欄）</b>
+                <b>🟡 待分類台號（未歸入任何一欄，按一下即可加入第一欄）</b>
                 <div id="ur-pool" style="margin-bottom: 6px;"></div>
                 <div id="ur-pool-btns" class="lr-pool-btns" style="display: flex; gap: 6px; flex-wrap: wrap;"></div>
             </div>
@@ -730,6 +733,7 @@ function setSubmitting(on) {
                     d.tempIssue.push({
                         t: i.querySelector('.temp-table').value,
                         v: i.querySelector('.temp-value').value,
+                        n: ((i.querySelector('.issue-note') || {}).value || ''),
                         s: i.querySelector('.issue-status').value
                     });
                 });
@@ -743,6 +747,7 @@ function setSubmitting(on) {
                     d.bgmIssue.push({
                         t: i.querySelector('.bgm-table').value,
                         v: i.querySelector('.bgm-value').value,
+                        n: ((i.querySelector('.issue-note') || {}).value || ''),
                         s: i.querySelector('.issue-status').value
                     });
                 });
@@ -797,7 +802,7 @@ function setSubmitting(on) {
     function loadDraft() {
         let data = localStorage.getItem(draftKey());
         if (!data && isPersonalUser()) {
-            // 舊版本草稿：若屬於自己，自動轉移過嚟
+            // 舊版本草稿：若屬於自己，自動轉移過來
             let old = localStorage.getItem('bs_shift_draft');
             if (old) {
                 try {
@@ -855,7 +860,7 @@ function setSubmitting(on) {
                     let container = document.getElementById('temp-container');
                     container.innerHTML = '';
                     d.tempIssue.forEach(i => {
-                        container.insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num temp-table" value="${i.t}"><input type="text" class="value temp-value" value="${i.v}"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" ${i.s==='已處理'?'selected':''}>已處理</option><option value="已 Send mail" ${i.s==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${i.s==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${i.s==='待處理'?'selected':''}>待處理</option></select></div></div>`);
+                        container.insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num temp-table" value="${i.t}"><input type="text" class="value temp-value" value="${i.v}"></div><div class="issue-row" style="margin-top: 8px;"><input type="text" class="issue-note temp-note" value="${i.n || ''}" placeholder="備註（例：觀察 3 日後再跟進）"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" ${i.s==='已處理'?'selected':''}>已處理</option><option value="觀察中" ${i.s==='觀察中'?'selected':''}>觀察中</option><option value="已 Send mail" ${i.s==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${i.s==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${i.s==='待處理'?'selected':''}>待處理</option></select></div></div>`);
                     });
                 }
             }
@@ -869,7 +874,7 @@ function setSubmitting(on) {
                     let container = document.getElementById('bgm-container');
                     container.innerHTML = '';
                     d.bgmIssue.forEach(i => {
-                        container.insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num bgm-table" value="${i.t}"><input type="text" class="value bgm-value" value="${i.v}"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" ${i.s==='已處理'?'selected':''}>已處理</option><option value="已 Send mail" ${i.s==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${i.s==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${i.s==='待處理'?'selected':''}>待處理</option></select></div></div>`);
+                        container.insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num bgm-table" value="${i.t}"><input type="text" class="value bgm-value" value="${i.v}"></div><div class="issue-row" style="margin-top: 8px;"><input type="text" class="issue-note bgm-note" value="${i.n || ''}" placeholder="備註（例：觀察 3 日後再跟進）"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" ${i.s==='已處理'?'selected':''}>已處理</option><option value="觀察中" ${i.s==='觀察中'?'selected':''}>觀察中</option><option value="已 Send mail" ${i.s==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${i.s==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${i.s==='待處理'?'selected':''}>待處理</option></select></div></div>`);
                     });
                 }
             }
@@ -905,7 +910,7 @@ function setSubmitting(on) {
                             </div>`;
                         });
                     }
-                    html += `</div><div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; align-items: center; flex: 1;"><span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span><select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" ${i.s==='已處理'?'selected':''}>已處理</option><option value="已 Send mail" ${i.s==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${i.s==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${i.s==='待處理'?'selected':''}>待處理</option></select></div><button type="button" class="btn-remove" style="position: static; margin-left: 10px;" onclick="this.parentElement.parentElement.remove()">X</button></div></div>`;
+                    html += `</div><div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; align-items: center; flex: 1;"><span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span><select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" ${i.s==='已處理'?'selected':''}>已處理</option><option value="觀察中" ${i.s==='觀察中'?'selected':''}>觀察中</option><option value="已 Send mail" ${i.s==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${i.s==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${i.s==='待處理'?'selected':''}>待處理</option></select></div><button type="button" class="btn-remove" style="position: static; margin-left: 10px;" onclick="this.parentElement.parentElement.remove()">X</button></div></div>`;
                     container.insertAdjacentHTML('beforeend', html);
                     let lastItem = document.querySelectorAll('.venue-item')[document.querySelectorAll('.venue-item').length - 1];
                     let catSelect = lastItem.querySelector('.venue-category');
@@ -939,7 +944,7 @@ function setSubmitting(on) {
         let btnTxt = '🔄 更新選項';
         await refreshConfigs();
         let count = Object.keys(venueCategories || {}).length;
-        let firstCat = Object.keys(venueCategories || {})[0] || '（冇）';
+        let firstCat = Object.keys(venueCategories || {})[0] || '（無）';
         alert('✅ 已更新選項\n\n類別數：' + count + '\n第一個類別：' + firstCat);
     }
 
@@ -1231,7 +1236,7 @@ function setSubmitting(on) {
         ensureVenueNoteUI(selectEl.closest('.venue-item'));
     }
 
-    // 每個場面問題項目一個備註框（唔影響台號解析）
+    // 每個場面問題項目一個備註框（不影響台號解析）
     function ensureVenueNoteUI(item) {
         if (!item) return;
         const container = item.querySelector('.venue-location-container');
@@ -1249,7 +1254,7 @@ function setSubmitting(on) {
         return /layout/i.test(cat || '');
     }
 
-    // 「賭檯 - Layout」才顯示「方位」（客位／DLR位），每個台號可各自揀
+    // 「賭檯 - Layout」才顯示「方位」（客位／DLR位），每個台號可各自選擇
     function ensureVenueSideUI(item) {
         if (!item) return;
         const catSel = item.querySelector('.venue-category');
@@ -1304,7 +1309,7 @@ function setSubmitting(on) {
     }
 
     function addTempRow() { 
-        document.getElementById('temp-container').insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num temp-table" placeholder="輸入數字(如0201)"><input type="text" class="value temp-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`); 
+        document.getElementById('temp-container').insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num temp-table" placeholder="輸入數字(如0201)"><input type="text" class="value temp-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><input type="text" class="issue-note temp-note" placeholder="備註（例：觀察 3 日後再跟進）"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="觀察中">觀察中</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`); 
         transformInputs(); 
         let items = document.querySelectorAll('.temp-item'); 
         items[items.length - 1].querySelector('.temp-table').focus(); 
@@ -1312,7 +1317,7 @@ function setSubmitting(on) {
     }
 
     function addBgmRow() { 
-        document.getElementById('bgm-container').insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num bgm-table" placeholder="輸入數字(如0201)"><input type="text" class="value bgm-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`); 
+        document.getElementById('bgm-container').insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num bgm-table" placeholder="輸入數字(如0201)"><input type="text" class="value bgm-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><input type="text" class="issue-note bgm-note" placeholder="備註（例：觀察 3 日後再跟進）"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="觀察中">觀察中</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`); 
         transformInputs(); 
         let items = document.querySelectorAll('.bgm-item'); 
         items[items.length - 1].querySelector('.bgm-table').focus(); 
@@ -1356,8 +1361,8 @@ function setSubmitting(on) {
         resetFeedback('dlr');
         
         document.getElementById('lux-container').innerHTML = `<div class="issue-item lux-item"><div class="issue-row"><input type="text" class="table-num lux-table" placeholder="輸入數字(如0201)"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
-        document.getElementById('temp-container').innerHTML = `<div class="issue-item temp-item"><div class="issue-row"><input type="text" class="table-num temp-table" placeholder="輸入數字(如0201)"><input type="text" class="value temp-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
-        document.getElementById('bgm-container').innerHTML = `<div class="issue-item bgm-item"><div class="issue-row"><input type="text" class="table-num bgm-table" placeholder="輸入數字(如0201)"><input type="text" class="value bgm-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
+        document.getElementById('temp-container').innerHTML = `<div class="issue-item temp-item"><div class="issue-row"><input type="text" class="table-num temp-table" placeholder="輸入數字(如0201)"><input type="text" class="value temp-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><input type="text" class="issue-note temp-note" placeholder="備註（例：觀察 3 日後再跟進）"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="觀察中">觀察中</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
+        document.getElementById('bgm-container').innerHTML = `<div class="issue-item bgm-item"><div class="issue-row"><input type="text" class="table-num bgm-table" placeholder="輸入數字(如0201)"><input type="text" class="value bgm-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><input type="text" class="issue-note bgm-note" placeholder="備註（例：觀察 3 日後再跟進）"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="觀察中">觀察中</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
         document.getElementById('nfc-container').innerHTML = `<div class="issue-item nfc-item"><div class="issue-row"><input type="text" class="table-num nfc-table" placeholder="輸入數字(如0201)"></div><div class="checkbox-group" style="background:transparent; border:none; padding:0; margin-top:5px; gap:5px;"><label style="width:30%;"><input type="checkbox" value="Box 1" class="nfc-box"> Box 1</label><label style="width:30%;"><input type="checkbox" value="Box 2" class="nfc-box"> Box 2</label><label style="width:30%;"><input type="checkbox" value="Box 3" class="nfc-box"> Box 3</label><label style="width:30%;"><input type="checkbox" value="Box 5" class="nfc-box"> Box 5</label><label style="width:30%;"><input type="checkbox" value="Box 6" class="nfc-box"> Box 6</label><label style="width:30%;"><input type="checkbox" value="ALL" class="nfc-box"> ALL</label></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
         document.getElementById('venue-container').innerHTML = `<div class="issue-item venue-item" style="border-bottom-color: #90caf9;"><div class="issue-row"><select class="venue-category" onchange="updateVenueProblem(this)"></select><select class="venue-problem"></select></div><div class="venue-location-container"><div class="issue-row venue-loc-row" style="margin-top: 5px;"><input type="text" class="table-num venue-location" placeholder="輸入數字(如0201)" style="flex: 1.5;"><button type="button" class="btn-add" style="background: #2ecc71; margin-top: 0; padding: 8px;" onclick="addVenueLocation(this)">+</button></div></div><div class="issue-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; align-items: center; flex: 1;"><span style="font-size:12px; color:#1565c0; font-weight:bold; white-space: nowrap; margin-right: 5px;">跟進狀態：</span><select class="issue-status" style="color: #1565c0; flex: 1;"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div></div>`;
         
@@ -1603,12 +1608,13 @@ function updatePendingCardState(card) {
         if (!text) return "";
         let rawStatus = statusStr || '待處理'; 
         let isDone = (rawStatus === '已處理');
-        let displayStatus = isDone ? '已處理' : '未處理'; 
-        let bgColor = isDone ? '#e8f5e9' : '#ffebee';
-        let textColor = isDone ? '#2e7d32' : '#d32f2f'; 
-        let prefixIcon = isDone ? '✅ ' : '⚠️ ';
+        let isWatch = (rawStatus === '觀察中');
+        let displayStatus = isDone ? '已處理' : (isWatch ? '觀察中' : '未處理'); 
+        let bgColor = isDone ? '#e8f5e9' : (isWatch ? '#fff8e1' : '#ffebee');
+        let textColor = isDone ? '#2e7d32' : (isWatch ? '#8a6d00' : '#d32f2f'); 
+        let prefixIcon = isDone ? '✅ ' : (isWatch ? '👀 ' : '⚠️ ');
         let displayPrefix = prefixIcon + defaultPrefix; 
-        let badgeClass = isDone ? 'status-done' : 'status-pending';
+        let badgeClass = isDone ? 'status-done' : (isWatch ? 'status-watch' : 'status-pending');
         return `<div class="issue-data" style="background:${bgColor}; color:${textColor};"><span><strong>${displayPrefix}</strong> ${text}</span><span class="status-badge ${badgeClass}">${displayStatus}</span></div>`;
     }
 
@@ -1726,7 +1732,7 @@ function updatePendingCardState(card) {
     }
 
     function clearReview(id) {
-        if (!confirm('確定取消所有人嘅檢閱記錄？')) return;
+        if (!confirm('確定取消所有人的檢閱記錄？')) return;
         postReview(id, 'clear', '');
     }
 
@@ -1826,6 +1832,7 @@ function updatePendingCardState(card) {
             records.forEach((r, index) => {
                 let doneIssuesList = []; 
                 let pendingIssuesList = [];
+                let watchIssuesList = [];
                 let doneOldHtml = ""; 
                 let doneOldCount = 0;
                 
@@ -1837,6 +1844,8 @@ function updatePendingCardState(card) {
                     cleanText = cleanText.replace(/\s*備註\s*[:：]\s*/g, '｜備註：');
                     if (status === '已處理') { 
                         doneIssuesList.push(formatIssueText(cleanText, defaultPrefix, status)); 
+                    } else if (status === '觀察中') { 
+                        watchIssuesList.push(formatIssueText(cleanText, defaultPrefix, status)); 
                     } else { 
                         pendingIssuesList.push(formatIssueText(cleanText, defaultPrefix, status)); 
                     } 
@@ -1864,16 +1873,18 @@ function updatePendingCardState(card) {
                         if (hallSeg) hallName = hallSeg.replace(/^NFC正常[:：]\s*/, '').trim();
                         hasNfcIssue = r.checklist.includes('NFC異常');
                     }
-                    let chip = (label, ok) => `<span style="display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap; background:${ok ? '#e6f4ea' : '#f1f3f4'}; color:${ok ? '#137333' : '#5f6368'}; border:1px solid ${ok ? '#b7e1cd' : '#dadce0'};">${ok ? '✅' : '—'} ${label}</span>`;
+                    let chip = (label, st) => `<span style="display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap; background:${st === 'ok' ? '#e6f4ea' : (st === 'warn' ? '#fff4e5' : '#f1f3f4')}; color:${st === 'ok' ? '#137333' : (st === 'warn' ? '#b26a00' : '#5f6368')}; border:1px solid ${st === 'ok' ? '#b7e1cd' : (st === 'warn' ? '#ffd8a8' : '#dadce0')};">${st === 'ok' ? '✅' : (st === 'warn' ? '⚠️' : '—')} ${label}</span>`;
+                    let meterState = (val, issue) => (!val ? 'none' : (issue ? 'warn' : 'ok'));
                     let rows = [];
                     if (r.lux || r.temp || r.bgm) {
-                        rows.push(`<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-bottom:6px;"><span style="font-weight:bold; white-space:nowrap;">🏢 全場檢測：</span>${chip('Lux', !!r.lux)}${chip('溫度', !!r.temp)}${chip('分貝', !!r.bgm)}</div>`);
+                        rows.push(`<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-bottom:6px;"><span style="font-weight:bold; white-space:nowrap;">🏢 全場檢測：</span>${chip('Lux', meterState(r.lux, r.lux_issue))}${chip('溫度', meterState(r.temp, r.temp_issue))}${chip('分貝', meterState(r.bgm, r.db_issue))}</div>`);
                     }
                     if (hallName) {
                         rows.push(`<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px;"><span style="font-weight:bold; white-space:nowrap;">🛰️ 本更 NFC 檢測：</span><span style="font-weight:bold; white-space:nowrap;">${hallName}</span><span style="background:#1a73e8; color:#fff; padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap;">✅ 已完成</span></div>`);
                     }
                     if (rows.length) {
-                        hallInfoHtml = `<div class="record-data" style="background:#e8f0fe; color:#174ea6; font-size:13px; line-height:1.6;">${rows.join('')}${hasNfcIssue && hallName ? `<div style="font-size:11px; color:#856404; margin-top:6px;">※ 以下僅列出 ${hallName} 內發現異常的個別台號，並非整個 Hall 均有異常。</div>` : ''}</div>`;
+                        let hasMeterIssue = !!(r.lux_issue || r.temp_issue || r.db_issue);
+                        hallInfoHtml = `<div class="record-data" style="background:#e8f0fe; color:#174ea6; font-size:13px; line-height:1.6;">${rows.join('')}${hasMeterIssue ? `<div style="font-size:11px; color:#856404; margin-top:6px;">※ Lux／溫度／分貝的異常只涉及個別台號（見下方清單），並非全場超標。</div>` : ''}${hasNfcIssue && hallName ? `<div style="font-size:11px; color:#856404; margin-top:6px;">※ 以下僅列出 ${hallName} 內發現異常的個別台號，並非整個 Hall 均有異常。</div>` : ''}</div>`;
                     }
                 }
 
@@ -1915,9 +1926,12 @@ function updatePendingCardState(card) {
                 }
 
                 let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${fmtDateTime(r.created_at)}</div>` : "";
-                let luxStr = (!r.lux_issue && r.lux !== '450-650') ? `Lux: ${r.lux}` : 'Lux數值大致在於450-650之間';
-                let tempStr = (r.temp === '正常 (22.5-24.5)' || r.temp === '正常' || r.temp_issue) ? '溫度數值大致在於 22.5–24.5 °C' : `溫度: ${unitTempText(r.temp)}`;
-                let bgmStr = (r.bgm === '正常 (65-75)' || r.bgm === '正常' || r.db_issue) ? '分貝數值大致在於 65–75 dB' : `分貝: ${unitBgmText(r.bgm)}`;
+                let luxStr = !r.lux ? 'Lux 未檢測'
+                    : (r.lux === '450-650' ? 'Lux 450–650 lx（正常）' : `Lux ${r.lux} lx（個別台號異常）`);
+                let tempStr = !r.temp ? '溫度 未檢測'
+                    : ((r.temp === '正常 (22.5-24.5)' || r.temp === '正常') ? '溫度 22.5–24.5 °C（正常）' : `溫度 ${unitTempText(r.temp)}`);
+                let bgmStr = !r.bgm ? '分貝 未檢測'
+                    : ((r.bgm === '正常 (65-75)' || r.bgm === '正常') ? '分貝 65–75 dB（正常）' : `分貝 ${unitBgmText(r.bgm)}`);
                 let dataHtml = `<div class="record-data">📊 全場檢測：${luxStr} ｜ ${tempStr} ｜ ${bgmStr}</div>`;
                 
                 let onDutyHtml = '';
@@ -1965,8 +1979,15 @@ function updatePendingCardState(card) {
                         <div style="margin-top:6px;">${pendingIssuesList.join('')}</div>
                     </details>`;
                 }
+                let watchBlock = '';
+                if (watchIssuesList.length > 0) {
+                    watchBlock = `<details open style="margin-top:8px;">
+                        <summary style="cursor:pointer; font-size:13px; font-weight:bold; color:#8a6d00; padding:7px 9px; background:#fffbea; border:1px solid #ffe6a3; border-radius:6px;">👀 觀察中項目（${watchIssuesList.length} 項）</summary>
+                        <div style="margin-top:6px;">${watchIssuesList.join('')}</div>
+                    </details>`;
+                }
                 let noIssueBlock = '';
-                if (pendingIssuesList.length === 0 && doneIssuesList.length === 0 && !doneOldHtml) {
+                if (pendingIssuesList.length === 0 && watchIssuesList.length === 0 && doneIssuesList.length === 0 && !doneOldHtml) {
                     noIssueBlock = `<div style="margin-top:8px; background:#f1fbf4; border:1px solid #c8ecd5; border-radius:6px; padding:9px 10px; font-size:12px; color:#2e7d32;">✅ 本更未發現異常項目</div>`;
                 }
                 let doneBlock = '';
@@ -1984,9 +2005,11 @@ function updatePendingCardState(card) {
                 }
                 let rvNames = reviewNames(r.reviewed_by);
                 let quickInfo = (r.reviewed ? ('✅ 已檢閱' + (rvNames.length > 1 ? '（' + rvNames.length + '）' : '') + '｜') : '') + (hallShort ? ('🛰️ NFC: ' + hallShort) : '本更無需 NFC');
-                let pendInfo = pendingIssuesList.length > 0
-                    ? ('⚠️ ' + pendingIssuesList.length + ' 項未處理')
-                    : '✅ 全部已處理';
+                let pendInfo = [];
+                if (pendingIssuesList.length > 0) pendInfo.push('⚠️ ' + pendingIssuesList.length + ' 項未處理');
+                if (watchIssuesList.length > 0) pendInfo.push('👀 ' + watchIssuesList.length + ' 項觀察中');
+                if (pendingIssuesList.length === 0 && watchIssuesList.length === 0) pendInfo.push('✅ 全部已處理');
+                pendInfo = pendInfo.join('｜');
 
                 html += `${divider}<div class="record-card">
                     <div class="record-header" style="background: #f8f9fa; padding: 10px; border-radius: 6px 6px 0 0; margin: -15px -15px 15px -15px; border-bottom: 2px solid #1a73e8;">
@@ -1999,7 +2022,7 @@ function updatePendingCardState(card) {
                     </div>
                     <details${index === 0 ? ' open' : ''} style="margin-top: 4px;">
                         <summary style="cursor: pointer; font-size: 12px; color: #555; padding: 6px 2px; line-height: 1.6;">${quickInfo}｜${pendInfo}｜點擊展開詳細</summary>
-                        <div style="margin-top: 8px;">${dataHtml}${hallInfoHtml}${feedbackHtml}${checkItemsHtml}${noIssueBlock}${doneBlock}${pendingBlock}${sideInfoHtml}${onDutyHtml}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div><div id="review-${r.id}" style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e0e6ed;">${reviewButtonHtml(r.id, r.reviewed, r.reviewed_at, r.reviewed_by)}</div></div>
+                        <div style="margin-top: 8px;">${dataHtml}${hallInfoHtml}${feedbackHtml}${checkItemsHtml}${noIssueBlock}${doneBlock}${pendingBlock}${watchBlock}${sideInfoHtml}${onDutyHtml}${followerHtml}<div class="record-note" style="margin-top: 10px;">${mainNote}</div><div id="review-${r.id}" style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #e0e6ed;">${reviewButtonHtml(r.id, r.reviewed, r.reviewed_at, r.reviewed_by)}</div></div>
                     </details></div>`;
             });
             listDiv.innerHTML = html;
@@ -2106,6 +2129,8 @@ function updatePendingCardState(card) {
                             let tableNum = match[1].trim();
                             let boxesStr = match[2];
                             let status = match[3].trim();
+                            let nm = item.match(/備註\s*[:：]\s*([\s\S]*)$/);
+                            let noteTxt = nm ? nm[1].trim() : '';
                             let b1 = '', b3 = '', b6 = '';
                             boxesStr.split(',').forEach(b => {
                                 if (b.includes('Box 1:')) b1 = b.replace('Box 1:', '').trim();
@@ -2140,7 +2165,9 @@ function updatePendingCardState(card) {
                             let tableNum = match[1].trim();
                             let val = match[2].trim();
                             let status = match[3].trim();
-                            container.insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num temp-table" value="${tableNum}"><input type="text" class="value temp-value" value="${val}"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" ${status==='已處理'?'selected':''}>已處理</option><option value="已 Send mail" ${status==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${status==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${status==='待處理'?'selected':''}>待處理</option></select></div></div>`);
+                            let nm = item.match(/備註\s*[:：]\s*([\s\S]*)$/);
+                            let noteTxt = nm ? nm[1].trim() : '';
+                            container.insertAdjacentHTML('beforeend', `<div class="issue-item temp-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num temp-table" value="${tableNum}"><input type="text" class="value temp-value" value="${val}"></div><div class="issue-row" style="margin-top: 8px;"><input type="text" class="issue-note temp-note" value="${noteTxt}" placeholder="備註（例：觀察 3 日後再跟進）"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" ${status==='已處理'?'selected':''}>已處理</option><option value="觀察中" ${status==='觀察中'?'selected':''}>觀察中</option><option value="已 Send mail" ${status==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${status==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${status==='待處理'?'selected':''}>待處理</option></select></div></div>`);
                         }
                     });
                 }
@@ -2168,7 +2195,9 @@ function updatePendingCardState(card) {
                             let tableNum = match[1].trim();
                             let val = match[2].trim();
                             let status = match[3].trim();
-                            container.insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num bgm-table" value="${tableNum}"><input type="text" class="value bgm-value" value="${val}"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" ${status==='已處理'?'selected':''}>已處理</option><option value="已 Send mail" ${status==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${status==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${status==='待處理'?'selected':''}>待處理</option></select></div></div>`);
+                            let nm = item.match(/備註\s*[:：]\s*([\s\S]*)$/);
+                            let noteTxt = nm ? nm[1].trim() : '';
+                            container.insertAdjacentHTML('beforeend', `<div class="issue-item bgm-item"><button type="button" class="btn-remove" onclick="this.parentElement.remove()">X</button><div class="issue-row"><input type="text" class="table-num bgm-table" value="${tableNum}"><input type="text" class="value bgm-value" value="${val}"></div><div class="issue-row" style="margin-top: 8px;"><input type="text" class="issue-note bgm-note" value="${noteTxt}" placeholder="備註（例：觀察 3 日後再跟進）"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" ${status==='已處理'?'selected':''}>已處理</option><option value="觀察中" ${status==='觀察中'?'selected':''}>觀察中</option><option value="已 Send mail" ${status==='已 Send mail'?'selected':''}>已 Send mail</option><option value="已通知相關部門跟進" ${status==='已通知相關部門跟進'?'selected':''}>已通知相關部門跟進</option><option value="待處理" ${status==='待處理'?'selected':''}>待處理</option></select></div></div>`);
                         }
                     });
                 }
@@ -2351,7 +2380,7 @@ function updatePendingCardState(card) {
         if (document.getElementById('temp-issue-group').style.display === 'block') { 
             tempIssue = Array.from(document.querySelectorAll('.temp-item')).map(item => { 
                 let status = item.querySelector('.issue-status').value; 
-                return (item.querySelector('.temp-table').value || item.querySelector('.temp-value').value) ? `${item.querySelector('.temp-table').value} (數值: ${item.querySelector('.temp-value').value}) [狀態:${status}]` : ""; 
+                let tnote = ((item.querySelector('.issue-note') || {}).value || '').trim(); return (item.querySelector('.temp-table').value || item.querySelector('.temp-value').value) ? `${item.querySelector('.temp-table').value} (數值: ${item.querySelector('.temp-value').value}) [狀態:${status}]` + (tnote ? ` 備註: ${tnote}` : '') : ""; 
             }).filter(Boolean).join(' | '); 
         }
         
@@ -2359,7 +2388,7 @@ function updatePendingCardState(card) {
         if (document.getElementById('bgm-issue-group').style.display === 'block') { 
             dbIssue = Array.from(document.querySelectorAll('.bgm-item')).map(item => { 
                 let status = item.querySelector('.issue-status').value; 
-                return (item.querySelector('.bgm-table').value || item.querySelector('.bgm-value').value) ? `${item.querySelector('.bgm-table').value} (數值: ${item.querySelector('.bgm-value').value}) [狀態:${status}]` : ""; 
+                let bnote = ((item.querySelector('.issue-note') || {}).value || '').trim(); return (item.querySelector('.bgm-table').value || item.querySelector('.bgm-value').value) ? `${item.querySelector('.bgm-table').value} (數值: ${item.querySelector('.bgm-value').value}) [狀態:${status}]` + (bnote ? ` 備註: ${bnote}` : '') : ""; 
             }).filter(Boolean).join(' | '); 
         }
         
@@ -2419,6 +2448,9 @@ function updatePendingCardState(card) {
         let overallStatus = "已處理"; 
         document.querySelectorAll('.issue-status').forEach(sel => { if(sel.value === "待處理") overallStatus = "待處理"; }); 
         if(overallStatus === "已處理") { 
+            document.querySelectorAll('.issue-status').forEach(sel => { if(sel.value === "觀察中") overallStatus = "觀察中"; }); 
+        }
+        if(overallStatus === "已處理") { 
             document.querySelectorAll('.issue-status').forEach(sel => { 
                 if(sel.value === "已通知相關部門跟進") overallStatus = "已通知相關部門跟進"; 
                 else if(sel.value === "已 Send mail") overallStatus = "已 Send mail"; 
@@ -2446,7 +2478,7 @@ function updatePendingCardState(card) {
         
         if (!data.name) { alert("請選擇交更人！"); return; }
 
-        // 當更同事必須最少揀一位
+        // 當更同事必須最少選擇一位
         if (Array.from(document.querySelectorAll('.onduty-item:checked')).length === 0) {
             const odBox = document.getElementById('on-duty-box');
             if (odBox) {
@@ -2458,7 +2490,7 @@ function updatePendingCardState(card) {
             return;
         }
 
-        // 負責跟進人必須最少揀一位
+        // 負責跟進人必須最少選擇一位
         if (Array.from(document.querySelectorAll('.follower-item:checked')).length === 0) {
             let fb = document.querySelector('.follower-item');
             if (fb) fb.scrollIntoView({ block: 'center' });
@@ -2511,7 +2543,7 @@ function updatePendingCardState(card) {
         })
         .catch(error => {
             setSubmitting(false);
-            alert("❌ 提交連線失敗！\n可能係 Render 伺服器正在喚醒（需時約 30 秒），或者微信網絡攔截。\n\n請稍後重新整理網頁再試，或改用「在瀏覽器打開」。");
+            alert("❌ 提交連線失敗！\n可能為 Render 伺服器正在喚醒（需時約 30 秒），或微信網絡攔截。\n\n請稍後重新整理網頁再試，或改用「在瀏覽器打開」。");
         }); 
     }
 
@@ -2616,7 +2648,7 @@ function updatePendingCardState(card) {
                 urUpdateSentBtn();
                 renderUpdateReport();
                 if (!data.detected_count) {
-                    urMsg('ℹ️ 截至 ' + data.date + '，呢個類別未有符合條件嘅台號。可先記錄，或用手動加入。');
+                    urMsg('ℹ️ 截至 ' + data.date + '，此類別未有符合條件的台號。可先記錄，或使用手動加入。');
                 } else {
                     urMsg('✅ 已抓取 ' + data.detected_count + ' 個台號（' + (mo === '1' ? '只計已 Send mail' : '全部狀態') + '）。' +
                           (data.has_saved ? '此日期已有儲存版本。' : ''));
@@ -2820,7 +2852,7 @@ function updatePendingCardState(card) {
             urMsg('✏️ 已移到「' + (cols[ci + 1].sub || '下一欄') + '」，記得按「💾 儲存」。');
         } else {
             if (urState.excluded.indexOf(item.table) < 0) urState.excluded.push(item.table);
-            urMsg('🗑️ 已移除該台號，儲存後唔會再自動出現。');
+            urMsg('🗑️ 已移除該台號，儲存後不會再自動出現。');
         }
         renderUpdateReport();
     }
@@ -2973,7 +3005,7 @@ function updatePendingCardState(card) {
         urCyclePool(parseInt(chip.getAttribute('data-p'), 10));
     });
 
-    // ===== 同事性別（只用作顯示，唔影響儲存嘅名） =====
+    // ===== 同事性別（只用作顯示，不影響儲存的名字） =====
     let STAFF_GENDER = {
         '龍ken (8000285)': '男',
         '陳ken (80571)': '男',
@@ -3005,7 +3037,7 @@ function updatePendingCardState(card) {
             d.members.forEach(m => { if (m.gender) gm[m.name] = m.gender; });
             STAFF_GENDER = gm;
 
-            // 重建前先記住已勾選嘅項目（例如已還原嘅草稿），避免重建時清走
+            // 重建前先記住已勾選的項目（例如已還原的草稿），避免重建時清除
             const checkedF = Array.from(document.querySelectorAll('.follower-item:checked')).map(c => c.value);
             const checkedO = Array.from(document.querySelectorAll('.onduty-item:checked')).map(c => c.value);
 
@@ -3015,7 +3047,7 @@ function updatePendingCardState(card) {
                 sel.innerHTML = '<option value="" disabled selected>請選擇...</option>' +
                     staff.map(m => '<option value="' + m.name + '">' + m.name + '</option>').join('');
                 if (cur && !staff.some(m => m.name === cur)) {
-                    // 舊紀錄嘅姓名可能已被刪除／改名，保留一個臨時選項以免修改時遺失
+                    // 舊紀錄的姓名可能已被刪除／改名，保留一個臨時選項以免修改時遺失
                     sel.insertAdjacentHTML('beforeend', '<option value="' + cur + '">' + cur + '（舊名）</option>');
                 }
                 if (cur) sel.value = cur;
@@ -3042,7 +3074,7 @@ function updatePendingCardState(card) {
         }
     }
 
-    // ===== 當更同事（用「交更人」一樣嘅名單） =====
+    // ===== 當更同事（使用與「交更人」相同的名單） =====
     function buildOnDutyList() {
         const box = document.getElementById('on-duty-list');
         const sel = document.getElementById('staffName');
