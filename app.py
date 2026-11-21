@@ -2893,6 +2893,16 @@ def hall_tables_summary():
                      GROUP BY hall, pit
                      ORDER BY hall, pit""")
         rows = c.fetchall()
+        c.execute("""SELECT UPPER(REGEXP_REPLACE(table_code, '[0-9]+$', '')) AS prefix,
+                            COUNT(*),
+                            COUNT(*) FILTER (WHERE status = '營運'),
+                            COUNT(*) FILTER (WHERE status = '停運')
+                     FROM hall_tables
+                     GROUP BY 1
+                     ORDER BY 2 DESC""")
+        type_rows = c.fetchall()
+        types = [{'type': (t or '其他'), 'total': int(n), 'active': int(a or 0), 'inactive': int(d or 0)}
+                 for t, n, a, d in type_rows]
         halls = []
         by_hall = {}
         total = {'total': 0, 'active': 0, 'inactive': 0}
@@ -2909,7 +2919,7 @@ def hall_tables_summary():
             total['total'] += n
             total['active'] += act
             total['inactive'] += dea
-        return jsonify({'status': 'success', 'halls': halls, 'total': total})
+        return jsonify({'status': 'success', 'halls': halls, 'types': types, 'total': total})
     except Exception as e:
         print('台號統計失敗:', e)
         return jsonify({'status': 'error', 'message': '❌ 讀取統計失敗。', 'halls': [], 'total': {}})
