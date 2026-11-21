@@ -106,6 +106,7 @@
         .cm-cell.cashier { background: #FFFF00; border-color: #d4c400; font-size: 9px; }
         .cm-cell.event { background: #FF99CC; border-color: #e07fa8; font-size: 9px; }
         .cm-box { position: absolute; border: 2px solid #000; box-sizing: border-box; pointer-events: none; }
+        .cm-grp { position: absolute; border: 1px solid #444; box-sizing: border-box; pointer-events: none; }
         .cm-pit { position: absolute; font-size: 10px; color: #c62828; font-weight: bold; white-space: nowrap; }
         .cm-legend span { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; font-size: 11px; color: #555; }
         .cm-dot { width: 12px; height: 12px; border: 1px solid #ccc; display: inline-block; }
@@ -2845,6 +2846,16 @@ function updatePendingCardState(card) {
             el.style.top = ((bx.r0 - 1) * CM_H - 3) + 'px';
             el.style.width = ((bx.c1 - bx.c0 + 1) * CM_W + 6) + 'px';
             el.style.height = ((bx.r1 - bx.r0 + 1) * CM_H + 6) + 'px';
+            map.appendChild(el);
+        });
+
+        (cmData.groups || []).forEach(function (g) {
+            const el = document.createElement('div');
+            el.className = 'cm-grp';
+            el.style.left = ((g.c0 - 1) * CM_W - 1) + 'px';
+            el.style.top = ((g.r0 - 1) * CM_H - 1) + 'px';
+            el.style.width = ((g.c1 - g.c0 + 1) * CM_W + 2) + 'px';
+            el.style.height = ((g.r1 - g.r0 + 1) * CM_H + 2) + 'px';
             map.appendChild(el);
         });
 
