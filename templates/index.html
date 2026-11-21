@@ -438,8 +438,14 @@
                 <h3 id="pending-title" style="margin: 0; font-size: 15px; color: #856404;">⚠️ 未完成跟進項目</h3>
                 <span id="pending-arrow" style="color: #856404; font-weight: bold;">▼ 展開</span>
             </div>
-            <div style="font-size: 12px; color: #856404; margin-top: 6px;">勾選表示本更已完成；未勾選的項目會繼續保留在首頁「待跟進」，不會寫入本紀錄。</div>
+            <div style="font-size: 12px; color: #856404; margin-top: 6px;">已完成的請打勾；未勾選的項目會繼續保留在「待跟進」，不會寫入本紀錄。</div>
             <div id="pending-list" style="display: none; margin-top: 15px; border-top: 1px dashed #e0c97e; padding-top: 15px;"></div>
+            <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #ffeeba; font-size: 13px; color: #856404;">
+                <label style="display: flex; align-items: flex-start; cursor: pointer; margin: 0;">
+                    <input type="checkbox" id="confirm-pending" style="margin-right: 8px; margin-top: 2px; width: 16px; height: 16px;">
+                    <span>我已核對以上項目（已完成的經已勾選）</span>
+                </label>
+            </div>
         </div>
         <button class="submit-btn" id="submit-btn-main" onclick="submitForm()">提交交更</button>
         <div id="result"></div>
@@ -1354,6 +1360,12 @@ function setSubmitting(on) {
         document.getElementById('bgm-issue-group').style.display = 'none';
         resetFeedback('guest');
         resetFeedback('dlr');
+        let cpEl = document.getElementById('confirm-pending');
+        if (cpEl) cpEl.checked = false;
+        let plReset = document.getElementById('pending-list');
+        if (plReset) plReset.style.display = 'none';
+        let paReset = document.getElementById('pending-arrow');
+        if (paReset) paReset.innerHTML = '▼ 展開';
         
         document.getElementById('lux-container').innerHTML = `<div class="issue-item lux-item"><div class="issue-row"><input type="text" class="table-num lux-table" placeholder="輸入數字(如0201)"></div><div class="box-row"><div class="box-item"><span>Box 1</span><input type="text" class="lux-box1" placeholder="數值"></div><div class="box-item"><span>Box 3</span><input type="text" class="lux-box3" placeholder="數值"></div><div class="box-item"><span>Box 6</span><input type="text" class="lux-box6" placeholder="數值"></div></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
         document.getElementById('temp-container').innerHTML = `<div class="issue-item temp-item"><div class="issue-row"><input type="text" class="table-num temp-table" placeholder="輸入數字(如0201)"><input type="text" class="value temp-value" placeholder="數值"></div><div class="issue-row" style="margin-top: 8px;"><input type="text" class="issue-note temp-note" placeholder="備註（例：觀察 3 日後再跟進）"></div><div class="issue-row" style="margin-top: 8px;"><select class="issue-status"><option value="已處理" selected>已處理</option><option value="觀察中">觀察中</option><option value="已 Send mail">已 Send mail</option><option value="已通知相關部門跟進">已通知相關部門跟進</option><option value="待處理">待處理</option></select></div></div>`;
@@ -2343,13 +2355,18 @@ function updatePendingCardState(card) {
         let doneOldItems = []; 
         
         pendingCheckboxes.forEach(cb => { 
-            if (cb.offsetParent !== null) { 
-                let text = cb.getAttribute('data-text'); 
-                if (cb.checked) {
-                    doneOldItems.push(text); 
-                }
-            }
+            let text = cb.getAttribute('data-text'); 
+            if (cb.checked && text) doneOldItems.push(text); 
         });
+
+        // 有待跟進項目時，必須先核對清單才可提交（避免漏勾已完成項目）
+        if (pendingCheckboxes.length > 0) {
+            let cbx = document.getElementById('confirm-pending');
+            if (!cbx || !cbx.checked) {
+                alert('⚠️ 請先核對「待跟進」清單：\n\n已完成的項目請打勾，並勾選「我已核對以上項目」，然後再次提交。');
+                return;
+            }
+        }
         
         let finalNote = document.getElementById('notes').value; 
         if (doneOldItems.length > 0) finalNote += `\n\n【早前已處理】\n` + doneOldItems.join('\n');
