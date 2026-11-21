@@ -2040,6 +2040,21 @@ def _up_layout_guess(problem, side=''):
     return None
 
 
+def _up_parse_metric(raw):
+    """解析 Lux／溫度／分貝 異常行：NB0201 (Box 1: 380) [狀態:已 Send mail]"""
+    s = str(raw or '').strip()
+    if not s:
+        return None
+    m = re.search(r'([A-Za-z]{1,4})\s*[-–]?\s*(\d{3,6})', s)
+    if not m:
+        return None
+    code = m.group(1).upper() + m.group(2)
+    if not _up_is_code(code):
+        return None
+    st = re.search(r'\[狀態\s*[:：]\s*([^\]]*)\]', s)
+    return {'code': code, 'status': st.group(1).strip() if st else ''}
+
+
 def _up_parse_line(line):
     """解析單行： [類別 - 問題] 位置: 台號 [狀態:xxx]"""
     if not line or '位置' not in line:
@@ -2058,6 +2073,10 @@ def _up_parse_line(line):
     out = []
     for raw in re.split(r'[,，、;；]', loc_text):
         code = _up_norm(raw)
+        if not _up_is_code(code):
+            # 台號後面可能跟住描述（例：NB1713 #1位內面、DS1106 A證…），抽出前後字母＋數字
+            mm = re.search(r'([A-Za-z]{1,4})\s*[-–]?\s*(\d{3,6})', raw)
+            code = (mm.group(1).upper() + mm.group(2)) if mm else ''
         if code and _up_is_code(code):
             out.append({'code': code, 'category': category,
                         'problem': problem, 'status': status})
@@ -2128,7 +2147,10 @@ def _up_detect(date_str):
         c.execute("""SELECT COALESCE(note, ''),
                             (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date,
                             COALESCE(layout_side, ''),
-                            COALESCE(checklist, '')
+                            COALESCE(checklist, ''),
+                            COALESCE(lux_issue, ''),
+                            COALESCE(temp_issue, ''),
+                            COALESCE(db_issue, '')
                      FROM records
                      WHERE (COALESCE(note, '') <> '' OR COALESCE(checklist, '') <> '')
                        AND (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date <= %s
@@ -2163,6 +2185,9 @@ def _up_detect(date_str):
         d = row[1]
         side_json = row[2] if len(row) > 2 else ''
         checklist = row[3] if len(row) > 3 else ''
+        lux_issue = row[4] if len(row) > 4 else ''
+        temp_issue = row[5] if len(row) > 5 else ''
+        db_issue = row[6] if len(row) > 6 else ''
         ds = d.strftime('%Y-%m-%d') if hasattr(d, 'strftime') else str(d)[:10]
         if side_json:
             try:
@@ -2182,6 +2207,20 @@ def _up_detect(date_str):
             else:
                 nfc_nocode.append(it['status'])
 
+        # Lux／溫度／分貝 異常（存在獨立欄位，也是異常類型）
+        for raw in str(lux_issue).split(' | '):
+            it = _up_parse_metric(raw)
+            if it:
+                upsert('Lux 異常', it['code'], '數值異常', it['status'], ds)
+        for raw in str(temp_issue).split(' | '):
+            it = _up_parse_metric(raw)
+            if it:
+                upsert('溫度 異常', it['code'], '數值異常', it['status'], ds)
+        for raw in str(db_issue).split(' | '):
+            it = _up_parse_metric(raw)
+            if it:
+                upsert('分貝 異常', it['code'], '數值異常', it['status'], ds)
+
         secs = _up_split_sections(note)
         # 【早前已處理】＝已經完成，不應再出現在更新表
         # 以「類別＋台號」判斷（因為有時同事沒有填寫問題，只填台號）
@@ -2191,6 +2230,11 @@ def _up_detect(date_str):
             for it in _up_parse_nfc(line, done=True):
                 if it['code']:
                     done_at[('NFC', it['code'])] = (ds, _up_nfc_problem(it['boxes']))
+            for label, catname in (('Lux', 'Lux 異常'), ('溫度', '溫度 異常'), ('分貝', '分貝 異常')):
+                if line.strip().startswith(label + ' -'):
+                    it = _up_parse_metric(line)
+                    if it:
+                        done_at[(catname, it['code'])] = (ds, '數值異常')
 
         for name, seg in secs.items():
             # 「早前已處理」＝完成標記；「早前未處理」只是上一張紀錄的文字副本，
