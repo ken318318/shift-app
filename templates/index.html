@@ -3515,7 +3515,6 @@ function updatePendingCardState(card) {
         if (!map || !cmData) return;
         map.innerHTML = '';
 
-        // 欄寬／行高（按 Excel 實際比例）
         const colsW = {}, rowsH = {};
         (cmData.cols || []).forEach(function (x) { colsW[x.c] = x.w; });
         (cmData.rows || []).forEach(function (x) { rowsH[x.r] = x.h; });
@@ -3528,10 +3527,10 @@ function updatePendingCardState(card) {
         for (let c = minC; c <= maxC + 1; c++) { X[c] = acc; acc += cw(c); }
         acc = 0;
         for (let r = minR; r <= maxR + 1; r++) { Y[r] = acc; acc += rh(r); }
-        map.style.width = X[maxC + 1] + 'px';
-        map.style.height = Y[maxR + 1] + 'px';
-        cmGeo = { X: X, Y: Y, cw: cw, rh: rh, merges: [],
-            minR: minR, maxR: maxR, minC: minC, maxC: maxC };
+        const W = X[maxC + 1], H = Y[maxR + 1];
+        map.style.width = W + 'px';
+        map.style.height = H + 'px';
+        cmGeo = { X: X, Y: Y, cw: cw, rh: rh, merges: [], minR: minR, maxR: maxR, minC: minC, maxC: maxC };
         cmApplyZoom();
 
         if (tip) {
@@ -3543,22 +3542,12 @@ function updatePendingCardState(card) {
                     : ('　新櫈 ' + (c.new || 0) + '、舊櫈 ' + (c.old || 0) + '、未設定 ' + Math.max(0, (c.total || 0) - (c.new || 0) - (c.old || 0))));
             let line = head + '　' + (cmMode === 'status'
                 ? '（紅字＝壞 DLR、藍底＝壞客櫈、綠字＝spare、灰底＝停運）'
-                : (isAdmin ? '（點格仔切換：紫＝新、橙＝舊）' : '（紫＝新、橙＝舊；只有管理員可修改）'));
+                : (isAdmin ? '（紫＝新、橙＝舊）' : '（紫＝新、橙＝舊；只有管理員可修改）'));
             if (cmEditMode) line += '　【編輯模式】點或拖選格仔，再用下面工具列修改';
             tip.textContent = line;
         }
 
-        function fpx(pt) { return Math.max(8, Math.round((pt || 11) * 96 / 72)); }
-        function setBorder(el, o) {
-            el.style.borderStyle = 'solid';
-            el.style.borderColor = '#000';
-            el.style.borderTopWidth = o.t ? '2px' : '0';
-            el.style.borderLeftWidth = o.l ? '2px' : '0';
-            el.style.borderRightWidth = o.rr ? '2px' : '0';
-            el.style.borderBottomWidth = o.b ? '2px' : '0';
-        }
-
-        // 有效合併：Excel 原始 → 減去已取消 → 加上手動
+        // 有效合併
         const unset = {};
         (cmEdits.unmerge || []).forEach(function (k) { unset[k] = 1; });
         const merges = (cmData.merges || []).filter(function (m) {
@@ -3566,7 +3555,6 @@ function updatePendingCardState(card) {
         }).concat(cmEdits.merges || []);
         cmGeo.merges = merges;
 
-        // 被合併覆蓋的格（非左上）
         const covered = {};
         merges.forEach(function (m) {
             const rs = m.rs || 1, cs = m.cs || 1;
@@ -3578,153 +3566,169 @@ function updatePendingCardState(card) {
             }
         });
 
-        (cmData.extras || []).forEach(function (x) {
-            if (x.r < minR || x.c < minC) return;
-            const el = document.createElement('div');
-            el.className = 'cm-cell ' + (x.kind === 'cashier' ? 'cashier' : 'event');
-            el.style.left = X[x.c] + 'px';
-            el.style.top = Y[x.r] + 'px';
-            el.style.width = cw(x.c) + 'px';
-            el.style.height = rh(x.r) + 'px';
-            el.style.borderStyle = 'solid';
-            el.style.borderColor = '#000';
-            el.style.borderWidth = '1px';
-            el.textContent = x.kind === 'cashier' ? '帳' : '活';
-            el.title = x.kind === 'cashier' ? '帳房' : '活動區（原停運台，活動後恢復）';
-            map.appendChild(el);
-        });
+        function fpx(pt) { return Math.max(8, Math.round((pt || 11) * 96 / 72)); }
+        function fontStr(pt, bold) {
+            return (bold ? 'bold ' : '') + fpx(pt) + 'px "Microsoft JhengHei","Microsoft YaHei",Arial,sans-serif';
+        }
+        function rgb(hex, fallback) {
+            if (!hex) return fallback;
+            const h = hex.replace('#', '');
+            if (h.length !== 6) return fallback;
+            return 'rgb(' + parseInt(h.substr(0, 2), 16) + ',' + parseInt(h.substr(2, 2), 16) + ',' + parseInt(h.substr(4, 2), 16) + ')';
+        }
 
+        let cv = document.getElementById('cm-canvas');
+        if (!cv) {
+            cv = document.createElement('canvas');
+            cv.id = 'cm-canvas';
+            cv.style.position = 'absolute';
+            cv.style.left = '0';
+            cv.style.top = '0';
+            map.appendChild(cv);
+        }
+        const dpr = window.devicePixelRatio || 1;
+        cv.width = Math.max(1, Math.round(W * dpr));
+        cv.height = Math.max(1, Math.round(H * dpr));
+        cv.style.width = W + 'px';
+        cv.style.height = H + 'px';
+        const ctx = cv.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, W, H);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, W, H);
+
+        // 淡灰網格
+        ctx.strokeStyle = '#e2e2e2';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let c = minC; c <= maxC + 1; c++) {
+            const x = Math.round(X[c]) + 0.5;
+            ctx.moveTo(x, 0); ctx.lineTo(x, H);
+        }
+        for (let r = minR; r <= maxR + 1; r++) {
+            const y = Math.round(Y[r]) + 0.5;
+            ctx.moveTo(0, y); ctx.lineTo(W, y);
+        }
+        ctx.stroke();
+
+        function fillCell(x0, y0, x1, y1, bg) {
+            if (!bg) return;
+            ctx.fillStyle = bg;
+            ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+        }
+        function drawText(x0, y0, x1, y1, text, fs, bold, color) {
+            if (!text) return;
+            ctx.font = fontStr(fs, bold);
+            ctx.fillStyle = color || '#111';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, (x0 + x1) / 2, (y0 + y1) / 2 + 1);
+        }
+        function drawBorder(x0, y0, x1, y1, t, l, rr, b) {
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            if (t) { ctx.moveTo(x0, y0 + 0.5); ctx.lineTo(x1, y0 + 0.5); }
+            if (b) { ctx.moveTo(x0, y1 - 0.5); ctx.lineTo(x1, y1 - 0.5); }
+            if (l) { ctx.moveTo(x0 + 0.5, y0); ctx.lineTo(x0 + 0.5, y1); }
+            if (rr) { ctx.moveTo(x1 - 0.5, y0); ctx.lineTo(x1 - 0.5, y1); }
+            ctx.stroke();
+        }
+
+        // 合併格
         merges.forEach(function (m) {
             if (m.r < minR || m.c < minC) return;
-            const el = document.createElement('div');
-            el.className = 'cm-cell cm-merge';
-            el.dataset.r = m.r;
-            el.dataset.c = m.c;
-            el.dataset.rs = m.rs || 1;
-            el.dataset.cs = m.cs || 1;
-            el.style.left = X[m.c] + 'px';
-            el.style.top = Y[m.r] + 'px';
-            let w = 0, h = 0;
-            for (let i = 0; i < (m.cs || 1); i++) w += cw(m.c + i);
-            for (let i = 0; i < (m.rs || 1); i++) h += rh(m.r + i);
-            el.style.width = w + 'px';
-            el.style.height = h + 'px';
-            const isManualM = (cmEdits.merges || []).indexOf(m) >= 0;
-            if (isManualM) setBorder(el, { t: m.t || 0, l: m.l || 0, rr: m.rr || 0, b: m.b || 0 });
-            else setBorder(el, { t: 0, l: 0, rr: 0, b: 0 });
-            if (m.bg) el.style.background = m.bg;
-            if (isManualM) el.classList.add('cm-edited');
-            el.style.fontSize = fpx(m.fs) + 'px';
-            el.style.fontWeight = m.bold ? 'bold' : 'normal';
-            el.style.lineHeight = '1.1';
-            el.style.padding = '0 2px';
-            el.style.color = m.fc || '#333';
-            el.style.whiteSpace = 'normal';
-            el.textContent = m.v || '';
-            map.appendChild(el);
+            const x0 = X[m.c], y0 = Y[m.r];
+            let x1 = x0, y1 = y0;
+            for (let i = 0; i < (m.cs || 1); i++) x1 += cw(m.c + i);
+            for (let i = 0; i < (m.rs || 1); i++) y1 += rh(m.r + i);
+            const isManual = (cmEdits.merges || []).indexOf(m) >= 0;
+            fillCell(x0, y0, x1, y1, m.bg ? rgb(m.bg, null) : null);
+            if (isManual) drawBorder(x0, y0, x1, y1, m.t, m.l, m.rr, m.b);
+            drawText(x0, y0, x1, y1, m.v || '', m.fs || 11, m.bold, m.fc ? rgb(m.fc, '#333') : '#333');
         });
 
+        // 普通格
         (cmData.cells || []).forEach(function (c) {
             if (c.r < minR || c.c < minC) return;
             const key = cmEditKey(c.r, c.c);
             if (covered[key]) return;
+            const x0 = X[c.c], y0 = Y[c.r];
+            const x1 = x0 + cw(c.c), y1 = y0 + rh(c.r);
             const ed = cmEdits.cells[key];
-            const el = document.createElement('div');
-            el.className = 'cm-cell';
-            el.dataset.r = c.r;
-            el.dataset.c = c.c;
-            el.style.left = X[c.c] + 'px';
-            el.style.top = Y[c.r] + 'px';
-            el.style.width = cw(c.c) + 'px';
-            el.style.height = rh(c.r) + 'px';
-            setBorder(el, { t: 0, l: 0, rr: 0, b: 0 });
-            el.style.fontSize = fpx(c.fs) + 'px';
-            el.style.fontWeight = c.bold ? 'bold' : 'normal';
-            el.textContent = c.v;
+
+            let bg = null, fc = '#111', bold = !!c.bold, fs = c.fs, v = c.v;
             if (c.code) {
-                el.title = c.code + '（' + c.status + '）';
                 if (cmMode === 'status') {
-                    if (c.guest_bad) el.style.background = '#99CCFF';
-                    else if (c.status === '停運') el.style.background = '#cfd8dc';
-                    else if (c.stand) el.style.background = '#f2f2f2';
-                    el.style.color = c.dlr_bad ? '#e53935' : (c.status === '停運' ? '#2e7d32' : '#111');
+                    if (c.guest_bad) bg = '#99CCFF';
+                    else if (c.status === '停運') bg = '#cfd8dc';
+                    else if (c.stand) bg = '#f2f2f2';
+                    fc = c.dlr_bad ? '#e53935' : (c.status === '停運' ? '#2e7d32' : '#111');
                 } else {
-                    if (c.status === '停運') el.style.background = '#cfd8dc';
-                    else if (c.stand) el.style.background = '#f2f2f2';
-                    el.style.color = c.stand ? '#111' : (c.chair === 'new' ? '#7b2fd0' : (c.chair === 'old' ? '#d95a00' : '#111'));
-                    if (c.chair && !c.stand) el.style.fontWeight = 'bold';
+                    if (c.status === '停運') bg = '#cfd8dc';
+                    else if (c.stand) bg = '#f2f2f2';
+                    fc = c.stand ? '#111' : (c.chair === 'new' ? '#7b2fd0' : (c.chair === 'old' ? '#d95a00' : '#111'));
+                    if (c.chair && !c.stand) bold = true;
                 }
-                el.onclick = function () {
-                    if (cmEditMode) return;
-                    if (cmMode !== 'type') return;
-                    if (!isAdmin) { alert('只有管理員可以修改新舊櫈。'); return; }
-                    toggleChairType(c);
-                };
             } else {
-                if (c.bg) el.style.background = c.bg;
-                el.style.color = c.fc || '#333';
+                bg = c.bg || null;
+                fc = c.fc || '#333';
             }
-            if (ed) { cmApplyEd(el, ed); el.classList.add('cm-edited'); }
-            map.appendChild(el);
+            if (ed) {
+                if ('bg' in ed) bg = ed.bg || '#fff';
+                if ('fc' in ed) fc = ed.fc || '#111';
+                if ('bold' in ed) bold = !!ed.bold;
+                if ('fs' in ed && ed.fs) fs = ed.fs;
+                if ('v' in ed) v = ed.v || '';
+            }
+            fillCell(x0, y0, x1, y1, bg ? rgb(bg, null) : null);
+            if (ed && ('t' in ed || 'l' in ed || 'rr' in ed || 'b' in ed)) {
+                drawBorder(x0, y0, x1, y1, ed.t, ed.l, ed.rr, ed.b);
+            }
+            drawText(x0, y0, x1, y1, v, fs, bold, rgb(fc, '#111'));
+            if (ed) {
+                ctx.fillStyle = '#ff6f00';
+                ctx.beginPath();
+                ctx.moveTo(x1 - 8, y0);
+                ctx.lineTo(x1, y0);
+                ctx.lineTo(x1, y0 + 8);
+                ctx.closePath();
+                ctx.fill();
+            }
         });
 
-        // 手改但原始版面沒有的格（例如取消合併後保留的文字）
+        // 手改但原本冇嘅格
         const seenCell = {};
         (cmData.cells || []).forEach(function (c) { seenCell[cmEditKey(c.r, c.c)] = 1; });
         Object.keys(cmEdits.cells || {}).forEach(function (k) {
             if (seenCell[k] || covered[k]) return;
-            const parts = k.split(',');
-            const r = parseInt(parts[0], 10), c = parseInt(parts[1], 10);
+            const p = k.split(',');
+            const r = parseInt(p[0], 10), c = parseInt(p[1], 10);
             if (!(r >= minR && c >= minC)) return;
             const ed = cmEdits.cells[k];
-            const el = document.createElement('div');
-            el.className = 'cm-cell cm-edited';
-            el.dataset.r = r;
-            el.dataset.c = c;
-            el.style.left = X[c] + 'px';
-            el.style.top = Y[r] + 'px';
-            el.style.width = cw(c) + 'px';
-            el.style.height = rh(r) + 'px';
-            setBorder(el, { t: 0, l: 0, rr: 0, b: 0 });
-            el.style.fontWeight = 'normal';
-            cmApplyEd(el, ed);
-            map.appendChild(el);
+            const x0 = X[c], y0 = Y[r], x1 = x0 + cw(c), y1 = y0 + rh(r);
+            fillCell(x0, y0, x1, y1, ed.bg ? rgb(ed.bg, null) : null);
+            if ('t' in ed || 'l' in ed || 'rr' in ed || 'b' in ed) {
+                drawBorder(x0, y0, x1, y1, ed.t, ed.l, ed.rr, ed.b);
+            }
+            drawText(x0, y0, x1, y1, ed.v || '', ed.fs || 11, ed.bold, ed.fc ? rgb(ed.fc, '#111') : '#111');
         });
 
-        // 淡灰格線（模擬 Excel View Gridlines）
-        for (let c = minC; c <= maxC; c++) {
-            const el = document.createElement('div');
-            el.style.cssText = 'position:absolute;background:#e2e2e2;width:1px;pointer-events:none;';
-            el.style.left = X[c] + 'px';
-            el.style.top = Y[minR] + 'px';
-            el.style.height = (Y[maxR + 1] - Y[minR]) + 'px';
-            map.appendChild(el);
-        }
-        for (let r = minR; r <= maxR; r++) {
-            const el = document.createElement('div');
-            el.style.cssText = 'position:absolute;background:#e2e2e2;height:1px;pointer-events:none;';
-            el.style.left = X[minC] + 'px';
-            el.style.top = Y[r] + 'px';
-            el.style.width = (X[maxC + 1] - X[minC]) + 'px';
-            map.appendChild(el);
-        }
-
+        // hlines/vlines
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
         (cmData.hlines || []).forEach(function (l) {
-            const el = document.createElement('div');
-            el.style.cssText = 'position:absolute;background:#222;height:1px;pointer-events:none;';
-            el.style.left = X[l.c1] + 'px';
-            el.style.top = Y[l.r] + 'px';
-            el.style.width = (X[l.c2] - X[l.c1] + 1) + 'px';
-            map.appendChild(el);
+            const y = Math.round(Y[l.r]) + 0.5;
+            const x1 = X[l.c1], x2 = X[l.c2 + 1] || X[l.c2];
+            ctx.moveTo(x1, y); ctx.lineTo(x2, y);
         });
         (cmData.vlines || []).forEach(function (l) {
-            const el = document.createElement('div');
-            el.style.cssText = 'position:absolute;background:#222;width:1px;pointer-events:none;';
-            el.style.left = X[l.c] + 'px';
-            el.style.top = Y[l.r1] + 'px';
-            el.style.height = (Y[l.r2] - Y[l.r1] + 1) + 'px';
-            map.appendChild(el);
+            const x = Math.round(X[l.c]) + 0.5;
+            const y1 = Y[l.r1], y2 = Y[l.r2 + 1] || Y[l.r2];
+            ctx.moveTo(x, y1); ctx.lineTo(x, y2);
         });
+        ctx.stroke();
 
         if (legend) {
             if (cmMode === 'status') {
