@@ -3563,7 +3563,7 @@ function updatePendingCardState(card) {
             const head = (cmData.today ? ('更新日期：' + cmData.today + '　') : '') +
                 '台數 ' + (c.total || 0) + '（營運 ' + (c.active || 0) + '／停運 ' + (c.inactive || 0) + '）' +
                 (cmMode === 'status'
-                    ? ('　壞 DLR ' + (c.dlr_bad || 0) + '、壞客櫈 ' + (c.guest_bad || 0) + '、spare ' + (c.spare || 0))
+                    ? ('　壞 DLR ' + (c.dlr_bad || 0) + '、壞客櫈 ' + ((c.guest_bad || 0) * 5) + ' 張（' + (c.guest_bad || 0) + ' 台）、spare ' + (c.spare || 0))
                     : ('　新櫈 ' + (c.new || 0) + '、舊櫈 ' + (c.old || 0) + '、未設定 ' + Math.max(0, (c.total || 0) - (c.new || 0) - (c.old || 0))));
             let line = head + '　' + (cmMode === 'status'
                 ? '（紅字＝壞 DLR、藍底＝壞客櫈、綠字＝spare、灰底＝停運）'
@@ -3792,8 +3792,9 @@ function updatePendingCardState(card) {
             if (cmMode === 'status') {
                 legend.innerHTML = '<span><i class="cm-dot" style="background:#fff"></i>營運（好）</span>' +
                     '<span><i class="cm-dot" style="background:#cfd8dc"></i>停運</span>' +
-                    '<span><i class="cm-dot" style="background:#99CCFF"></i>壞客櫈</span>' +
-                    '<span style="color:#e53935">紅字＝壞 DLR</span><span style="color:#2e7d32">綠字＝spare</span>' +
+                    '<span style="background:#99CCFF;color:#01579b;border-radius:6px;padding:3px 8px;font-weight:bold">藍底＝壞客櫈</span>' +
+                    '<span style="background:#e53935;color:#fff;border-radius:6px;padding:3px 8px;font-weight:bold">紅字＝壞 DLR</span>' +
+                    '<span style="background:#2e7d32;color:#fff;border-radius:6px;padding:3px 8px;font-weight:bold">綠字＝spare</span>' +
                     '<span>黑字＝好凳</span><span><i class="cm-dot" style="background:#c5cae9"></i>企位（SB/RL）</span><span>客櫈每台 5 張</span>' +
                     '<span><i class="cm-dot" style="background:#FFFF00"></i>帳房</span>' +
                     '<span><i class="cm-dot" style="background:#FF99CC"></i>活動區</span>';
