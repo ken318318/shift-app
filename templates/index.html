@@ -2965,7 +2965,8 @@ function updatePendingCardState(card) {
             for (let i = 0; i < m.rs; i++) h += rh(m.r + i);
             el.style.width = w + 'px';
             el.style.height = h + 'px';
-            setBorder(el, m);
+            setBorder(el, { t: 0, l: 0, rr: 0, b: 0 });
+            if (m.bg) el.style.background = m.bg;
             el.style.fontSize = fpx(m.fs) + 'px';
             el.style.fontWeight = m.bold ? 'bold' : 'normal';
             el.style.lineHeight = '1.1';
@@ -2984,7 +2985,7 @@ function updatePendingCardState(card) {
             el.style.top = Y[c.r] + 'px';
             el.style.width = cw(c.c) + 'px';
             el.style.height = rh(c.r) + 'px';
-            setBorder(el, c);
+            setBorder(el, { t: 0, l: 0, rr: 0, b: 0 });
             el.style.fontSize = fpx(c.fs) + 'px';
             el.style.fontWeight = c.bold ? 'bold' : 'normal';
             el.textContent = c.v;
@@ -3010,6 +3011,23 @@ function updatePendingCardState(card) {
                 if (c.bg) el.style.background = c.bg;
                 el.style.color = c.fc || '#333';
             }
+            map.appendChild(el);
+        });
+
+        (cmData.hlines || []).forEach(function (l) {
+            const el = document.createElement('div');
+            el.style.cssText = 'position:absolute;background:#000;height:2px;pointer-events:none;';
+            el.style.left = X[l.c1] + 'px';
+            el.style.top = (Y[l.r] - 1) + 'px';
+            el.style.width = (X[l.c2] - X[l.c1]) + 'px';
+            map.appendChild(el);
+        });
+        (cmData.vlines || []).forEach(function (l) {
+            const el = document.createElement('div');
+            el.style.cssText = 'position:absolute;background:#000;width:2px;pointer-events:none;';
+            el.style.left = (X[l.c] - 1) + 'px';
+            el.style.top = Y[l.r1] + 'px';
+            el.style.height = (Y[l.r2] - Y[l.r1]) + 'px';
             map.appendChild(el);
         });
 
