@@ -3645,6 +3645,7 @@ function updatePendingCardState(card) {
             if (c.r < minR || c.c < minC) return;
             const key = cmEditKey(c.r, c.c);
             if (covered[key]) return;
+            if ((c.r >= 26 && c.r <= 29 && c.c >= 37 && c.c <= 40) || (c.r >= 47 && c.r <= 50 && c.c >= 63 && c.c <= 66)) return;
             const x0 = X[c.c], y0 = Y[c.r];
             const x1 = x0 + cw(c.c), y1 = y0 + rh(c.r);
             const ed = cmEdits.cells[key];
@@ -3711,6 +3712,30 @@ function updatePendingCardState(card) {
             drawText(x0, y0, x1, y1, ed.v || '', ed.fs || 11, ed.bold, ed.fc ? rgb(ed.fc, '#111') : '#111');
         });
 
+        // Pit 63 / Pit 31：4 個 2x2 大格（台號順序不變）
+        function drawSpecial(sr, sc) {
+            const x0 = X[sc], y0 = Y[sr];
+            const x1 = X[sc + 4], y1 = Y[sr + 4];
+            const xm = X[sc + 2], ym = Y[sr + 2];
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1.6;
+            ctx.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0 - 1, y1 - y0 - 1);
+            ctx.beginPath();
+            ctx.moveTo(x0, ym); ctx.lineTo(x1, ym);
+            ctx.moveTo(xm, y0); ctx.lineTo(xm, y1);
+            ctx.stroke();
+            [[0, 0], [0, 2], [2, 0], [2, 2]].forEach(function (p) {
+                const cellData = (cmData.cells || []).find(function (x) { return x.r === sr + p[0] && x.c === sc + p[1]; });
+                if (!cellData) return;
+                const bx0 = (p[1] === 0 ? x0 : xm);
+                const bx1 = (p[1] === 0 ? xm : x1);
+                const by0 = (p[0] === 0 ? y0 : ym);
+                const by1 = (p[0] === 0 ? ym : y1);
+                drawText(bx0, by0, bx1, by1, cellData.v, 18, true, rgb(cellData.fc, '#111'));
+            });
+        }
         // hlines/vlines（細線灰、粗線黑）
         (cmData.hlines || []).forEach(function (l) {
             const y = Math.round(Y[l.r]) + 0.5;
@@ -3732,6 +3757,8 @@ function updatePendingCardState(card) {
             ctx.lineTo(x, y2);
             ctx.stroke();
         });
+
+        [[26, 37], [47, 63]].forEach(function (a) { drawSpecial(a[0], a[1]); });
 
         if (legend) {
             if (cmMode === 'status') {
