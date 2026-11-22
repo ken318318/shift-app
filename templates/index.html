@@ -3711,18 +3711,18 @@ function updatePendingCardState(card) {
 
         (cmData.hlines || []).forEach(function (l) {
             const el = document.createElement('div');
-            el.style.cssText = 'position:absolute;background:#000;height:2px;pointer-events:none;';
+            el.style.cssText = 'position:absolute;background:#222;height:1px;pointer-events:none;';
             el.style.left = X[l.c1] + 'px';
-            el.style.top = (Y[l.r] - 1) + 'px';
-            el.style.width = (X[l.c2] - X[l.c1] + 2) + 'px';
+            el.style.top = Y[l.r] + 'px';
+            el.style.width = (X[l.c2] - X[l.c1] + 1) + 'px';
             map.appendChild(el);
         });
         (cmData.vlines || []).forEach(function (l) {
             const el = document.createElement('div');
-            el.style.cssText = 'position:absolute;background:#000;width:2px;pointer-events:none;';
-            el.style.left = (X[l.c] - 1) + 'px';
+            el.style.cssText = 'position:absolute;background:#222;width:1px;pointer-events:none;';
+            el.style.left = X[l.c] + 'px';
             el.style.top = Y[l.r1] + 'px';
-            el.style.height = (Y[l.r2] - Y[l.r1] + 2) + 'px';
+            el.style.height = (Y[l.r2] - Y[l.r1] + 1) + 'px';
             map.appendChild(el);
         });
 
