@@ -3506,7 +3506,7 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
     cols = []
     from openpyxl.utils import column_index_from_string
     # Pit 63 / Pit 31 下面 4 格所在嘅欄平均闊度
-    widen = set(range(37, 41)) | set(range(63, 67))
+    widen = set()
     for k, dim in ws.column_dimensions.items():
         try:
             idx = column_index_from_string(k)
