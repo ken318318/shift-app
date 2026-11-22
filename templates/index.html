@@ -571,7 +571,6 @@
                 <button class="lr-b-gray" onclick="cmZoomStep(1)">➕</button>
                 <button class="lr-b-gray" onclick="cmZoomFit()">適合螢幕</button>
                 <button class="lr-b-blue" onclick="cmSaveImage()">🖼️ 存為圖片</button>
-                <button id="cm-b-import" class="lr-b-gray" onclick="document.getElementById('cm-file').click()" style="display:none;">📤 上傳 Excel</button>
                 <button id="cm-b-reset" class="lr-b-gray" onclick="cmResetLayout()" style="display:none;">↩️ 還原版面</button>
                 <button id="cm-b-edit" class="lr-b-gray" onclick="cmToggleEdit()" style="display:none;">✏️ 編輯</button>
                 <input type="file" id="cm-file" accept=".xlsx,.xlsm" style="display:none" onchange="cmUploadExcel(this)">
@@ -3684,11 +3683,11 @@ function updatePendingCardState(card) {
                 } else if (cmMode === 'status') {
                     if (c.guest_bad) bg = '#99CCFF';
                     else if (c.status === '停運') bg = '#cfd8dc';
-                    else if (c.stand) bg = '#f2f2f2';
+                    else if (c.stand) bg = '#c5cae9';
                     fc = c.dlr_bad ? '#e53935' : (c.status === '停運' ? '#2e7d32' : '#111');
                 } else {
                     if (c.status === '停運') bg = '#cfd8dc';
-                    else if (c.stand) bg = '#f2f2f2';
+                    else if (c.stand) bg = '#c5cae9';
                     fc = c.stand ? '#111' : (c.chair === 'new' ? '#7b2fd0' : (c.chair === 'old' ? '#d95a00' : '#111'));
                     if (c.chair && !c.stand) bold = true;
                 }
@@ -3795,7 +3794,7 @@ function updatePendingCardState(card) {
                     '<span><i class="cm-dot" style="background:#cfd8dc"></i>停運</span>' +
                     '<span><i class="cm-dot" style="background:#99CCFF"></i>壞客櫈</span>' +
                     '<span style="color:#e53935">紅字＝壞 DLR</span><span style="color:#2e7d32">綠字＝spare</span>' +
-                    '<span>黑字＝企位</span><span>客櫈每台 5 張</span>' +
+                    '<span>黑字＝好凳</span><span><i class="cm-dot" style="background:#c5cae9"></i>企位（SB/RL）</span><span>客櫈每台 5 張</span>' +
                     '<span><i class="cm-dot" style="background:#FFFF00"></i>帳房</span>' +
                     '<span><i class="cm-dot" style="background:#FF99CC"></i>活動區</span>';
             } else {
