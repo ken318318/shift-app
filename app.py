@@ -3437,15 +3437,16 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
             cells.append(dict(bc))
             seen.add(k)
 
+    # 只畫 Excel 嘅粗框（medium/thick），細線交由淡灰網格顯示，避免雙線
     for c in cells:
         mr, mc = int(c['r']), int(c['c'])
-        if c.get('t'):
+        if c.get('t') == 2:
             hset.setdefault(mr, []).append(mc)
-        if c.get('b'):
+        if c.get('b') == 2:
             hset.setdefault(mr + 1, []).append(mc)
-        if c.get('l'):
+        if c.get('l') == 2:
             vset.setdefault(mc, []).append(mr)
-        if c.get('rr'):
+        if c.get('rr') == 2:
             vset.setdefault(mc + 1, []).append(mr)
 
     rs = [int(c['r']) for c in cells]
