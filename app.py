@@ -3142,36 +3142,36 @@ _BORDER_THICK = {'medium', 'thick', 'double', 'mediumDashDot', 'mediumDashDotDot
 _BORDER_THIN = {'thin', 'hair', 'dotted', 'dashed', 'dashDot', 'dashDotDot'}
 
 
+_CHAIR_STATIC_CACHE = None
+
+
 def _chair_static_layout():
-    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
-    path = os.path.join(base, 'chair_grid.json')
-    if not os.path.exists(path):
-        path = os.path.join(base, 'chair_map.json')
-    with open(path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    global _CHAIR_STATIC_CACHE
+    if _CHAIR_STATIC_CACHE is None:
+        base = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+        path = os.path.join(base, 'chair_grid.json')
+        if not os.path.exists(path):
+            path = os.path.join(base, 'chair_map.json')
+        with open(path, 'r', encoding='utf-8') as f:
+            _CHAIR_STATIC_CACHE = json.load(f)
+    return _CHAIR_STATIC_CACHE
 
 
 def _chair_layout():
-    """版面：優先用手機上傳（存資料庫），否則用 static/chair_grid.json。"""
-    global _CHAIR_LAYOUT_CACHE
-    if _CHAIR_LAYOUT_CACHE is None:
-        layout = None
-        raw = get_setting(_CHAIR_LAYOUT_KEY, '') or ''
-        if raw.strip():
-            try:
-                d = json.loads(raw)
-                if isinstance(d, dict) and d.get('cells'):
-                    layout = d
-            except Exception as e:
-                print('資料庫版面讀取失敗:', e)
-        if layout is None:
-            try:
-                layout = _chair_static_layout()
-            except Exception as e:
-                print('櫈況圖版面讀取失敗:', e)
-                layout = {'maxR': 0, 'maxC': 0, 'pits': [], 'cells': [], 'extras': []}
-        _CHAIR_LAYOUT_CACHE = layout
-    return _CHAIR_LAYOUT_CACHE
+    """版面：優先用手機上傳（存資料庫），否則用 static。每都讀 DB，上傳即時生效。"""
+    raw = get_setting(_CHAIR_LAYOUT_KEY, '') or ''
+    if raw.strip():
+        try:
+            d = json.loads(raw)
+            if isinstance(d, dict) and d.get('cells'):
+                return d
+        except Exception as e:
+            print('資料庫版面讀取失敗:', e)
+    try:
+        return _chair_static_layout()
+    except Exception as e:
+        print('櫈況圖版面讀取失敗:', e)
+        return {'maxR': 0, 'maxC': 0, 'pits': [], 'cells': [], 'extras': []}
 
 
 def _chair_base_codes():
@@ -3315,6 +3315,151 @@ def _xlsx_apply_layout(data, base_layout):
                 m[k] = s[k]
         mhit += 1
     return out, hit, mhit
+
+
+def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=6):
+    """完全按 Excel 重建版面（框線、合併、文字、位置），再套用台號。"""
+    import openpyxl
+
+    wb = openpyxl.load_workbook(io.BytesIO(data), data_only=True)
+    ws = wb.worksheets[0]
+    merged_ranges = list(ws.merged_cells.ranges)
+    merged_set = set()
+    for rng in merged_ranges:
+        for r in range(rng.min_row, rng.max_row + 1):
+            for c in range(rng.min_col, rng.max_col + 1):
+                merged_set.add((r, c))
+
+    cells = []
+    hset = {}
+    vset = {}
+
+    for row in ws.iter_rows():
+        if row and row[0].row > 200:
+            break
+        for cell in row:
+            if cell.column > 160:
+                continue
+            if (cell.row, cell.column) in merged_set:
+                continue
+            f = cell.font
+            if f.size is not None and float(f.size) > 16:
+                continue
+            val = cell.value
+            if isinstance(val, str) and ('Chair' in val or 'Update' in val):
+                continue
+            bg = _chair_color(cell.fill.fgColor if cell.fill else None)
+            b = cell.border
+            t = _chair_border_val(b.top.style if b.top else None)
+            l = _chair_border_val(b.left.style if b.left else None)
+            rr = _chair_border_val(b.right.style if b.right else None)
+            bb = _chair_border_val(b.bottom.style if b.bottom else None)
+            if not ((val not in (None, '')) or bg or (t + l + rr + bb)):
+                continue
+            mr, mc = cell.row + row_offset, cell.column
+            if mr < 1 or mc < 1:
+                continue
+            if isinstance(val, float) and val.is_integer():
+                val = int(val)
+            cells.append({
+                'r': mr, 'c': mc,
+                'v': '' if val is None else str(val),
+                'code': code_map.get('%d,%d' % (mr, mc), ''),
+                'num': None,
+                't': t, 'l': l, 'rr': rr, 'b': bb,
+                'fc': _chair_color(f.color) or '#000000',
+                'fs': float(f.size or 11),
+                'bold': bool(f.bold),
+                'bg': bg
+            })
+
+    merges = []
+    for rng in merged_ranges:
+        tl = ws.cell(row=rng.min_row, column=rng.min_col)
+        val = tl.value
+        if val is None or str(val).strip() == '':
+            continue
+        f = tl.font
+        if f.size is not None and float(f.size) > 16:
+            continue
+        if 'Chair' in str(val) or 'Update' in str(val):
+            continue
+        b = tl.border
+        merges.append({
+            'r': rng.min_row + row_offset, 'c': rng.min_col,
+            'rs': rng.max_row - rng.min_row + 1,
+            'cs': rng.max_col - rng.min_col + 1,
+            'v': str(val),
+            'fc': _chair_color(f.color) or '',
+            'fs': float(f.size or 11),
+            'bold': bool(f.bold),
+            'bg': _chair_color(tl.fill.fgColor if tl.fill else None),
+            't': _chair_border_val(b.top.style if b.top else None),
+            'l': _chair_border_val(b.left.style if b.left else None),
+            'rr': _chair_border_val(b.right.style if b.right else None),
+            'b': _chair_border_val(b.bottom.style if b.bottom else None)
+        })
+
+    # 補回缺失的台號格（用原始版面），確保 611 台齊全
+    if base_layout:
+        seen = set('%d,%d' % (c['r'], c['c']) for c in cells)
+        for bc in base_layout.get('cells', []):
+            if not bc.get('code'):
+                continue
+            k = '%d,%d' % (bc['r'], bc['c'])
+            if k in seen:
+                continue
+            cells.append(dict(bc))
+            seen.add(k)
+
+    for c in cells:
+        mr, mc = int(c['r']), int(c['c'])
+        if c.get('t'):
+            hset.setdefault(mr, []).append(mc)
+        if c.get('b'):
+            hset.setdefault(mr + 1, []).append(mc)
+        if c.get('l'):
+            vset.setdefault(mc, []).append(mr)
+        if c.get('rr'):
+            vset.setdefault(mc + 1, []).append(mr)
+
+    rs = [int(c['r']) for c in cells]
+    cs = [int(c['c']) for c in cells]
+    if rs:
+        minr, maxr, minc, maxc = min(rs), max(rs), min(cs), max(cs)
+    else:
+        minr, maxr, minc, maxc = 1, 1, 1, 1
+
+    cols = []
+    from openpyxl.utils import column_index_from_string
+    for k, dim in ws.column_dimensions.items():
+        try:
+            idx = column_index_from_string(k)
+        except Exception:
+            continue
+        if dim.width:
+            cols.append({'c': idx, 'w': round(float(dim.width), 3)})
+    rows = []
+    for k, dim in ws.row_dimensions.items():
+        if dim.height:
+            rows.append({'r': int(k) + row_offset, 'h': round(float(dim.height), 3)})
+
+    hlines = []
+    for r, arr in hset.items():
+        for a, z in _chair_run_ranges(arr):
+            hlines.append({'r': r, 'c1': a, 'c2': z})
+    vlines = []
+    for c, arr in vset.items():
+        for a, z in _chair_run_ranges(arr):
+            vlines.append({'c': c, 'r1': a, 'r2': z})
+
+    return {
+        'maxR': maxr, 'maxC': maxc, 'minR': minr, 'minC': minc,
+        'maxRu': maxr, 'maxCu': maxc,
+        'cols': cols, 'rows': rows,
+        'cells': cells, 'merges': merges,
+        'hlines': hlines, 'vlines': vlines, 'extras': []
+    }
 
 
 def _chair_types():
@@ -3603,6 +3748,8 @@ def chair_map_import():
         return jsonify({'status': 'error', 'message': '❌ Excel 解析失敗：' + str(e)[:120]})
     if not layout.get('cells'):
         return jsonify({'status': 'error', 'message': '❌ 讀不到任何格仔，請確認 Excel 內容。'})
+    if hit == 0:
+        return jsonify({'status': 'error', 'message': '❌ 對唔到任何格仔（Excel 位置可能同系統唔同）。請用第一個 Sheet，並確認位置無搬過。'})
     if not set_setting(_CHAIR_LAYOUT_KEY, json.dumps(layout, ensure_ascii=False)):
         return jsonify({'status': 'error', 'message': '❌ 儲存失敗，請稍後再試。'})
     _CHAIR_LAYOUT_CACHE = None
