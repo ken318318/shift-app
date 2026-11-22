@@ -3657,8 +3657,7 @@ def _chair_issues():
             except Exception: pass
 
     for (note,) in rows:
-        secs = _up_split_sections(note or '')
-        for line in '\n'.join(secs.values()).split('\n'):
+        for line in str(note or '').split('\n'):
             for it in _up_parse_line(line):
                 cat = it.get('category') or ''
                 is_dlr = ('DLR' in cat and ('櫈' in cat or '椅' in cat))
