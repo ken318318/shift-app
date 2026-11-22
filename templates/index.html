@@ -93,11 +93,11 @@
         .lr-td.lr-new { color: #FF0000; }
         .lr-emp { background: #FDE9E9; }
         .lr-note { font-size: 8px; line-height: 1.2; color: #777; font-weight: normal; margin-top: 2px; word-break: break-word; }
-        /* ===== 椅況圖 ===== */
+        /* ===== 櫈況圖 ===== */
         .cm-modal { display: none; position: fixed; inset: 0; background: #eef2f7; z-index: 10001; overflow: auto; -webkit-overflow-scrolling: touch; }
         .cm-wrap { padding: 8px 8px 40px; }
         .cm-bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; background: #fff; padding: 8px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 8px; position: sticky; top: 0; z-index: 3; }
-        .cm-bar button { padding: 8px 10px; border: none; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .cm-bar button { padding: 9px 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
         .cm-cell { position: absolute; width: 26px; height: 22px; border: 1px solid #d6dde6; font-size: 11px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; background: #fff; }
         .cm-cell.off { background: #cfd8dc; }
         .cm-cell.guest { background: #99CCFF; }
@@ -108,7 +108,7 @@
         .cm-box { position: absolute; border: 2px solid #000; box-sizing: border-box; pointer-events: none; }
         .cm-grp { position: absolute; border: 1px solid #444; box-sizing: border-box; pointer-events: none; }
         .cm-pit { position: absolute; font-size: 10px; color: #c62828; font-weight: bold; white-space: nowrap; }
-        .cm-legend span { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; font-size: 11px; color: #555; }
+        .cm-legend span { display: inline-flex; align-items: center; gap: 4px; margin: 3px 12px 3px 0; font-size: 13px; color: #333; font-weight: bold; }
         .cm-dot { width: 12px; height: 12px; border: 1px solid #ccc; display: inline-block; }
         .lr-cnt { background: #FDE9E9; font-weight: bold; font-size: 14px; }
         .lr-total { font-size: 16px; font-weight: bold; border-top: 3px solid #000 !important; border-bottom: 3px solid #000 !important; padding: 7px 4px !important; }
@@ -171,7 +171,7 @@
         </div>
         <button class="submit-btn" onclick="showForm()" style="margin-top: 0; margin-bottom: 10px; background-color: #2ecc71;">📝 新增BS交更紀錄</button>
         <button class="lr-btn2" onclick="openUpdateReport()">📋 一鍵生成更新表（Layout／各類別）</button>
-        <button class="lr-btn2" onclick="openChairMap()" style="border-color:#7b1fa2; color:#6a1b9a;">🪑 椅況圖（好壞／新舊）</button>
+        <button class="lr-btn2" onclick="openChairMap()" style="border-color:#7b1fa2; color:#6a1b9a;">🪑 櫈況圖（好壞／新舊）</button>
         
         <div id="home-pending-container" style="display: none; background: #fff3cd; padding: 9px 12px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 14px;">
             <div onclick="toggleHomePending()" style="cursor: pointer;">
@@ -546,13 +546,13 @@
         <div><a id="ur-dl" download="更新表.png">⬇️ 下載圖片</a></div>
     </div>
 
-    <!-- ===== 椅況圖 ===== -->
+    <!-- ===== 櫈況圖 ===== -->
     <div id="chair-modal" class="cm-modal">
         <div class="cm-wrap">
             <div class="cm-bar">
                 <button class="lr-b-close" onclick="closeChairMap()">✖ 返回</button>
-                <button id="cm-b-status" class="lr-b-blue" onclick="setChairMode('status')">🪑 好壞椅</button>
-                <button id="cm-b-type" class="lr-b-gray" onclick="setChairMode('type')">🆕 新舊椅</button>
+                <button id="cm-b-status" class="lr-b-blue" onclick="setChairMode('status')">🪑 好壞櫈</button>
+                <button id="cm-b-type" class="lr-b-gray" onclick="setChairMode('type')">🆕 新舊櫈</button>
                 <button class="lr-b-gray" onclick="cmZoomStep(-1)">➖</button>
                 <span id="cm-zoom-label" style="font-size:12px;color:#455a64;min-width:38px;text-align:center;">100%</span>
                 <button class="lr-b-gray" onclick="cmZoomStep(1)">➕</button>
@@ -567,12 +567,12 @@
         </div>
     </div>
 
-    <!-- ===== 椅況圖圖片 ===== -->
+    <!-- ===== 櫈況圖圖片 ===== -->
     <div id="cm-imgbox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.9); z-index:10005; overflow:auto; padding:12px; text-align:center;">
         <button onclick="document.getElementById('cm-imgbox').style.display='none'" style="display:block; margin:0 auto 8px; padding:8px 16px; border:none; border-radius:8px; background:#e67c73; color:#fff; font-size:13px; font-weight:bold;">✖ 關閉</button>
         <p style="color:#fff; font-size:13px;">長按圖片 → 儲存到相簿（或按下方按鈕下載）</p>
-        <img id="cm-img" style="max-width:100%; background:#fff;" alt="椅況圖">
-        <div><a id="cm-dl" download="椅況圖.png" style="display:inline-block; margin:12px 0 30px; padding:10px 18px; background:#1a73e8; color:#fff; border-radius:8px; font-size:14px; font-weight:bold; text-decoration:none;">⬇️ 下載圖片</a></div>
+        <img id="cm-img" style="max-width:100%; background:#fff;" alt="櫈況圖">
+        <div><a id="cm-dl" download="櫈況圖.png" style="display:inline-block; margin:12px 0 30px; padding:10px 18px; background:#1a73e8; color:#fff; border-radius:8px; font-size:14px; font-weight:bold; text-decoration:none;">⬇️ 下載圖片</a></div>
     </div>
 
     <script>
@@ -2797,7 +2797,7 @@ function updatePendingCardState(card) {
         }); 
     }
 
-    // ================= 椅況圖 =================
+    // ================= 櫈況圖 =================
     let cmData = null;
     let cmMode = 'status';
     const CM_W = 26, CM_H = 22;
@@ -2807,6 +2807,7 @@ function updatePendingCardState(card) {
         if (!m) return;
         m.style.display = 'block';
         document.body.style.overflow = 'hidden';
+        bsLoading(true, '載入中…', true);
         loadChairMap();
     }
 
@@ -2826,6 +2827,7 @@ function updatePendingCardState(card) {
             cmData = d;
             renderChairMap();
         } catch (e) { if (tip) tip.textContent = '❌ 讀取失敗'; }
+        finally { bsLoading(false); }
     }
 
     function setChairMode(m) {
@@ -2870,15 +2872,17 @@ function updatePendingCardState(card) {
         const map = document.getElementById('cm-map');
         if (!map) return;
         const go = function () {
+            bsLoading(true, '產生圖片中…', true);
             const oldZoom = map.style.zoom;
             map.style.zoom = '1';
             html2canvas(map, { backgroundColor: '#fff', scale: 2, useCORS: true }).then(function (canvas) {
                 map.style.zoom = oldZoom;
+                bsLoading(false);
                 const url = canvas.toDataURL('image/png');
                 document.getElementById('cm-img').src = url;
                 document.getElementById('cm-dl').href = url;
                 document.getElementById('cm-imgbox').style.display = 'block';
-            }).catch(function () { map.style.zoom = oldZoom; alert('❌ 產生圖片失敗'); });
+            }).catch(function () { map.style.zoom = oldZoom; bsLoading(false); alert('❌ 產生圖片失敗'); });
         };
         if (window.html2canvas) { go(); return; }
         urLoadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js', go, function () {
@@ -2916,9 +2920,11 @@ function updatePendingCardState(card) {
             const c = cmData.counts || {};
             const head = (cmData.today ? ('更新日期：' + cmData.today + '　') : '') +
                 '台數 ' + (c.total || 0) + '（營運 ' + (c.active || 0) + '／停運 ' + (c.inactive || 0) + '）' +
-                (cmMode === 'status' ? ('　壞 DLR ' + (c.dlr_bad || 0) + '、壞客椅 ' + (c.guest_bad || 0) + '、spare ' + (c.spare || 0)) : '');
+                (cmMode === 'status'
+                    ? ('　壞 DLR ' + (c.dlr_bad || 0) + '、壞客櫈 ' + (c.guest_bad || 0) + '、spare ' + (c.spare || 0))
+                    : ('　新櫈 ' + (c.new || 0) + '、舊櫈 ' + (c.old || 0) + '、未設定 ' + Math.max(0, (c.total || 0) - (c.new || 0) - (c.old || 0))));
             tip.textContent = head + '　' + (cmMode === 'status'
-                ? '（紅字＝壞 DLR、藍底＝壞客椅、綠字＝spare、灰底＝停運）'
+                ? '（紅字＝壞 DLR、藍底＝壞客櫈、綠字＝spare、灰底＝停運）'
                 : (isAdmin ? '（點格仔切換：紫＝新、橙＝舊）' : '（紫＝新、橙＝舊；只有管理員可修改）'));
         }
 
@@ -2926,10 +2932,10 @@ function updatePendingCardState(card) {
         function setBorder(el, o) {
             el.style.borderStyle = 'solid';
             el.style.borderColor = '#000';
-            el.style.borderTopWidth = (o.t === 2 ? '2px' : (o.t === 1 ? '1px' : '0'));
-            el.style.borderLeftWidth = (o.l === 2 ? '2px' : (o.l === 1 ? '1px' : '0'));
-            el.style.borderRightWidth = (o.rr === 2 ? '2px' : (o.rr === 1 ? '1px' : '0'));
-            el.style.borderBottomWidth = (o.b === 2 ? '2px' : (o.b === 1 ? '1px' : '0'));
+            el.style.borderTopWidth = o.t ? '2px' : '0';
+            el.style.borderLeftWidth = o.l ? '2px' : '0';
+            el.style.borderRightWidth = o.rr ? '2px' : '0';
+            el.style.borderBottomWidth = o.b ? '2px' : '0';
         }
 
         (cmData.extras || []).forEach(function (x) {
@@ -2987,15 +2993,17 @@ function updatePendingCardState(card) {
                 if (cmMode === 'status') {
                     if (c.guest_bad) el.style.background = '#99CCFF';
                     else if (c.status === '停運') el.style.background = '#cfd8dc';
+                    else if (c.stand) el.style.background = '#f2f2f2';
                     el.style.color = c.dlr_bad ? '#e53935' : (c.status === '停運' ? '#2e7d32' : '#111');
                 } else {
-                    if (c.chair === 'new') { el.style.background = '#9933FF'; el.style.color = '#fff'; }
-                    else if (c.chair === 'old') { el.style.background = '#FF6600'; el.style.color = '#fff'; }
-                    if (c.status === '停運') el.style.opacity = '0.6';
+                    if (c.status === '停運') el.style.background = '#cfd8dc';
+                    else if (c.stand) el.style.background = '#f2f2f2';
+                    el.style.color = c.stand ? '#111' : (c.chair === 'new' ? '#7b2fd0' : (c.chair === 'old' ? '#d95a00' : '#111'));
+                    if (c.chair && !c.stand) el.style.fontWeight = 'bold';
                 }
                 el.onclick = function () {
                     if (cmMode !== 'type') return;
-                    if (!isAdmin) { alert('只有管理員可以修改新舊椅。'); return; }
+                    if (!isAdmin) { alert('只有管理員可以修改新舊櫈。'); return; }
                     toggleChairType(c);
                 };
             } else {
@@ -3008,13 +3016,15 @@ function updatePendingCardState(card) {
             if (cmMode === 'status') {
                 legend.innerHTML = '<span><i class="cm-dot" style="background:#fff"></i>營運（好）</span>' +
                     '<span><i class="cm-dot" style="background:#cfd8dc"></i>停運</span>' +
-                    '<span><i class="cm-dot" style="background:#99CCFF"></i>壞客椅</span>' +
+                    '<span><i class="cm-dot" style="background:#99CCFF"></i>壞客櫈</span>' +
                     '<span style="color:#e53935">紅字＝壞 DLR</span><span style="color:#2e7d32">綠字＝spare</span>' +
+                    '<span>黑字＝企位</span><span>客櫈每台 5 張</span>' +
                     '<span><i class="cm-dot" style="background:#FFFF00"></i>帳房</span>' +
                     '<span><i class="cm-dot" style="background:#FF99CC"></i>活動區</span>';
             } else {
-                legend.innerHTML = '<span><i class="cm-dot" style="background:#9933FF"></i>新椅</span>' +
-                    '<span><i class="cm-dot" style="background:#FF6600"></i>舊椅</span><span>白＝未設定</span>';
+                legend.innerHTML = '<span style="color:#7b2fd0;font-weight:bold">紫字＝新櫈</span>' +
+                    '<span style="color:#d95a00;font-weight:bold">橙字＝舊櫈</span>' +
+                    '<span><i class="cm-dot" style="background:#cfd8dc"></i>灰底＝停運</span><span>黑字＝企位</span>';
             }
         }
     }
@@ -3022,6 +3032,7 @@ function updatePendingCardState(card) {
     async function toggleChairType(cell) {
         const order = ['', 'new', 'old'];
         const next = order[(order.indexOf(cell.chair || '') + 1) % order.length];
+        bsLoading(true, '儲存中…', true);
         try {
             const r = await fetch('/api/chair_map/type', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -3032,6 +3043,7 @@ function updatePendingCardState(card) {
             cell.chair = next;
             renderChairMap();
         } catch (e) { alert('❌ 連線失敗'); }
+        finally { bsLoading(false); }
     }
 
     // ================= 更新表（任何類別，一鍵生成） =================
