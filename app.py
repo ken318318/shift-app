@@ -3132,6 +3132,7 @@ def set_hall_status():
 
 
 _CHAIR_TYPE_KEY = 'chair_types'
+_CHAIR_EDIT_KEY = 'chair_edits'
 _CHAIR_LAYOUT_CACHE = None
 
 
@@ -3170,6 +3171,36 @@ def _chair_types():
     except Exception:
         pass
     return base
+
+
+def _chair_edits():
+    """櫈況圖手動編輯覆蓋層（存 app_settings['chair_edits']）。
+    只有管理員改過的格才有記錄；冇記錄的格完全照自動規則。"""
+    empty = {'cells': {}, 'merges': [], 'unmerge': []}
+    raw = get_setting(_CHAIR_EDIT_KEY, '') or ''
+    if not raw.strip():
+        return empty
+    try:
+        data = json.loads(raw)
+    except Exception:
+        return empty
+    if not isinstance(data, dict):
+        return empty
+    out = {'cells': {}, 'merges': [], 'unmerge': []}
+    cells = data.get('cells')
+    if isinstance(cells, dict):
+        for k, v in cells.items():
+            if isinstance(v, dict) and re.match(r'^\d+,\d+$', str(k)):
+                out['cells'][str(k)] = v
+    merges = data.get('merges')
+    if isinstance(merges, list):
+        for m in merges:
+            if isinstance(m, dict) and m.get('r') and m.get('c'):
+                out['merges'].append(m)
+    unmerge = data.get('unmerge')
+    if isinstance(unmerge, list):
+        out['unmerge'] = [str(x) for x in unmerge if re.match(r'^\d+,\d+$', str(x))]
+    return out
 
 
 def _chair_issues():
@@ -3282,7 +3313,8 @@ def chair_map_get():
                     'hlines': layout.get('hlines', []), 'vlines': layout.get('vlines', []),
                     'today': _up_today(), 'counts': cnt,
                     'pits': layout.get('pits', []), 'extras': layout.get('extras', []),
-                    'merges': layout.get('merges', []), 'cells': cells})
+                    'merges': layout.get('merges', []), 'cells': cells,
+                    'edits': _chair_edits()})
 
 
 @app.route('/api/chair_map/type', methods=['POST'])
@@ -3306,6 +3338,78 @@ def chair_map_set_type():
         types.pop(code, None)
     return jsonify({'status': 'success'} if set_setting(_CHAIR_TYPE_KEY, json.dumps(types, ensure_ascii=False)) else
                    {'status': 'error', 'message': '儲存失敗'})
+
+
+@app.route('/api/chair_map/edit', methods=['POST'])
+def chair_map_edit():
+    """儲存櫈況圖手動編輯（文字顏色／底色／粗體／框線／文字／合併）。只有管理員可改。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以修改版面。'})
+    data = request.json or {}
+    raw = data.get('edits')
+    if not isinstance(raw, dict):
+        return jsonify({'status': 'error', 'message': '❌ 資料格式錯誤。'})
+
+    clean = {'cells': {}, 'merges': [], 'unmerge': []}
+    cells = raw.get('cells')
+    if isinstance(cells, dict):
+        for k, v in cells.items():
+            if not isinstance(v, dict):
+                continue
+            k = str(k)
+            if not re.match(r'^\d+,\d+$', k):
+                continue
+            props = {}
+            for f in ('fc', 'bg', 'v'):
+                if f in v and isinstance(v.get(f), str) and len(v.get(f)) <= 40:
+                    props[f] = v.get(f)
+            if 'bold' in v:
+                props['bold'] = bool(v.get('bold'))
+            for f in ('t', 'l', 'rr', 'b'):
+                if f in v:
+                    props[f] = 1 if v.get(f) else 0
+            if props:
+                clean['cells'][k] = props
+    merges = raw.get('merges')
+    if isinstance(merges, list):
+        for m in merges[:80]:
+            if not isinstance(m, dict):
+                continue
+            try:
+                r = int(m.get('r')); c = int(m.get('c'))
+                rs = max(1, min(30, int(m.get('rs') or 1)))
+                cs = max(1, min(30, int(m.get('cs') or 1)))
+                fs = float(m.get('fs') or 11)
+            except Exception:
+                continue
+            if r < 1 or c < 1:
+                continue
+            clean['merges'].append({
+                'r': r, 'c': c, 'rs': rs, 'cs': cs,
+                'v': str(m.get('v') or '')[:60],
+                'fc': str(m.get('fc') or '')[:20],
+                'bg': str(m.get('bg') or '')[:20],
+                'fs': max(6, min(48, fs)),
+                'bold': bool(m.get('bold'))
+            })
+    unmerge = raw.get('unmerge')
+    if isinstance(unmerge, list):
+        for x in unmerge[:600]:
+            x = str(x)
+            if re.match(r'^\d+,\d+$', x):
+                clean['unmerge'].append(x)
+    if len(clean['cells']) > 4000:
+        return jsonify({'status': 'error', 'message': '❌ 改動數量過多。'})
+
+    if not set_setting(_CHAIR_EDIT_KEY, json.dumps(clean, ensure_ascii=False)):
+        return jsonify({'status': 'error', 'message': '❌ 儲存失敗，請稍後再試。'})
+    try:
+        log_action('修改櫈況圖', '手動編輯 %d 格、%d 個合併' % (len(clean['cells']), len(clean['merges'])))
+    except Exception:
+        pass
+    return jsonify({'status': 'success', 'cells': len(clean['cells']), 'merges': len(clean['merges'])})
 
 
 @app.route('/')
