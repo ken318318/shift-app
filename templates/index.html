@@ -3714,21 +3714,27 @@ function updatePendingCardState(card) {
             drawText(x0, y0, x1, y1, ed.v || '', ed.fs || 11, ed.bold, ed.fc ? rgb(ed.fc, '#111') : '#111');
         });
 
-        // hlines/vlines
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 1;
-        ctx.beginPath();
+        // hlines/vlines（細線灰、粗線黑）
         (cmData.hlines || []).forEach(function (l) {
             const y = Math.round(Y[l.r]) + 0.5;
             const x1 = X[l.c1], x2 = X[l.c2 + 1] || X[l.c2];
-            ctx.moveTo(x1, y); ctx.lineTo(x2, y);
+            ctx.strokeStyle = (l.w >= 2) ? '#000' : '#8a8a8a';
+            ctx.lineWidth = (l.w >= 2) ? 1.6 : 1;
+            ctx.beginPath();
+            ctx.moveTo(x1, y);
+            ctx.lineTo(x2, y);
+            ctx.stroke();
         });
         (cmData.vlines || []).forEach(function (l) {
             const x = Math.round(X[l.c]) + 0.5;
             const y1 = Y[l.r1], y2 = Y[l.r2 + 1] || Y[l.r2];
-            ctx.moveTo(x, y1); ctx.lineTo(x, y2);
+            ctx.strokeStyle = (l.w >= 2) ? '#000' : '#8a8a8a';
+            ctx.lineWidth = (l.w >= 2) ? 1.6 : 1;
+            ctx.beginPath();
+            ctx.moveTo(x, y1);
+            ctx.lineTo(x, y2);
+            ctx.stroke();
         });
-        ctx.stroke();
 
         if (legend) {
             if (cmMode === 'status') {
