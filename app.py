@@ -3146,18 +3146,30 @@ def _chair_layout():
             with open(path, 'r', encoding='utf-8') as f:
                 _CHAIR_LAYOUT_CACHE = json.load(f)
         except Exception as e:
-            print('椅況圖版面讀取失敗:', e)
+            print('櫈況圖版面讀取失敗:', e)
             _CHAIR_LAYOUT_CACHE = {'maxR': 0, 'maxC': 0, 'pits': [], 'cells': [], 'extras': []}
     return _CHAIR_LAYOUT_CACHE
 
 
 def _chair_types():
+    base = {}
+    try:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'chair_types_seed.json')
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                seed = json.load(f)
+            if isinstance(seed, dict):
+                base = seed
+    except Exception as e:
+        print('新舊櫈預設讀取失敗:', e)
     raw = get_setting(_CHAIR_TYPE_KEY, '') or ''
     try:
         data = json.loads(raw) if raw.strip() else {}
-        return data if isinstance(data, dict) else {}
+        if isinstance(data, dict):
+            base.update(data)
     except Exception:
-        return {}
+        pass
+    return base
 
 
 def _chair_issues():
@@ -3170,7 +3182,7 @@ def _chair_issues():
         c.execute("SELECT note FROM records WHERE note LIKE '%【場面問題】%' ORDER BY id ASC")
         rows = c.fetchall()
     except Exception as e:
-        print('椅況圖讀取紀錄失敗:', e)
+        print('櫈況圖讀取紀錄失敗:', e)
         rows = []
     finally:
         if conn:
@@ -3183,7 +3195,7 @@ def _chair_issues():
             for it in _up_parse_line(line):
                 cat = it.get('category') or ''
                 is_dlr = ('DLR' in cat and ('櫈' in cat or '椅' in cat))
-                is_guest = ('客櫈' in cat or '客椅' in cat)
+                is_guest = ('客櫈' in cat or '客櫈' in cat)
                 if not (is_dlr or is_guest):
                     continue
                 key = _up_norm(it['code'])
@@ -3198,7 +3210,7 @@ def _chair_issues():
 
 @app.route('/api/chair_map', methods=['GET'])
 def chair_map_get():
-    """椅況圖：回傳每張台的椅況（停運／好／壞 DLR／壞客椅）及新舊椅設定。"""
+    """櫈況圖：回傳每張台的椅況（停運／好／壞 DLR／壞客櫈）及新舊櫈設定。"""
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
 
@@ -3212,7 +3224,7 @@ def chair_map_get():
         for code, st in c.fetchall():
             hall_status[_up_norm(code)] = st
     except Exception as e:
-        print('椅況圖讀取台號失敗:', e)
+        print('櫈況圖讀取台號失敗:', e)
     finally:
         if conn:
             try: release_db_connection(conn)
@@ -3227,6 +3239,8 @@ def chair_map_get():
         key = _up_norm(code)
         st = hall_status.get(key, '營運') if key else ''
         iss = issues.get(key, {}) if key else {}
+        stand = bool(key) and (code.upper().startswith(('RL', 'DS')) or code.upper() in
+                               ('NB1626','NB1627','NB1628','NB1629','NB1630','NB1631','NB1632','NB1633'))
         cells.append({
             'r': cell.get('r'), 'c': cell.get('c'),
             'v': cell.get('v', ''),
@@ -3236,9 +3250,15 @@ def chair_map_get():
             'status': st,
             'dlr_bad': bool(iss.get('dlr_bad')),
             'guest_bad': bool(iss.get('guest_bad')),
+            'stand': stand,
             'chair': types.get(key) or '' if key else ''
         })
-    cnt = {'total': 0, 'active': 0, 'inactive': 0, 'dlr_bad': 0, 'guest_bad': 0, 'spare': 0}
+    cnt = {'total': 0, 'active': 0, 'inactive': 0, 'dlr_bad': 0, 'guest_bad': 0, 'spare': 0, 'new': 0, 'old': 0}
+    for x in cells:
+        if x.get('chair') == 'new':
+            cnt['new'] += 1
+        elif x.get('chair') == 'old':
+            cnt['old'] += 1
     for x in cells:
         if not x.get('code'):
             continue
@@ -3270,7 +3290,7 @@ def chair_map_set_type():
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
     if session.get('role') != 'admin':
-        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以修改新舊椅。'})
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以修改新舊櫈。'})
     data = request.json or {}
     code = _up_norm(data.get('code'))
     typ = (data.get('type') or '').strip().lower()
