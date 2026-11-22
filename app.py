@@ -3479,23 +3479,6 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
             for i in range(rs):
                 vset.setdefault(mc + cs, {})[mr + i] = m['rr']
 
-    # 掃描整張 Excel 所有粗框線（包括合併區內），確保一條都唔漏
-    row_off = row_offset
-    max_r = min(ws.max_row, 200)
-    max_c = min(ws.max_column, 160)
-    for er in range(1, max_r + 1):
-        for ec in range(1, max_c + 1):
-            cell = ws.cell(row=er, column=ec)
-            b = cell.border
-            if b.top and b.top.style in ('medium', 'thick'):
-                hset.setdefault(er + row_off, {})[ec] = 2
-            if b.bottom and b.bottom.style in ('medium', 'thick'):
-                hset.setdefault(er + 1 + row_off, {})[ec] = 2
-            if b.left and b.left.style in ('medium', 'thick'):
-                vset.setdefault(ec, {})[er + row_off] = 2
-            if b.right and b.right.style in ('medium', 'thick'):
-                vset.setdefault(ec + 1, {})[er + row_off] = 2
-
     rs = [int(c['r']) for c in cells]
     cs = [int(c['c']) for c in cells]
     if rs:
@@ -3505,8 +3488,6 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
 
     cols = []
     from openpyxl.utils import column_index_from_string
-    # Pit 63 / Pit 31 下面 4 格所在嘅欄平均闊度
-    widen = set()
     for k, dim in ws.column_dimensions.items():
         try:
             idx = column_index_from_string(k)
@@ -3519,14 +3500,7 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
         if hi > 200:
             hi = idx
         for c in range(int(lo), int(hi) + 1):
-            w = 6.0 if c in widen else round(float(dim.width), 3)
-            if not any(x['c'] == c for x in cols):
-                cols.append({'c': c, 'w': w})
-    _have = set(x['c'] for x in cols)
-    for c in widen:
-        if c not in _have:
-            cols.append({'c': c, 'w': 6.0})
-
+            cols.append({'c': c, 'w': round(float(dim.width), 3)})
     rows = []
     for k, dim in ws.row_dimensions.items():
         if not dim.height:
