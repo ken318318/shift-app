@@ -3368,7 +3368,7 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
             if (cell.row, cell.column) in merged_set:
                 continue
             f = cell.font
-            if f.size is not None and float(f.size) > 16:
+            if f.size is not None and float(f.size) > 40:
                 continue
             val = cell.value
             if isinstance(val, str) and ('Chair' in val or 'Update' in val):
@@ -3407,7 +3407,7 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
         if str(val).strip().isdigit():
             continue
         f = tl.font
-        if f.size is not None and float(f.size) > 16:
+        if f.size is not None and float(f.size) > 40:
             continue
         if 'Chair' in str(val) or 'Update' in str(val):
             continue
@@ -3439,17 +3439,17 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
             cells.append(dict(bc))
             seen.add(k)
 
-    # 只畫 Excel 嘅粗框（medium/thick），細線交由淡灰網格顯示，避免雙線
+    # 收集所有邊（1=細，2=粗），畫齊所有框
     for c in cells:
         mr, mc = int(c['r']), int(c['c'])
-        if c.get('t') == 2:
-            hset.setdefault(mr, []).append(mc)
-        if c.get('b') == 2:
-            hset.setdefault(mr + 1, []).append(mc)
-        if c.get('l') == 2:
-            vset.setdefault(mc, []).append(mr)
-        if c.get('rr') == 2:
-            vset.setdefault(mc + 1, []).append(mr)
+        if c.get('t'):
+            hset.setdefault(mr, {})[mc] = c['t']
+        if c.get('b'):
+            hset.setdefault(mr + 1, {})[mc] = c['b']
+        if c.get('l'):
+            vset.setdefault(mc, {})[mr] = c['l']
+        if c.get('rr'):
+            vset.setdefault(mc + 1, {})[mr] = c['rr']
 
     rs = [int(c['r']) for c in cells]
     cs = [int(c['c']) for c in cells]
@@ -3484,14 +3484,33 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
         for r in range(int(lo), int(hi) + 1):
             rows.append({'r': r + row_offset, 'h': round(float(dim.height), 3)})
 
+    def _runs_with_w(d):
+        vals = sorted(d.keys())
+        out = []
+        if not vals:
+            return out
+        start = prev = vals[0]
+        w = d[start]
+        for v in vals[1:]:
+            if v == prev + 1:
+                prev = v
+                if d[v] > w:
+                    w = d[v]
+            else:
+                out.append((start, prev, w))
+                start = prev = v
+                w = d[v]
+        out.append((start, prev, w))
+        return out
+
     hlines = []
-    for r, arr in hset.items():
-        for a, z in _chair_run_ranges(arr):
-            hlines.append({'r': r, 'c1': a, 'c2': z})
+    for r, d in hset.items():
+        for a, z, w in _runs_with_w(d):
+            hlines.append({'r': r, 'c1': a, 'c2': z, 'w': w})
     vlines = []
-    for c, arr in vset.items():
-        for a, z in _chair_run_ranges(arr):
-            vlines.append({'c': c, 'r1': a, 'r2': z})
+    for c, d in vset.items():
+        for a, z, w in _runs_with_w(d):
+            vlines.append({'c': c, 'r1': a, 'r2': z, 'w': w})
 
     return {
         'maxR': maxr, 'maxC': maxc, 'minR': minr, 'minC': minc,
