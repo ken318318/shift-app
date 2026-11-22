@@ -2067,7 +2067,7 @@ def _up_parse_line(line):
     """解析單行： [類別 - 問題] 位置: 台號 [狀態:xxx]"""
     if not line or '位置' not in line:
         return []
-    m = re.search(r'\[([^\[\]]+?)\]\s*位置\s*[:：]\s*(.+)', line)
+    m = re.search(r'[\[【]([^\[\]【】]+?)[\]】]\s*位置\s*[:：]\s*(.+)', line)
     if not m:
         return []
     parts = [p.strip() for p in m.group(1).split(' - ')]
@@ -3646,7 +3646,7 @@ def _chair_issues():
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT note FROM records WHERE note LIKE '%【場面問題】%' ORDER BY id ASC")
+        c.execute("SELECT note FROM records WHERE (note LIKE '%客櫈%' OR note LIKE '%DLR櫈%' OR note LIKE '%客椅%' OR note LIKE '%【場面問題】%') ORDER BY id ASC")
         rows = c.fetchall()
     except Exception as e:
         print('櫈況圖讀取紀錄失敗:', e)
@@ -3658,11 +3658,11 @@ def _chair_issues():
 
     for (note,) in rows:
         secs = _up_split_sections(note or '')
-        for line in secs.get('場面問題', '').split('\n'):
+        for line in '\n'.join(secs.values()).split('\n'):
             for it in _up_parse_line(line):
                 cat = it.get('category') or ''
                 is_dlr = ('DLR' in cat and ('櫈' in cat or '椅' in cat))
-                is_guest = ('客櫈' in cat or '客櫈' in cat)
+                is_guest = ('客櫈' in cat or '客椅' in cat)
                 if not (is_dlr or is_guest):
                     continue
                 key = _up_norm(it['code'])
