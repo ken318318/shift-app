@@ -3046,9 +3046,11 @@ function updatePendingCardState(card) {
     function cmTargetCells() {
         const s = cmSelRange();
         if (!s) return [];
-        return (cmData.cells || []).filter(function (c) {
-            return c.r >= s.r1 && c.r <= s.r2 && c.c >= s.c1 && c.c <= s.c2;
-        });
+        const out = [];
+        for (let r = s.r1; r <= s.r2; r++) {
+            for (let c = s.c1; c <= s.c2; c++) out.push({ r: r, c: c });
+        }
+        return out;
     }
 
     function cmDrawSel() {
@@ -3080,13 +3082,44 @@ function updatePendingCardState(card) {
         return t.closest('.cm-cell[data-r]');
     }
 
+    // 按滑鼠／手指座標反算行列，令空白格都選得
+    function cmRCFromEvent(e) {
+        const map = document.getElementById('cm-map');
+        if (!map || !cmGeo) return null;
+        const rect = map.getBoundingClientRect();
+        const z = parseFloat(map.style.zoom) || 1;
+        const x = (e.clientX - rect.left) / z;
+        const y = (e.clientY - rect.top) / z;
+        const X = cmGeo.X, Y = cmGeo.Y;
+        let c = -1, r = -1;
+        for (let k = cmGeo.minC; k <= cmGeo.maxC; k++) {
+            if (x >= X[k] && x < X[k + 1]) { c = k; break; }
+        }
+        for (let k = cmGeo.minR; k <= cmGeo.maxR; k++) {
+            if (y >= Y[k] && y < Y[k + 1]) { r = k; break; }
+        }
+        if (c < 0 || r < 0) return null;
+        return { r: r, c: c };
+    }
+
     function cmPointerDown(e) {
         if (!cmEditMode) return;
         const el = cmCellFromEvent(e);
-        if (!el) { cmSel = null; cmDrawSel(); cmRefreshTools(); return; }
+        let r, c, rs = 1, cs = 1;
+        if (el && el.dataset.r) {
+            r = parseInt(el.dataset.r, 10);
+            c = parseInt(el.dataset.c, 10);
+            if (el.classList.contains('cm-merge')) {
+                rs = parseInt(el.dataset.rs || '1', 10);
+                cs = parseInt(el.dataset.cs || '1', 10);
+            }
+        } else {
+            const rc = cmRCFromEvent(e);
+            if (!rc) { cmSel = null; cmDrawSel(); cmRefreshTools(); return; }
+            r = rc.r;
+            c = rc.c;
+        }
         if (e.pointerType === 'mouse' || e.pointerType === 'pen') e.preventDefault();
-        const r = parseInt(el.dataset.r, 10), c = parseInt(el.dataset.c, 10);
-        const rs = parseInt(el.dataset.rs || '1', 10), cs = parseInt(el.dataset.cs || '1', 10);
         cmSel = { r1: r, c1: c, r2: r + rs - 1, c2: c + cs - 1 };
         cmDragging = true;
         cmDrawSel(); cmRefreshTools();
@@ -3094,10 +3127,10 @@ function updatePendingCardState(card) {
 
     function cmPointerMove(e) {
         if (!cmEditMode || !cmDragging || !cmSel) return;
-        const el = cmCellFromEvent(e);
-        if (!el) return;
-        cmSel.r2 = parseInt(el.dataset.r, 10);
-        cmSel.c2 = parseInt(el.dataset.c, 10);
+        const rc = cmRCFromEvent(e);
+        if (!rc) return;
+        cmSel.r2 = rc.r;
+        cmSel.c2 = rc.c;
         cmDrawSel();
     }
 
@@ -3184,6 +3217,7 @@ function updatePendingCardState(card) {
         } else {
             const cells = cmTargetCells();
             if (!cells.length) { alert('選取範圍內沒有可修改的格。'); return; }
+            if (cells.length > 2000) { alert('選取範圍太大（超過 2000 格），請分細啲再改。'); return; }
             cells.forEach(function (c) {
                 const k = cmEditKey(c.r, c.c);
                 const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
@@ -3224,6 +3258,7 @@ function updatePendingCardState(card) {
         } else {
             const cells = cmTargetCells();
             if (!cells.length) { alert('選取範圍內沒有可修改的格。'); return; }
+            if (cells.length > 2000) { alert('選取範圍太大（超過 2000 格），請分細啲再改。'); return; }
             cells.forEach(function (c) {
                 const k = cmEditKey(c.r, c.c);
                 const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
@@ -3246,6 +3281,7 @@ function updatePendingCardState(card) {
         } else {
             const cells = cmTargetCells();
             if (!cells.length) { alert('選取範圍內沒有可修改的格。'); return; }
+            if (cells.length > 2000) { alert('選取範圍太大（超過 2000 格），請分細啲再改。'); return; }
             cells.forEach(function (c) {
                 const k = cmEditKey(c.r, c.c);
                 const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
@@ -3267,6 +3303,7 @@ function updatePendingCardState(card) {
         } else {
             const cells = cmTargetCells();
             if (!cells.length) { alert('選取範圍內沒有可修改的格。'); return; }
+            if (cells.length > 2000) { alert('選取範圍太大（超過 2000 格），請分細啲再改。'); return; }
             cells.forEach(function (c) {
                 const k = cmEditKey(c.r, c.c);
                 const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
@@ -3281,6 +3318,7 @@ function updatePendingCardState(card) {
         const s = cmSelRange();
         if (!s) { alert('請先拖選範圍。'); return; }
         if (s.r1 === s.r2 && s.c1 === s.c2) { alert('請拖選多過一格才可合併。'); return; }
+        if ((s.r2 - s.r1 + 1) * (s.c2 - s.c1 + 1) > 200) { alert('合併範圍太大，請分細啲。'); return; }
         const bad = (cmData.cells || []).some(function (c) {
             if (!(c.r >= s.r1 && c.r <= s.r2 && c.c >= s.c1 && c.c <= s.c2)) return false;
             if (c.r === s.r1 && c.c === s.c1) return false;
@@ -3415,7 +3453,8 @@ function updatePendingCardState(card) {
         for (let r = minR; r <= maxR + 1; r++) { Y[r] = acc; acc += rh(r); }
         map.style.width = X[maxC + 1] + 'px';
         map.style.height = Y[maxR + 1] + 'px';
-        cmGeo = { X: X, Y: Y, cw: cw, rh: rh, merges: [] };
+        cmGeo = { X: X, Y: Y, cw: cw, rh: rh, merges: [],
+            minR: minR, maxR: maxR, minC: minC, maxC: maxC };
         cmApplyZoom();
 
         if (tip) {
@@ -3626,6 +3665,7 @@ function updatePendingCardState(card) {
 
         map.onpointerdown = cmPointerDown;
         map.onpointermove = cmPointerMove;
+        map.ondragstart = function (e) { e.preventDefault(); };
         if (cmEditMode) cmDrawSel();
         cmRefreshTools();
     }
