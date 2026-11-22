@@ -98,7 +98,7 @@
         .cm-wrap { padding: 8px 8px 40px; }
         .cm-bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; background: #fff; padding: 8px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 8px; position: sticky; top: 0; z-index: 3; }
         .cm-bar button { padding: 9px 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
-        .cm-cell { position: absolute; width: 26px; height: 22px; border: 1px solid #d6dde6; font-size: 11px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; background: #fff; }
+        .cm-cell { position: absolute; width: 26px; height: 22px; border: 1px solid #d6dde6; font-size: 11px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; background: #fff; -webkit-user-select: none; user-select: none; }
         .cm-cell.off { background: #cfd8dc; }
         .cm-cell.guest { background: #99CCFF; }
         .cm-cell.newc { background: #9933FF; color: #fff; }
@@ -110,6 +110,19 @@
         .cm-pit { position: absolute; font-size: 10px; color: #c62828; font-weight: bold; white-space: nowrap; }
         .cm-legend span { display: inline-flex; align-items: center; gap: 4px; margin: 3px 12px 3px 0; font-size: 13px; color: #333; font-weight: bold; }
         .cm-dot { width: 12px; height: 12px; border: 1px solid #ccc; display: inline-block; }
+        /* 櫈況圖編輯器 */
+        .cm-tools { display: none; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); padding: 8px; margin-bottom: 8px; }
+        .cm-tools.on { display: block; }
+        .cm-tools-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0; }
+        .cm-tools-lbl { font-size: 12px; color: #607d8b; font-weight: bold; }
+        .cm-sw { border: 1px solid #c7d0d8; background: #fff; border-radius: 6px; padding: 6px 9px; font-size: 12px; font-weight: bold; cursor: pointer; color: #37474f; }
+        .cm-sw.on { background: #1565c0; color: #fff; border-color: #1565c0; }
+        .cm-swatch { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #90a4ae; cursor: pointer; padding: 0; }
+        .cm-edited::after { content: ''; position: absolute; right: 0; top: 0; border-top: 6px solid #ff6f00; border-left: 6px solid transparent; }
+        .cm-exporting .cm-edited::after { display: none; }
+        .cm-selbox { position: absolute; border: 2px dashed #1565c0; background: rgba(21,101,192,.12); pointer-events: none; z-index: 5; box-sizing: border-box; }
+        .cm-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #263238; color: #fff; padding: 9px 18px; border-radius: 20px; font-size: 13px; font-weight: bold; z-index: 10060; opacity: 0; transition: opacity .2s; pointer-events: none; }
+        .cm-toast.on { opacity: 1; }
         .lr-cnt { background: #FDE9E9; font-weight: bold; font-size: 14px; }
         .lr-total { font-size: 16px; font-weight: bold; border-top: 3px solid #000 !important; border-bottom: 3px solid #000 !important; padding: 7px 4px !important; }
         .lr-sep { border-left: 3px solid #000 !important; }
@@ -558,9 +571,51 @@
                 <button class="lr-b-gray" onclick="cmZoomStep(1)">➕</button>
                 <button class="lr-b-gray" onclick="cmZoomFit()">適合螢幕</button>
                 <button class="lr-b-blue" onclick="cmSaveImage()">🖼️ 存為圖片</button>
+                <button id="cm-b-edit" class="lr-b-gray" onclick="cmToggleEdit()" style="display:none;">✏️ 編輯</button>
                 <span class="cm-legend" id="cm-legend"></span>
             </div>
             <div id="cm-tip" class="lr-msg"></div>
+            <div id="cm-tools" class="cm-tools">
+                <div class="cm-tools-row">
+                    <span class="cm-tools-lbl">文字</span>
+                    <button class="cm-swatch" style="background:#111" title="黑" onclick="cmSetProp('fc','#111')"></button>
+                    <button class="cm-swatch" style="background:#e53935" title="紅" onclick="cmSetProp('fc','#e53935')"></button>
+                    <button class="cm-swatch" style="background:#2e7d32" title="綠" onclick="cmSetProp('fc','#2e7d32')"></button>
+                    <button class="cm-swatch" style="background:#1565c0" title="藍" onclick="cmSetProp('fc','#1565c0')"></button>
+                    <button class="cm-swatch" style="background:#7b2fd0" title="紫" onclick="cmSetProp('fc','#7b2fd0')"></button>
+                    <button class="cm-swatch" style="background:#d95a00" title="橙" onclick="cmSetProp('fc','#d95a00')"></button>
+                    <button class="cm-sw" onclick="cmSetPropAuto('fc')">自動</button>
+                </div>
+                <div class="cm-tools-row">
+                    <span class="cm-tools-lbl">底色</span>
+                    <button class="cm-swatch" style="background:#ffffff" title="白" onclick="cmSetProp('bg','#ffffff')"></button>
+                    <button class="cm-swatch" style="background:#cfd8dc" title="灰" onclick="cmSetProp('bg','#cfd8dc')"></button>
+                    <button class="cm-swatch" style="background:#fff176" title="黃" onclick="cmSetProp('bg','#fff176')"></button>
+                    <button class="cm-swatch" style="background:#f8bbd0" title="粉" onclick="cmSetProp('bg','#f8bbd0')"></button>
+                    <button class="cm-swatch" style="background:#bbdefb" title="淺藍" onclick="cmSetProp('bg','#bbdefb')"></button>
+                    <button class="cm-sw" onclick="cmSetPropAuto('bg')">自動</button>
+                </div>
+                <div class="cm-tools-row">
+                    <span class="cm-tools-lbl">格式</span>
+                    <button id="cm-b-bold" class="cm-sw" onclick="cmToggleBold()">B 粗體</button>
+                    <button id="cm-b-t" class="cm-sw" onclick="cmToggleBorder('t')">上框</button>
+                    <button id="cm-b-b" class="cm-sw" onclick="cmToggleBorder('b')">下框</button>
+                    <button id="cm-b-l" class="cm-sw" onclick="cmToggleBorder('l')">左框</button>
+                    <button id="cm-b-rr" class="cm-sw" onclick="cmToggleBorder('rr')">右框</button>
+                    <button class="cm-sw" onclick="cmBorderAll(1)">全框</button>
+                    <button class="cm-sw" onclick="cmBorderAll(0)">去框</button>
+                </div>
+                <div class="cm-tools-row">
+                    <span class="cm-tools-lbl">操作</span>
+                    <button class="cm-sw" onclick="cmMerge()">合併</button>
+                    <button class="cm-sw" onclick="cmUnmerge()">取消合併</button>
+                    <button class="cm-sw" onclick="cmEditText()">✏️ 改字</button>
+                    <button class="cm-sw" onclick="cmResetSel()">↩️ 還原自動</button>
+                    <button class="cm-sw" style="color:#c62828" onclick="cmClearAllEdits()">🗑️ 清空全部</button>
+                    <button class="cm-sw" style="background:#2e7d32;color:#fff;border-color:#2e7d32" onclick="cmToggleEdit()">✅ 完成編輯</button>
+                </div>
+                <div id="cm-selinfo" class="cm-tools-lbl" style="margin:2px;font-weight:normal;color:#455a64;">未選取格仔（點一下或拖選）</div>
+            </div>
             <div id="cm-scroll" style="overflow:auto; background:#fff; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,.08);">
                 <div id="cm-map" style="position:relative; width:1px; height:1px; margin:10px;"></div>
             </div>
@@ -2800,6 +2855,14 @@ function updatePendingCardState(card) {
     // ================= 櫈況圖 =================
     let cmData = null;
     let cmMode = 'status';
+    let cmEditMode = false;
+    let cmEdits = { cells: {}, merges: [], unmerge: [] };
+    let cmSel = null;
+    let cmDragging = false;
+    let cmGeo = null;
+    document.addEventListener('pointerup', function () {
+        if (cmDragging) { cmDragging = false; cmRefreshTools(); }
+    });
     const CM_W = 26, CM_H = 22;
 
     function openChairMap() {
@@ -2807,6 +2870,8 @@ function updatePendingCardState(card) {
         if (!m) return;
         m.style.display = 'block';
         document.body.style.overflow = 'hidden';
+        const eb = document.getElementById('cm-b-edit');
+        if (eb) eb.style.display = isAdmin ? '' : 'none';
         bsLoading(true, '載入中…', true);
         loadChairMap();
     }
@@ -2825,6 +2890,7 @@ function updatePendingCardState(card) {
             const d = await r.json();
             if (!d || d.status !== 'success') { if (tip) tip.textContent = (d && d.message) || '讀取失敗'; return; }
             cmData = d;
+            cmEdits = cmNormalizeEdits(d.edits);
             renderChairMap();
         } catch (e) { if (tip) tip.textContent = '❌ 讀取失敗'; }
         finally { bsLoading(false); }
@@ -2832,6 +2898,7 @@ function updatePendingCardState(card) {
 
     function setChairMode(m) {
         cmMode = m;
+        cmSel = null;
         const a = document.getElementById('cm-b-status');
         const b = document.getElementById('cm-b-type');
         if (a) a.className = m === 'status' ? 'lr-b-blue' : 'lr-b-gray';
@@ -2875,14 +2942,23 @@ function updatePendingCardState(card) {
             bsLoading(true, '產生圖片中…', true);
             const oldZoom = map.style.zoom;
             map.style.zoom = '1';
-            html2canvas(map, { backgroundColor: '#fff', scale: 2, useCORS: true }).then(function (canvas) {
+            map.classList.add('cm-exporting');
+            const sb = document.getElementById('cm-selbox');
+            const sbOld = sb ? sb.style.display : '';
+            if (sb) sb.style.display = 'none';
+            const restore = function () {
                 map.style.zoom = oldZoom;
+                map.classList.remove('cm-exporting');
+                if (sb) sb.style.display = sbOld;
+            };
+            html2canvas(map, { backgroundColor: '#fff', scale: 2, useCORS: true }).then(function (canvas) {
+                restore();
                 bsLoading(false);
                 const url = canvas.toDataURL('image/png');
                 document.getElementById('cm-img').src = url;
                 document.getElementById('cm-dl').href = url;
                 document.getElementById('cm-imgbox').style.display = 'block';
-            }).catch(function () { map.style.zoom = oldZoom; bsLoading(false); alert('❌ 產生圖片失敗'); });
+            }).catch(function () { restore(); bsLoading(false); alert('❌ 產生圖片失敗'); });
         };
         if (window.html2canvas) { go(); return; }
         urLoadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js', go, function () {
@@ -2890,6 +2966,431 @@ function updatePendingCardState(card) {
                 alert('❌ 無法載入圖片組件（可能被網絡攔截）');
             });
         });
+    }
+
+    function cmEditKey(r, c) { return r + ',' + c; }
+
+    function cmNormalizeEdits(d) {
+        const out = { cells: {}, merges: [], unmerge: [] };
+        if (d && typeof d === 'object') {
+            if (d.cells && typeof d.cells === 'object') {
+                Object.keys(d.cells).forEach(function (k) {
+                    if (d.cells[k] && typeof d.cells[k] === 'object') out.cells[k] = Object.assign({}, d.cells[k]);
+                });
+            }
+            if (Array.isArray(d.merges)) {
+                out.merges = d.merges.filter(function (m) { return m && m.r && m.c; })
+                    .map(function (m) { return Object.assign({}, m); });
+            }
+            if (Array.isArray(d.unmerge)) out.unmerge = d.unmerge.map(String);
+        }
+        return out;
+    }
+
+    function cmApplyEd(el, ed) {
+        if (!ed) return;
+        if ('fc' in ed) el.style.color = ed.fc || '#111';
+        if ('bg' in ed) el.style.background = ed.bg || '#fff';
+        if ('bold' in ed) el.style.fontWeight = ed.bold ? 'bold' : 'normal';
+        if ('fs' in ed && ed.fs) el.style.fontSize = Math.max(8, Math.round(ed.fs * 96 / 72)) + 'px';
+        if ('v' in ed) el.textContent = ed.v || '';
+        if ('t' in ed || 'l' in ed || 'rr' in ed || 'b' in ed) {
+            el.style.borderStyle = 'solid';
+            el.style.borderColor = '#000';
+            el.style.borderTopWidth = ed.t ? '2px' : '0';
+            el.style.borderLeftWidth = ed.l ? '2px' : '0';
+            el.style.borderRightWidth = ed.rr ? '2px' : '0';
+            el.style.borderBottomWidth = ed.b ? '2px' : '0';
+        }
+    }
+
+    function cmSelRange() {
+        if (!cmSel) return null;
+        return {
+            r1: Math.min(cmSel.r1, cmSel.r2), r2: Math.max(cmSel.r1, cmSel.r2),
+            c1: Math.min(cmSel.c1, cmSel.c2), c2: Math.max(cmSel.c1, cmSel.c2)
+        };
+    }
+
+    function cmFindMerge(s) {
+        if (!s || !cmGeo || !cmGeo.merges) return null;
+        const list = cmGeo.merges;
+        for (let i = 0; i < list.length; i++) {
+            const m = list[i];
+            const rs = m.rs || 1, cs = m.cs || 1;
+            if (m.r === s.r1 && m.c === s.c1 && rs === (s.r2 - s.r1 + 1) && cs === (s.c2 - s.c1 + 1)) {
+                return { m: m, manual: (cmEdits.merges || []).indexOf(m) >= 0 };
+            }
+        }
+        return null;
+    }
+
+    // 將 Excel 合併格轉為「手動合併格」，保留原本範圍與文字，只改屬性
+    function cmConvertMergeProps(m, props) {
+        const key = cmEditKey(m.r, m.c);
+        const idx = (cmEdits.merges || []).indexOf(m);
+        if (idx >= 0) {
+            Object.keys(props || {}).forEach(function (x) { m[x] = props[x]; });
+            return;
+        }
+        const copy = {
+            r: m.r, c: m.c, rs: m.rs || 1, cs: m.cs || 1,
+            v: m.v || '', fc: m.fc || '', bg: m.bg || '',
+            bold: !!m.bold, fs: m.fs || 11
+        };
+        Object.keys(props || {}).forEach(function (x) { copy[x] = props[x]; });
+        cmEdits.merges.push(copy);
+        if (cmEdits.unmerge.indexOf(key) < 0) cmEdits.unmerge.push(key);
+    }
+
+    function cmTargetCells() {
+        const s = cmSelRange();
+        if (!s) return [];
+        return (cmData.cells || []).filter(function (c) {
+            return c.r >= s.r1 && c.r <= s.r2 && c.c >= s.c1 && c.c <= s.c2;
+        });
+    }
+
+    function cmDrawSel() {
+        const map = document.getElementById('cm-map');
+        if (!map) return;
+        let box = document.getElementById('cm-selbox');
+        if (!cmSel || !cmGeo) { if (box) box.remove(); return; }
+        if (!box) {
+            box = document.createElement('div');
+            box.id = 'cm-selbox';
+            box.className = 'cm-selbox';
+            map.appendChild(box);
+        }
+        const s = cmSelRange();
+        const X = cmGeo.X, Y = cmGeo.Y;
+        let w = 0, h = 0;
+        for (let c = s.c1; c <= s.c2; c++) w += cmGeo.cw(c);
+        for (let r = s.r1; r <= s.r2; r++) h += cmGeo.rh(r);
+        box.style.left = X[s.c1] + 'px';
+        box.style.top = Y[s.r1] + 'px';
+        box.style.width = w + 'px';
+        box.style.height = h + 'px';
+        box.style.display = 'block';
+    }
+
+    function cmCellFromEvent(e) {
+        const t = e.target;
+        if (!t || !t.closest) return null;
+        return t.closest('.cm-cell[data-r]');
+    }
+
+    function cmPointerDown(e) {
+        if (!cmEditMode) return;
+        const el = cmCellFromEvent(e);
+        if (!el) { cmSel = null; cmDrawSel(); cmRefreshTools(); return; }
+        if (e.pointerType === 'mouse' || e.pointerType === 'pen') e.preventDefault();
+        const r = parseInt(el.dataset.r, 10), c = parseInt(el.dataset.c, 10);
+        const rs = parseInt(el.dataset.rs || '1', 10), cs = parseInt(el.dataset.cs || '1', 10);
+        cmSel = { r1: r, c1: c, r2: r + rs - 1, c2: c + cs - 1 };
+        cmDragging = true;
+        cmDrawSel(); cmRefreshTools();
+    }
+
+    function cmPointerMove(e) {
+        if (!cmEditMode || !cmDragging || !cmSel) return;
+        const el = cmCellFromEvent(e);
+        if (!el) return;
+        cmSel.r2 = parseInt(el.dataset.r, 10);
+        cmSel.c2 = parseInt(el.dataset.c, 10);
+        cmDrawSel();
+    }
+
+    function cmPointerUp() { cmDragging = false; }
+
+    function cmUpdateBorderBtns(ed) {
+        [['cm-b-t', 't'], ['cm-b-b', 'b'], ['cm-b-l', 'l'], ['cm-b-rr', 'rr']].forEach(function (p) {
+            const el = document.getElementById(p[0]);
+            if (el) el.classList.toggle('on', !!(ed && ed[p[1]]));
+        });
+        const b = document.getElementById('cm-b-bold');
+        if (b) b.classList.toggle('on', !!(ed && ed.bold));
+    }
+
+    function cmFirstEd(s) {
+        const fm = cmFindMerge(s);
+        if (fm) return fm.m;
+        return cmEdits.cells[cmEditKey(s.r1, s.c1)] || {};
+    }
+
+    function cmRefreshTools() {
+        const info = document.getElementById('cm-selinfo');
+        const s = cmSelRange();
+        if (!s) {
+            if (info) info.textContent = '未選取格仔（點一下或拖選）';
+            cmUpdateBorderBtns({});
+            return;
+        }
+        const n = (s.r2 - s.r1 + 1) * (s.c2 - s.c1 + 1);
+        if (info) info.textContent = '已選 ' + n + ' 格（R' + s.r1 + '–' + s.r2 + '／C' + s.c1 + '–' + s.c2 + '）';
+        cmUpdateBorderBtns(cmFirstEd(s));
+    }
+
+    function cmToggleEdit() {
+        if (!isAdmin) { alert('只有管理員可以修改版面。'); return; }
+        cmEditMode = !cmEditMode;
+        const tb = document.getElementById('cm-tools');
+        if (tb) tb.classList.toggle('on', cmEditMode);
+        const btn = document.getElementById('cm-b-edit');
+        if (btn) btn.className = cmEditMode ? 'lr-b-blue' : 'lr-b-gray';
+        if (!cmEditMode) cmSel = null;
+        renderChairMap();
+        cmRefreshTools();
+    }
+
+    let cmToastTimer = null;
+    function cmToast(t) {
+        let el = document.getElementById('cm-toast');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'cm-toast';
+            el.className = 'cm-toast';
+            document.body.appendChild(el);
+        }
+        el.textContent = t;
+        el.classList.add('on');
+        clearTimeout(cmToastTimer);
+        cmToastTimer = setTimeout(function () { el.classList.remove('on'); }, 1500);
+    }
+
+    async function cmSaveEdits() {
+        try {
+            const r = await fetch('/api/chair_map/edit', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ edits: cmEdits })
+            });
+            const d = await r.json();
+            if (!d || d.status !== 'success') { alert((d && d.message) || '❌ 儲存失敗'); return false; }
+            cmToast('✅ 已儲存');
+            return true;
+        } catch (e) {
+            alert('❌ 連線失敗，改動未儲存。');
+            return false;
+        }
+    }
+
+    async function cmSetProp(field, val) {
+        const s = cmSelRange();
+        if (!s) { alert('請先點選格仔。'); return; }
+        const fm = cmFindMerge(s);
+        if (fm) {
+            if (fm.manual) { fm.m[field] = val; }
+            else { const p = {}; p[field] = val; cmConvertMergeProps(fm.m, p); }
+        } else {
+            const cells = cmTargetCells();
+            if (!cells.length) { alert('選取範圍內沒有可修改的格。'); return; }
+            cells.forEach(function (c) {
+                const k = cmEditKey(c.r, c.c);
+                const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
+                ed[field] = val;
+            });
+        }
+        renderChairMap();
+        await cmSaveEdits();
+    }
+
+    async function cmSetPropAuto(field) {
+        const s = cmSelRange();
+        if (!s) { alert('請先點選格仔。'); return; }
+        const fm = cmFindMerge(s);
+        if (fm) {
+            if (fm.manual) { delete fm.m[field]; }
+        } else {
+            cmTargetCells().forEach(function (c) {
+                const k = cmEditKey(c.r, c.c);
+                const ed = cmEdits.cells[k];
+                if (ed) {
+                    delete ed[field];
+                    if (!Object.keys(ed).length) delete cmEdits.cells[k];
+                }
+            });
+        }
+        renderChairMap();
+        await cmSaveEdits();
+    }
+
+    async function cmToggleBold() {
+        const s = cmSelRange();
+        if (!s) { alert('請先點選格仔。'); return; }
+        const fm = cmFindMerge(s);
+        if (fm) {
+            if (fm.manual) { fm.m.bold = !fm.m.bold; }
+            else { cmConvertMergeProps(fm.m, { bold: !fm.m.bold }); }
+        } else {
+            const cells = cmTargetCells();
+            if (!cells.length) { alert('選取範圍內沒有可修改的格。'); return; }
+            cells.forEach(function (c) {
+                const k = cmEditKey(c.r, c.c);
+                const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
+                const cur = ('bold' in ed) ? ed.bold : !!c.bold;
+                ed.bold = !cur;
+            });
+        }
+        renderChairMap();
+        await cmSaveEdits();
+    }
+
+    async function cmToggleBorder(edge) {
+        const s = cmSelRange();
+        if (!s) { alert('請先點選格仔。'); return; }
+        const fm = cmFindMerge(s);
+        if (fm) {
+            const cur = fm.m[edge] ? 1 : 0;
+            if (fm.manual) { fm.m[edge] = cur ? 0 : 1; }
+            else { const p = {}; p[edge] = cur ? 0 : 1; cmConvertMergeProps(fm.m, p); }
+        } else {
+            const cells = cmTargetCells();
+            if (!cells.length) { alert('選取範圍內沒有可修改的格。'); return; }
+            cells.forEach(function (c) {
+                const k = cmEditKey(c.r, c.c);
+                const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
+                const cur = (edge in ed) ? ed[edge] : 0;
+                ed[edge] = cur ? 0 : 1;
+            });
+        }
+        renderChairMap();
+        await cmSaveEdits();
+    }
+
+    async function cmBorderAll(v) {
+        const s = cmSelRange();
+        if (!s) { alert('請先點選格仔。'); return; }
+        const fm = cmFindMerge(s);
+        if (fm) {
+            if (fm.manual) { fm.m.t = fm.m.l = fm.m.rr = fm.m.b = v; }
+            else { cmConvertMergeProps(fm.m, { t: v, l: v, rr: v, b: v }); }
+        } else {
+            const cells = cmTargetCells();
+            if (!cells.length) { alert('選取範圍內沒有可修改的格。'); return; }
+            cells.forEach(function (c) {
+                const k = cmEditKey(c.r, c.c);
+                const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
+                ed.t = ed.l = ed.rr = ed.b = v;
+            });
+        }
+        renderChairMap();
+        await cmSaveEdits();
+    }
+
+    async function cmMerge() {
+        const s = cmSelRange();
+        if (!s) { alert('請先拖選範圍。'); return; }
+        if (s.r1 === s.r2 && s.c1 === s.c2) { alert('請拖選多過一格才可合併。'); return; }
+        const bad = (cmData.cells || []).some(function (c) {
+            if (!(c.r >= s.r1 && c.r <= s.r2 && c.c >= s.c1 && c.c <= s.c2)) return false;
+            if (c.r === s.r1 && c.c === s.c1) return false;
+            return !!(c.code || (c.v && String(c.v).trim()));
+        });
+        if (bad) { alert('❌ 範圍內有其他台號或文字，請先清空或避開該格。'); return; }
+        const left = cmEdits.cells[cmEditKey(s.r1, s.c1)] || {};
+        const v = prompt('合併後顯示的文字（可留空）：', left.v || '');
+        if (v === null) return;
+        // 移除範圍內重疊的 Excel 合併
+        (cmData.merges || []).forEach(function (m) {
+            if (m.r >= s.r1 && m.r <= s.r2 && m.c >= s.c1 && m.c <= s.c2) {
+                const k = cmEditKey(m.r, m.c);
+                if (cmEdits.unmerge.indexOf(k) < 0) cmEdits.unmerge.push(k);
+            }
+        });
+        cmEdits.merges = (cmEdits.merges || []).filter(function (m) {
+            return !(m.r >= s.r1 && m.r <= s.r2 && m.c >= s.c1 && m.c <= s.c2);
+        });
+        for (let r = s.r1; r <= s.r2; r++) {
+            for (let c = s.c1; c <= s.c2; c++) {
+                if (r === s.r1 && c === s.c1) continue;
+                delete cmEdits.cells[cmEditKey(r, c)];
+            }
+        }
+        cmEdits.merges.push({
+            r: s.r1, c: s.c1, rs: s.r2 - s.r1 + 1, cs: s.c2 - s.c1 + 1,
+            v: v || '', fc: left.fc || '', bg: left.bg || '',
+            bold: true, fs: left.fs || 11
+        });
+        cmSel = { r1: s.r1, c1: s.c1, r2: s.r2, c2: s.c2 };
+        renderChairMap();
+        await cmSaveEdits();
+    }
+
+    async function cmUnmerge() {
+        const s = cmSelRange();
+        if (!s) { alert('請先點選合併格。'); return; }
+        let changed = false;
+        const list = (cmGeo.merges || []).slice();
+        list.forEach(function (m) {
+            const rs = m.rs || 1, cs = m.cs || 1;
+            const mr2 = m.r + rs - 1, mc2 = m.c + cs - 1;
+            if (m.r >= s.r1 && mr2 <= s.r2 && m.c >= s.c1 && mc2 <= s.c2) {
+                const k = cmEditKey(m.r, m.c);
+                const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
+                if (m.v) ed.v = m.v;
+                if (m.fc) ed.fc = m.fc;
+                if (m.bg) ed.bg = m.bg;
+                if (m.bold) ed.bold = true;
+                if (m.fs) ed.fs = m.fs;
+                const mi = cmEdits.merges.indexOf(m);
+                if (mi >= 0) cmEdits.merges.splice(mi, 1);
+                else if (cmEdits.unmerge.indexOf(k) < 0) cmEdits.unmerge.push(k);
+                changed = true;
+            }
+        });
+        if (!changed) { alert('選取範圍內沒有合併格。'); return; }
+        renderChairMap();
+        await cmSaveEdits();
+    }
+
+    async function cmClearAllEdits() {
+        if (!confirm('⚠️ 清除全部手動修改（所有顏色、底色、邊框、合併、文字）？')) return;
+        if (!confirm('確定要清除？此動作不能復原。')) return;
+        cmEdits = { cells: {}, merges: [], unmerge: [] };
+        cmSel = null;
+        renderChairMap();
+        await cmSaveEdits();
+    }
+
+    async function cmEditText() {
+        const s = cmSelRange();
+        if (!s) { alert('請先點選格仔。'); return; }
+        const fm = cmFindMerge(s);
+        let cur = '';
+        if (fm) {
+            cur = fm.m.v || '';
+        } else {
+            const ed = cmEdits.cells[cmEditKey(s.r1, s.c1)];
+            if (ed && 'v' in ed) cur = ed.v || '';
+            else {
+                const c = (cmData.cells || []).filter(function (x) { return x.r === s.r1 && x.c === s.c1; })[0];
+                cur = c ? (c.v || '') : '';
+            }
+        }
+        const v = prompt('輸入文字（清空＝刪除文字）：', cur);
+        if (v === null) return;
+        await cmSetProp('v', v);
+    }
+
+    async function cmResetSel() {
+        const s = cmSelRange();
+        if (!s) { alert('請先點選格仔。'); return; }
+        if (!confirm('清除選取範圍內所有手動修改（還原自動）？')) return;
+        const fm = cmFindMerge(s);
+        if (fm && fm.manual) {
+            const mi = cmEdits.merges.indexOf(fm.m);
+            if (mi >= 0) cmEdits.merges.splice(mi, 1);
+        }
+        for (let r = s.r1; r <= s.r2; r++) {
+            for (let c = s.c1; c <= s.c2; c++) {
+                const k = cmEditKey(r, c);
+                delete cmEdits.cells[k];
+                const i = cmEdits.unmerge.indexOf(k);
+                if (i >= 0) cmEdits.unmerge.splice(i, 1);
+            }
+        }
+        renderChairMap();
+        await cmSaveEdits();
     }
 
     function renderChairMap() {
@@ -2914,6 +3415,7 @@ function updatePendingCardState(card) {
         for (let r = minR; r <= maxR + 1; r++) { Y[r] = acc; acc += rh(r); }
         map.style.width = X[maxC + 1] + 'px';
         map.style.height = Y[maxR + 1] + 'px';
+        cmGeo = { X: X, Y: Y, cw: cw, rh: rh, merges: [] };
         cmApplyZoom();
 
         if (tip) {
@@ -2923,9 +3425,11 @@ function updatePendingCardState(card) {
                 (cmMode === 'status'
                     ? ('　壞 DLR ' + (c.dlr_bad || 0) + '、壞客櫈 ' + (c.guest_bad || 0) + '、spare ' + (c.spare || 0))
                     : ('　新櫈 ' + (c.new || 0) + '、舊櫈 ' + (c.old || 0) + '、未設定 ' + Math.max(0, (c.total || 0) - (c.new || 0) - (c.old || 0))));
-            tip.textContent = head + '　' + (cmMode === 'status'
+            let line = head + '　' + (cmMode === 'status'
                 ? '（紅字＝壞 DLR、藍底＝壞客櫈、綠字＝spare、灰底＝停運）'
                 : (isAdmin ? '（點格仔切換：紫＝新、橙＝舊）' : '（紫＝新、橙＝舊；只有管理員可修改）'));
+            if (cmEditMode) line += '　【編輯模式】點或拖選格仔，再用下面工具列修改';
+            tip.textContent = line;
         }
 
         function fpx(pt) { return Math.max(8, Math.round((pt || 11) * 96 / 72)); }
@@ -2937,6 +3441,26 @@ function updatePendingCardState(card) {
             el.style.borderRightWidth = o.rr ? '2px' : '0';
             el.style.borderBottomWidth = o.b ? '2px' : '0';
         }
+
+        // 有效合併：Excel 原始 → 減去已取消 → 加上手動
+        const unset = {};
+        (cmEdits.unmerge || []).forEach(function (k) { unset[k] = 1; });
+        const merges = (cmData.merges || []).filter(function (m) {
+            return !unset[cmEditKey(m.r, m.c)];
+        }).concat(cmEdits.merges || []);
+        cmGeo.merges = merges;
+
+        // 被合併覆蓋的格（非左上）
+        const covered = {};
+        merges.forEach(function (m) {
+            const rs = m.rs || 1, cs = m.cs || 1;
+            for (let i = 0; i < rs; i++) {
+                for (let k = 0; k < cs; k++) {
+                    if (i === 0 && k === 0) continue;
+                    covered[cmEditKey(m.r + i, m.c + k)] = 1;
+                }
+            }
+        });
 
         (cmData.extras || []).forEach(function (x) {
             if (x.r < minR || x.c < minC) return;
@@ -2954,33 +3478,43 @@ function updatePendingCardState(card) {
             map.appendChild(el);
         });
 
-        (cmData.merges || []).forEach(function (m) {
-            if (!m.v || m.r < minR || m.c < minC) return;
+        merges.forEach(function (m) {
+            if (m.r < minR || m.c < minC) return;
             const el = document.createElement('div');
-            el.className = 'cm-cell';
+            el.className = 'cm-cell cm-merge';
+            el.dataset.r = m.r;
+            el.dataset.c = m.c;
+            el.dataset.rs = m.rs || 1;
+            el.dataset.cs = m.cs || 1;
             el.style.left = X[m.c] + 'px';
             el.style.top = Y[m.r] + 'px';
             let w = 0, h = 0;
-            for (let i = 0; i < m.cs; i++) w += cw(m.c + i);
-            for (let i = 0; i < m.rs; i++) h += rh(m.r + i);
+            for (let i = 0; i < (m.cs || 1); i++) w += cw(m.c + i);
+            for (let i = 0; i < (m.rs || 1); i++) h += rh(m.r + i);
             el.style.width = w + 'px';
             el.style.height = h + 'px';
             setBorder(el, { t: 0, l: 0, rr: 0, b: 0 });
             if (m.bg) el.style.background = m.bg;
+            if ((cmEdits.merges || []).indexOf(m) >= 0) el.classList.add('cm-edited');
             el.style.fontSize = fpx(m.fs) + 'px';
             el.style.fontWeight = m.bold ? 'bold' : 'normal';
             el.style.lineHeight = '1.1';
             el.style.padding = '0 2px';
             el.style.color = m.fc || '#333';
             el.style.whiteSpace = 'normal';
-            el.textContent = m.v;
+            el.textContent = m.v || '';
             map.appendChild(el);
         });
 
         (cmData.cells || []).forEach(function (c) {
             if (c.r < minR || c.c < minC) return;
+            const key = cmEditKey(c.r, c.c);
+            if (covered[key]) return;
+            const ed = cmEdits.cells[key];
             const el = document.createElement('div');
             el.className = 'cm-cell';
+            el.dataset.r = c.r;
+            el.dataset.c = c.c;
             el.style.left = X[c.c] + 'px';
             el.style.top = Y[c.r] + 'px';
             el.style.width = cw(c.c) + 'px';
@@ -3003,6 +3537,7 @@ function updatePendingCardState(card) {
                     if (c.chair && !c.stand) el.style.fontWeight = 'bold';
                 }
                 el.onclick = function () {
+                    if (cmEditMode) return;
                     if (cmMode !== 'type') return;
                     if (!isAdmin) { alert('只有管理員可以修改新舊櫈。'); return; }
                     toggleChairType(c);
@@ -3011,6 +3546,30 @@ function updatePendingCardState(card) {
                 if (c.bg) el.style.background = c.bg;
                 el.style.color = c.fc || '#333';
             }
+            if (ed) { cmApplyEd(el, ed); el.classList.add('cm-edited'); }
+            map.appendChild(el);
+        });
+
+        // 手改但原始版面沒有的格（例如取消合併後保留的文字）
+        const seenCell = {};
+        (cmData.cells || []).forEach(function (c) { seenCell[cmEditKey(c.r, c.c)] = 1; });
+        Object.keys(cmEdits.cells || {}).forEach(function (k) {
+            if (seenCell[k] || covered[k]) return;
+            const parts = k.split(',');
+            const r = parseInt(parts[0], 10), c = parseInt(parts[1], 10);
+            if (!(r >= minR && c >= minC)) return;
+            const ed = cmEdits.cells[k];
+            const el = document.createElement('div');
+            el.className = 'cm-cell cm-edited';
+            el.dataset.r = r;
+            el.dataset.c = c;
+            el.style.left = X[c] + 'px';
+            el.style.top = Y[r] + 'px';
+            el.style.width = cw(c) + 'px';
+            el.style.height = rh(r) + 'px';
+            setBorder(el, { t: 0, l: 0, rr: 0, b: 0 });
+            el.style.fontWeight = 'normal';
+            cmApplyEd(el, ed);
             map.appendChild(el);
         });
 
@@ -3064,7 +3623,13 @@ function updatePendingCardState(card) {
                     '<span><i class="cm-dot" style="background:#cfd8dc"></i>灰底＝停運</span><span>黑字＝企位</span>';
             }
         }
+
+        map.onpointerdown = cmPointerDown;
+        map.onpointermove = cmPointerMove;
+        if (cmEditMode) cmDrawSel();
+        cmRefreshTools();
     }
+
 
     async function toggleChairType(cell) {
         const order = ['', 'new', 'old'];
