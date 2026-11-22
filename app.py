@@ -3134,6 +3134,19 @@ def set_hall_status():
 
 _CHAIR_TYPE_KEY = 'chair_types'
 _CHAIR_EDIT_KEY = 'chair_edits'
+_CHAIR_EVENT_KEY = 'chair_event_tables'
+
+
+def _chair_event_tables():
+    """活動台名單（唔計入台數/DLR 數量，地圖粉色顯示）。"""
+    raw = get_setting(_CHAIR_EVENT_KEY, '') or ''
+    try:
+        data = json.loads(raw)
+        if isinstance(data, list):
+            return set(_up_norm(x) for x in data if x)
+    except Exception:
+        pass
+    return set()
 _CHAIR_LAYOUT_CACHE = None
 
 
@@ -3479,6 +3492,23 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
             for i in range(rs):
                 vset.setdefault(mc + cs, {})[mr + i] = m['rr']
 
+    # 掃描整張 Excel 所有粗框線（包括合併區內），確保一條都唔漏
+    row_off = row_offset
+    max_r = min(ws.max_row, 200)
+    max_c = min(ws.max_column, 160)
+    for er in range(1, max_r + 1):
+        for ec in range(1, max_c + 1):
+            cell = ws.cell(row=er, column=ec)
+            b = cell.border
+            if b.top and b.top.style in ('medium', 'thick'):
+                hset.setdefault(er + row_off, {})[ec] = 2
+            if b.bottom and b.bottom.style in ('medium', 'thick'):
+                hset.setdefault(er + 1 + row_off, {})[ec] = 2
+            if b.left and b.left.style in ('medium', 'thick'):
+                vset.setdefault(ec, {})[er + row_off] = 2
+            if b.right and b.right.style in ('medium', 'thick'):
+                vset.setdefault(ec + 1, {})[er + row_off] = 2
+
     rs = [int(c['r']) for c in cells]
     cs = [int(c['c']) for c in cells]
     if rs:
@@ -3488,6 +3518,8 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
 
     cols = []
     from openpyxl.utils import column_index_from_string
+    # Pit 63 / Pit 31 下面 4 格所在嘅欄平均闊度
+    widen = set()
     for k, dim in ws.column_dimensions.items():
         try:
             idx = column_index_from_string(k)
@@ -3500,7 +3532,14 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
         if hi > 200:
             hi = idx
         for c in range(int(lo), int(hi) + 1):
-            cols.append({'c': c, 'w': round(float(dim.width), 3)})
+            w = 6.0 if c in widen else round(float(dim.width), 3)
+            if not any(x['c'] == c for x in cols):
+                cols.append({'c': c, 'w': w})
+    _have = set(x['c'] for x in cols)
+    for c in widen:
+        if c not in _have:
+            cols.append({'c': c, 'w': 6.0})
+
     rows = []
     for k, dim in ws.row_dimensions.items():
         if not dim.height:
@@ -3660,6 +3699,7 @@ def chair_map_get():
 
     issues = _chair_issues()
     types = _chair_types()
+    event_codes = _chair_event_tables()
 
     cells = []
     for cell in layout.get('cells', []):
@@ -3683,16 +3723,21 @@ def chair_map_get():
             'fs': cell.get('fs', 11),
             'fc': cell.get('fc', ''),
             'bold': bool(cell.get('bold')),
-            'bg': cell.get('bg', '')
+            'bg': cell.get('bg', ''),
+            'event': bool(key) and _up_norm(code) in event_codes
         })
     cnt = {'total': 0, 'active': 0, 'inactive': 0, 'dlr_bad': 0, 'guest_bad': 0, 'spare': 0, 'new': 0, 'old': 0}
     for x in cells:
+        if x.get('event'):
+            continue
         if x.get('chair') == 'new':
             cnt['new'] += 1
         elif x.get('chair') == 'old':
             cnt['old'] += 1
     for x in cells:
         if not x.get('code'):
+            continue
+        if x.get('event'):
             continue
         cnt['total'] += 1
         if x.get('status') == '停運':
@@ -3811,6 +3856,36 @@ def chair_map_edit():
     except Exception:
         pass
     return jsonify({'status': 'success', 'cells': len(clean['cells']), 'merges': len(clean['merges'])})
+
+
+@app.route('/api/chair_map/event', methods=['POST'])
+def chair_map_event():
+    """標記／取消活動台（唔計入台數及 DLR 數量）。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以修改活動台。'})
+    data = request.json or {}
+    codes = data.get('codes') or []
+    if not isinstance(codes, list):
+        codes = [codes]
+    on = bool(data.get('on'))
+    cur = _chair_event_tables()
+    for c in codes:
+        k = _up_norm(str(c))
+        if not k:
+            continue
+        if on:
+            cur.add(k)
+        else:
+            cur.discard(k)
+    if not set_setting(_CHAIR_EVENT_KEY, json.dumps(sorted(cur), ensure_ascii=False)):
+        return jsonify({'status': 'error', 'message': '❌ 儲存失敗。'})
+    try:
+        log_action('修改活動台', '%s %d 台' % ('加入' if on else '恢復', len(codes)))
+    except Exception:
+        pass
+    return jsonify({'status': 'success', 'count': len(cur)})
 
 
 @app.route('/api/chair_map/import', methods=['POST'])
