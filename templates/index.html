@@ -610,6 +610,8 @@
                 </div>
                 <div class="cm-tools-row">
                     <span class="cm-tools-lbl">操作</span>
+                    <button class="cm-sw" onclick="cmSetEvent(true)">🏷️ 活動區</button>
+                    <button class="cm-sw" onclick="cmSetEvent(false)">↩️ 恢復台</button>
                     <button class="cm-sw" onclick="cmMerge()">合併</button>
                     <button class="cm-sw" onclick="cmUnmerge()">取消合併</button>
                     <button class="cm-sw" onclick="cmEditText()">✏️ 改字</button>
@@ -3211,6 +3213,30 @@ function updatePendingCardState(card) {
         }
     }
 
+    async function cmSetEvent(on) {
+        const s = cmSelRange();
+        if (!s) { alert('請先選取台號。'); return; }
+        const codes = [];
+        cmTargetCells().forEach(function (c) {
+            const cell = (cmData.cells || []).find(function (x) { return x.r === c.r && x.c === c.c; });
+            if (cell && cell.code) codes.push(cell.code);
+        });
+        if (!codes.length) { alert('選取範圍內冇台號。'); return; }
+        if (!confirm((on ? '標記 ' : '恢復 ') + codes.length + ' 台？\n' + (on ? '（唔計入台數及 DLR 數量）' : '（重新計入台數）'))) return;
+        try {
+            const r = await fetch('/api/chair_map/event', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codes: codes, on: on })
+            });
+            const d = await r.json();
+            if (!d || d.status !== 'success') { alert((d && d.message) || '❌ 失敗'); return; }
+            await loadChairMap();
+            cmToast(on ? '✅ 已標記活動台' : '✅ 已恢復台');
+        } catch (e) {
+            alert('❌ 連線失敗');
+        }
+    }
+
     function cmToggleEdit() {
         if (!isAdmin) { alert('只有管理員可以修改版面。'); return; }
         cmEditMode = !cmEditMode;
@@ -3652,7 +3678,10 @@ function updatePendingCardState(card) {
 
             let bg = null, fc = '#111', bold = !!c.bold, fs = c.fs, v = c.v;
             if (c.code) {
-                if (cmMode === 'status') {
+                if (c.event) {
+                    bg = '#FF99CC';
+                    fc = '#111';
+                } else if (cmMode === 'status') {
                     if (c.guest_bad) bg = '#99CCFF';
                     else if (c.status === '停運') bg = '#cfd8dc';
                     else if (c.stand) bg = '#f2f2f2';
