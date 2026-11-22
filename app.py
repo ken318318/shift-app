@@ -3317,12 +3317,37 @@ def _xlsx_apply_layout(data, base_layout):
     return out, hit, mhit
 
 
-def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=6):
-    """完全按 Excel 重建版面（框線、合併、文字、位置），再套用台號。"""
+def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
+    """完全按 Excel 重建版面（框線、合併、文字、位置），再套用台號。
+    row_offset 為 None 時，自動揀最匹配台號嘅 Sheet 同偏移。"""
     import openpyxl
 
     wb = openpyxl.load_workbook(io.BytesIO(data), data_only=True)
-    ws = wb.worksheets[0]
+    if row_offset is None:
+        keys = []
+        for k in code_map:
+            a, b = k.split(',')
+            keys.append((int(a), int(b)))
+        best = (0, None, 0)
+        for cand in wb.worksheets:
+            for off in range(0, 10):
+                hit = 0
+                for (kr, kc) in keys:
+                    er = kr - off
+                    if er < 1:
+                        continue
+                    try:
+                        v = cand.cell(row=er, column=kc).value
+                    except Exception:
+                        continue
+                    if v not in (None, ''):
+                        hit += 1
+                if hit > best[0]:
+                    best = (hit, cand, off)
+        ws = best[1] or wb.worksheets[0]
+        row_offset = best[2]
+    else:
+        ws = wb.worksheets[0]
     merged_ranges = list(ws.merged_cells.ranges)
     merged_set = set()
     for rng in merged_ranges:
@@ -3740,7 +3765,8 @@ def chair_map_import():
     if len(data) > 8 * 1024 * 1024:
         return jsonify({'status': 'error', 'message': '❌ 檔案太大（上限 8MB）。'})
     try:
-        layout, hit, mhit = _xlsx_apply_layout(data, _chair_static_layout())
+        layout = _xlsx_build_layout(data, _chair_base_codes(), _chair_static_layout())
+        hit = sum(1 for c in layout.get('cells', []) if c.get('code'))
     except ImportError:
         return jsonify({'status': 'error', 'message': '❌ 伺服器未安裝解析組件（openpyxl），請重新部署。'})
     except Exception as e:
