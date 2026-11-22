@@ -3007,6 +3007,7 @@ function updatePendingCardState(card) {
                     toggleChairType(c);
                 };
             } else {
+                if (c.bg) el.style.background = c.bg;
                 el.style.color = c.fc || '#333';
             }
             map.appendChild(el);
