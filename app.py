@@ -3404,6 +3404,8 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
         val = tl.value
         if val is None or str(val).strip() == '':
             continue
+        if str(val).strip().isdigit():
+            continue
         f = tl.font
         if f.size is not None and float(f.size) > 16:
             continue
@@ -3463,12 +3465,24 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
             idx = column_index_from_string(k)
         except Exception:
             continue
-        if dim.width:
-            cols.append({'c': idx, 'w': round(float(dim.width), 3)})
+        if not dim.width:
+            continue
+        lo = getattr(dim, 'min', None) or idx
+        hi = getattr(dim, 'max', None) or idx
+        if hi > 200:
+            hi = idx
+        for c in range(int(lo), int(hi) + 1):
+            cols.append({'c': c, 'w': round(float(dim.width), 3)})
     rows = []
     for k, dim in ws.row_dimensions.items():
-        if dim.height:
-            rows.append({'r': int(k) + row_offset, 'h': round(float(dim.height), 3)})
+        if not dim.height:
+            continue
+        lo = getattr(dim, 'min', None) or int(k)
+        hi = getattr(dim, 'max', None) or int(k)
+        if hi > 200:
+            hi = int(k)
+        for r in range(int(lo), int(hi) + 1):
+            rows.append({'r': r + row_offset, 'h': round(float(dim.height), 3)})
 
     hlines = []
     for r, arr in hset.items():
