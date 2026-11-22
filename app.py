@@ -3439,6 +3439,17 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
             cells.append(dict(bc))
             seen.add(k)
 
+    # Pit 63 / Pit 31 下方嘅數字放大
+    for c in cells:
+        if (24 <= c['r'] <= 28 and 36 <= c['c'] <= 42) or (45 <= c['r'] <= 49 and 62 <= c['c'] <= 68):
+            if c.get('code'):
+                c['fs'] = 18
+                c['bold'] = True
+        if str(c.get('v') or '').strip().replace(' ', '') == 'Pit27':
+            c['fc'] = '#FF0000'
+            c['fs'] = 16
+            c['bold'] = True
+
     # 收集所有邊（1=細，2=粗），畫齊所有框
     for c in cells:
         mr, mc = int(c['r']), int(c['c'])
@@ -3450,6 +3461,23 @@ def _xlsx_build_layout(data, code_map, base_layout=None, row_offset=None):
             vset.setdefault(mc, {})[mr] = c['l']
         if c.get('rr'):
             vset.setdefault(mc + 1, {})[mr] = c['rr']
+
+    # 合併格嘅外框（例如 Pit 26/33 大框頂邊）
+    for m in merges:
+        mr, mc = int(m['r']), int(m['c'])
+        rs, cs = int(m.get('rs') or 1), int(m.get('cs') or 1)
+        if m.get('t'):
+            for i in range(cs):
+                hset.setdefault(mr, {})[mc + i] = m['t']
+        if m.get('b'):
+            for i in range(cs):
+                hset.setdefault(mr + rs, {})[mc + i] = m['b']
+        if m.get('l'):
+            for i in range(rs):
+                vset.setdefault(mc, {})[mr + i] = m['l']
+        if m.get('rr'):
+            for i in range(rs):
+                vset.setdefault(mc + cs, {})[mr + i] = m['rr']
 
     rs = [int(c['r']) for c in cells]
     cs = [int(c['c']) for c in cells]
@@ -3651,7 +3679,11 @@ def chair_map_get():
             'dlr_bad': bool(iss.get('dlr_bad')),
             'guest_bad': bool(iss.get('guest_bad')),
             'stand': stand,
-            'chair': types.get(key) or '' if key else ''
+            'chair': types.get(key) or '' if key else '',
+            'fs': cell.get('fs', 11),
+            'fc': cell.get('fc', ''),
+            'bold': bool(cell.get('bold')),
+            'bg': cell.get('bg', '')
         })
     cnt = {'total': 0, 'active': 0, 'inactive': 0, 'dlr_bad': 0, 'guest_bad': 0, 'spare': 0, 'new': 0, 'old': 0}
     for x in cells:
