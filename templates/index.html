@@ -3036,7 +3036,8 @@ function updatePendingCardState(card) {
         const copy = {
             r: m.r, c: m.c, rs: m.rs || 1, cs: m.cs || 1,
             v: m.v || '', fc: m.fc || '', bg: m.bg || '',
-            bold: !!m.bold, fs: m.fs || 11
+            bold: !!m.bold, fs: m.fs || 11,
+            t: m.t || 0, l: m.l || 0, rr: m.rr || 0, b: m.b || 0
         };
         Object.keys(props || {}).forEach(function (x) { copy[x] = props[x]; });
         cmEdits.merges.push(copy);
@@ -3207,23 +3208,64 @@ function updatePendingCardState(card) {
         }
     }
 
+    function cmMergeContaining(r, c) {
+        if (!cmGeo || !cmGeo.merges) return null;
+        for (let i = 0; i < cmGeo.merges.length; i++) {
+            const m = cmGeo.merges[i];
+            const rs = m.rs || 1, cs = m.cs || 1;
+            if (r >= m.r && r < m.r + rs && c >= m.c && c < m.c + cs) return m;
+        }
+        return null;
+    }
+
+    function cmMergeProps(m, props) {
+        if ((cmEdits.merges || []).indexOf(m) >= 0) {
+            Object.keys(props || {}).forEach(function (x) { m[x] = props[x]; });
+        } else {
+            cmConvertMergeProps(m, props);
+        }
+    }
+
+    // 對選區內每一格套用：合併格只改合併（每塊一次），其餘改單格
+    function cmApplyToSelection(fnCell, fnMerge) {
+        const s = cmSelRange();
+        if (!s) return 0;
+        const done = [];
+        let n = 0;
+        for (let r = s.r1; r <= s.r2; r++) {
+            for (let c = s.c1; c <= s.c2; c++) {
+                const m = cmMergeContaining(r, c);
+                if (m) {
+                    if (done.indexOf(m) < 0) {
+                        done.push(m);
+                        if (fnMerge) fnMerge(m);
+                        n++;
+                    }
+                } else {
+                    if (fnCell) fnCell(r, c);
+                    n++;
+                }
+            }
+        }
+        return n;
+    }
+
     async function cmSetProp(field, val) {
         const s = cmSelRange();
         if (!s) { alert('請先點選格仔。'); return; }
-        const fm = cmFindMerge(s);
-        if (fm) {
-            if (fm.manual) { fm.m[field] = val; }
-            else { const p = {}; p[field] = val; cmConvertMergeProps(fm.m, p); }
-        } else {
-            const cells = cmTargetCells();
-            if (!cells.length) { alert('選取範圍內沒有可修改的格。'); return; }
-            if (cells.length > 2000) { alert('選取範圍太大（超過 2000 格），請分細啲再改。'); return; }
-            cells.forEach(function (c) {
-                const k = cmEditKey(c.r, c.c);
-                const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
-                ed[field] = val;
-            });
+        if ((s.r2 - s.r1 + 1) * (s.c2 - s.c1 + 1) > 2000) {
+            alert('選取範圍太大（超過 2000 格），請分細啲再改。');
+            return;
         }
+        cmApplyToSelection(function (r, c) {
+            const k = cmEditKey(r, c);
+            const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
+            ed[field] = val;
+        }, function (m) {
+            const p = {};
+            p[field] = val;
+            cmMergeProps(m, p);
+        });
         renderChairMap();
         await cmSaveEdits();
     }
@@ -3231,19 +3273,16 @@ function updatePendingCardState(card) {
     async function cmSetPropAuto(field) {
         const s = cmSelRange();
         if (!s) { alert('請先點選格仔。'); return; }
-        const fm = cmFindMerge(s);
-        if (fm) {
-            if (fm.manual) { delete fm.m[field]; }
-        } else {
-            cmTargetCells().forEach(function (c) {
-                const k = cmEditKey(c.r, c.c);
-                const ed = cmEdits.cells[k];
-                if (ed) {
-                    delete ed[field];
-                    if (!Object.keys(ed).length) delete cmEdits.cells[k];
-                }
-            });
-        }
+        cmApplyToSelection(function (r, c) {
+            const k = cmEditKey(r, c);
+            const ed = cmEdits.cells[k];
+            if (ed) {
+                delete ed[field];
+                if (!Object.keys(ed).length) delete cmEdits.cells[k];
+            }
+        }, function (m) {
+            if ((cmEdits.merges || []).indexOf(m) >= 0) delete m[field];
+        });
         renderChairMap();
         await cmSaveEdits();
     }
@@ -3251,21 +3290,18 @@ function updatePendingCardState(card) {
     async function cmToggleBold() {
         const s = cmSelRange();
         if (!s) { alert('請先點選格仔。'); return; }
-        const fm = cmFindMerge(s);
-        if (fm) {
-            if (fm.manual) { fm.m.bold = !fm.m.bold; }
-            else { cmConvertMergeProps(fm.m, { bold: !fm.m.bold }); }
-        } else {
-            const cells = cmTargetCells();
-            if (!cells.length) { alert('選取範圍內沒有可修改的格。'); return; }
-            if (cells.length > 2000) { alert('選取範圍太大（超過 2000 格），請分細啲再改。'); return; }
-            cells.forEach(function (c) {
-                const k = cmEditKey(c.r, c.c);
-                const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
-                const cur = ('bold' in ed) ? ed.bold : !!c.bold;
-                ed.bold = !cur;
-            });
+        if ((s.r2 - s.r1 + 1) * (s.c2 - s.c1 + 1) > 2000) {
+            alert('選取範圍太大（超過 2000 格），請分細啲再改。');
+            return;
         }
+        cmApplyToSelection(function (r, c) {
+            const k = cmEditKey(r, c);
+            const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
+            const cur = ('bold' in ed) ? ed.bold : false;
+            ed.bold = !cur;
+        }, function (m) {
+            cmMergeProps(m, { bold: !m.bold });
+        });
         renderChairMap();
         await cmSaveEdits();
     }
@@ -3273,22 +3309,20 @@ function updatePendingCardState(card) {
     async function cmToggleBorder(edge) {
         const s = cmSelRange();
         if (!s) { alert('請先點選格仔。'); return; }
-        const fm = cmFindMerge(s);
-        if (fm) {
-            const cur = fm.m[edge] ? 1 : 0;
-            if (fm.manual) { fm.m[edge] = cur ? 0 : 1; }
-            else { const p = {}; p[edge] = cur ? 0 : 1; cmConvertMergeProps(fm.m, p); }
-        } else {
-            const cells = cmTargetCells();
-            if (!cells.length) { alert('選取範圍內沒有可修改的格。'); return; }
-            if (cells.length > 2000) { alert('選取範圍太大（超過 2000 格），請分細啲再改。'); return; }
-            cells.forEach(function (c) {
-                const k = cmEditKey(c.r, c.c);
-                const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
-                const cur = (edge in ed) ? ed[edge] : 0;
-                ed[edge] = cur ? 0 : 1;
-            });
+        if ((s.r2 - s.r1 + 1) * (s.c2 - s.c1 + 1) > 2000) {
+            alert('選取範圍太大（超過 2000 格），請分細啲再改。');
+            return;
         }
+        cmApplyToSelection(function (r, c) {
+            const k = cmEditKey(r, c);
+            const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
+            const cur = (edge in ed) ? ed[edge] : 0;
+            ed[edge] = cur ? 0 : 1;
+        }, function (m) {
+            const p = {};
+            p[edge] = m[edge] ? 0 : 1;
+            cmMergeProps(m, p);
+        });
         renderChairMap();
         await cmSaveEdits();
     }
@@ -3296,20 +3330,17 @@ function updatePendingCardState(card) {
     async function cmBorderAll(v) {
         const s = cmSelRange();
         if (!s) { alert('請先點選格仔。'); return; }
-        const fm = cmFindMerge(s);
-        if (fm) {
-            if (fm.manual) { fm.m.t = fm.m.l = fm.m.rr = fm.m.b = v; }
-            else { cmConvertMergeProps(fm.m, { t: v, l: v, rr: v, b: v }); }
-        } else {
-            const cells = cmTargetCells();
-            if (!cells.length) { alert('選取範圍內沒有可修改的格。'); return; }
-            if (cells.length > 2000) { alert('選取範圍太大（超過 2000 格），請分細啲再改。'); return; }
-            cells.forEach(function (c) {
-                const k = cmEditKey(c.r, c.c);
-                const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
-                ed.t = ed.l = ed.rr = ed.b = v;
-            });
+        if ((s.r2 - s.r1 + 1) * (s.c2 - s.c1 + 1) > 2000) {
+            alert('選取範圍太大（超過 2000 格），請分細啲再改。');
+            return;
         }
+        cmApplyToSelection(function (r, c) {
+            const k = cmEditKey(r, c);
+            const ed = cmEdits.cells[k] || (cmEdits.cells[k] = {});
+            ed.t = ed.l = ed.rr = ed.b = v;
+        }, function (m) {
+            cmMergeProps(m, { t: v, l: v, rr: v, b: v });
+        });
         renderChairMap();
         await cmSaveEdits();
     }
@@ -3532,9 +3563,11 @@ function updatePendingCardState(card) {
             for (let i = 0; i < (m.rs || 1); i++) h += rh(m.r + i);
             el.style.width = w + 'px';
             el.style.height = h + 'px';
-            setBorder(el, { t: 0, l: 0, rr: 0, b: 0 });
+            const isManualM = (cmEdits.merges || []).indexOf(m) >= 0;
+            if (isManualM) setBorder(el, { t: m.t || 0, l: m.l || 0, rr: m.rr || 0, b: m.b || 0 });
+            else setBorder(el, { t: 0, l: 0, rr: 0, b: 0 });
             if (m.bg) el.style.background = m.bg;
-            if ((cmEdits.merges || []).indexOf(m) >= 0) el.classList.add('cm-edited');
+            if (isManualM) el.classList.add('cm-edited');
             el.style.fontSize = fpx(m.fs) + 'px';
             el.style.fontWeight = m.bold ? 'bold' : 'normal';
             el.style.lineHeight = '1.1';
