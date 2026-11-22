@@ -3646,6 +3646,9 @@ function updatePendingCardState(card) {
             fillCell(x0, y0, x1, y1, m.bg ? rgb(m.bg, null) : null);
             if (isManual) drawBorder(x0, y0, x1, y1, m.t, m.l, m.rr, m.b);
             drawText(x0, y0, x1, y1, m.v || '', m.fs || 11, m.bold, m.fc ? rgb(m.fc, '#333') : '#333');
+            ctx.strokeStyle = '#bdbdbd';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(Math.round(x0) + 0.5, Math.round(y0) + 0.5, Math.round(x1 - x0) - 1, Math.round(y1 - y0) - 1);
         });
 
         // 普通格
@@ -3686,6 +3689,9 @@ function updatePendingCardState(card) {
                 drawBorder(x0, y0, x1, y1, ed.t, ed.l, ed.rr, ed.b);
             }
             drawText(x0, y0, x1, y1, v, fs, bold, rgb(fc, '#111'));
+            ctx.strokeStyle = '#bdbdbd';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(Math.round(x0) + 0.5, Math.round(y0) + 0.5, Math.round(x1 - x0) - 1, Math.round(y1 - y0) - 1);
             if (ed) {
                 ctx.fillStyle = '#ff6f00';
                 ctx.beginPath();
