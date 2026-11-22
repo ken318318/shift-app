@@ -57,7 +57,7 @@
         .modal h3 { margin: 0 0 10px 0; font-size: 16px; }
         .msg { font-size: 12px; margin-top: 8px; min-height: 16px; }
         .hide { display: none !important; }
-        /* ===== 椅況圖 ===== */
+        /* ===== 櫈況圖 ===== */
         .cm-cell { position: absolute; width: 26px; height: 22px; border: 1px solid #d6dde6; font-size: 11px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; cursor: pointer; background: #fff; }
         .cm-cell.cm-off { background: #cfd8dc; }
         .cm-cell.cm-guest { background: #99CCFF; }
@@ -94,7 +94,7 @@
             <button class="tab" data-tab="export" onclick="switchTab('export')">匯出</button>
             <button class="tab" data-tab="stats" onclick="switchTab('stats')">統計</button>
             <button class="tab" data-tab="hall" onclick="switchTab('hall')">台號狀態</button>
-            <button class="tab" data-tab="chairs" onclick="switchTab('chairs')">椅況圖</button>
+            <button class="tab" data-tab="chairs" onclick="switchTab('chairs')">櫈況圖</button>
             <button class="tab" data-tab="members" onclick="switchTab('members')">成員</button>
             <button class="tab" data-tab="account" onclick="switchTab('account')">帳號</button>
         </div>
@@ -245,13 +245,13 @@
         <div id="hall-list" style="margin-top:10px;"></div>
     </div>
 
-    <!-- ================= 椅況圖 ================= -->
+    <!-- ================= 櫈況圖 ================= -->
     <div class="card hide" id="panel-chairs">
         <div class="row" style="margin-bottom:6px;">
-            <button class="btn" id="cm-mode-status" onclick="setChairMode('status')">🪑 好壞椅</button>
-            <button class="btn btn-gray" id="cm-mode-type" onclick="setChairMode('type')">🆕 新舊椅</button>
+            <button class="btn" id="cm-mode-status" onclick="setChairMode('status')">🪑 好壞櫈</button>
+            <button class="btn btn-gray" id="cm-mode-type" onclick="setChairMode('type')">🆕 新舊櫈</button>
         </div>
-        <div class="muted" id="cm-tip">好壞椅模式：由交更自動上色；新舊椅模式：點格仔可切換新／舊。</div>
+        <div class="muted" id="cm-tip">好壞櫈模式：由交更自動上色；新舊櫈模式：點格仔可切換新／舊。</div>
         <div class="cm-legend" id="cm-legend" style="margin-top:6px;"></div>
         <div id="cm-scroll" style="overflow:auto; border:1px solid #e3e9f2; border-radius:8px; margin-top:8px; background:#fafbfc;">
             <div id="cm-map" style="position:relative; width:1px; height:1px;"></div>
@@ -970,7 +970,7 @@
                 box.innerHTML = html;
             } catch (e) { box.innerHTML = ''; }
         }
-        /* ===== 椅況圖 ===== */
+        /* ===== 櫈況圖 ===== */
         let chairData = null;
         let chairMode = 'status';
         const CM_W = 26, CM_H = 22;
@@ -995,8 +995,8 @@
             if (b) b.className = 'btn' + (m === 'type' ? '' : ' btn-gray');
             const tip = document.getElementById('cm-tip');
             if (tip) tip.textContent = (m === 'status')
-                ? '好壞椅模式：由交更自動上色（停運灰、好黑、壞紅、spare 綠、壞客椅藍）。'
-                : '新舊椅模式：點格仔切換（紫＝新、橙＝舊）。';
+                ? '好壞櫈模式：由交更自動上色（停運灰、好黑、壞紅、spare 綠、壞客櫈藍）。'
+                : '新舊櫈模式：點格仔切換（紫＝新、橙＝舊）。';
             renderChairMap();
         }
 
@@ -1041,7 +1041,7 @@
                 if (chairMode === 'status') {
                     legend.innerHTML = '<span><i class="cm-dot" style="background:#fff"></i>營運（好）</span>' +
                         '<span><i class="cm-dot" style="background:#cfd8dc"></i>停運</span>' +
-                        '<span><i class="cm-dot" style="background:#99CCFF"></i>壞客椅</span>' +
+                        '<span><i class="cm-dot" style="background:#99CCFF"></i>壞客櫈</span>' +
                         '<span style="color:#e53935">紅字＝壞 DLR 椅</span><span style="color:#2e7d32">綠字＝spare</span>';
                 } else {
                     legend.innerHTML = '<span><i class="cm-dot" style="background:#9933FF"></i>新椅</span>' +
