@@ -571,7 +571,10 @@
                 <button class="lr-b-gray" onclick="cmZoomStep(1)">➕</button>
                 <button class="lr-b-gray" onclick="cmZoomFit()">適合螢幕</button>
                 <button class="lr-b-blue" onclick="cmSaveImage()">🖼️ 存為圖片</button>
+                <button id="cm-b-import" class="lr-b-gray" onclick="document.getElementById('cm-file').click()" style="display:none;">📤 上傳 Excel</button>
+                <button id="cm-b-reset" class="lr-b-gray" onclick="cmResetLayout()" style="display:none;">↩️ 還原版面</button>
                 <button id="cm-b-edit" class="lr-b-gray" onclick="cmToggleEdit()" style="display:none;">✏️ 編輯</button>
+                <input type="file" id="cm-file" accept=".xlsx,.xlsm" style="display:none" onchange="cmUploadExcel(this)">
                 <span class="cm-legend" id="cm-legend"></span>
             </div>
             <div id="cm-tip" class="lr-msg"></div>
@@ -2872,6 +2875,10 @@ function updatePendingCardState(card) {
         document.body.style.overflow = 'hidden';
         const eb = document.getElementById('cm-b-edit');
         if (eb) eb.style.display = isAdmin ? '' : 'none';
+        const ib = document.getElementById('cm-b-import');
+        if (ib) ib.style.display = isAdmin ? '' : 'none';
+        const rb = document.getElementById('cm-b-reset');
+        if (rb) rb.style.display = isAdmin ? '' : 'none';
         bsLoading(true, '載入中…', true);
         loadChairMap();
     }
@@ -3163,6 +3170,45 @@ function updatePendingCardState(card) {
         const n = (s.r2 - s.r1 + 1) * (s.c2 - s.c1 + 1);
         if (info) info.textContent = '已選 ' + n + ' 格（R' + s.r1 + '–' + s.r2 + '／C' + s.c1 + '–' + s.c2 + '）';
         cmUpdateBorderBtns(cmFirstEd(s));
+    }
+
+    async function cmResetLayout() {
+        if (!confirm('還原為系統預設版面？\n\n你上傳嘅 Excel 版面會被移除（手動編輯顏色唔受影響）。')) return;
+        bsLoading(true, '還原中…', true);
+        try {
+            const r = await fetch('/api/chair_map/reset', { method: 'POST' });
+            const d = await r.json();
+            if (!d || d.status !== 'success') { alert((d && d.message) || '❌ 還原失敗'); return; }
+            await loadChairMap();
+            cmToast('✅ 已還原預設版面');
+        } catch (e) {
+            alert('❌ 連線失敗');
+        } finally {
+            bsLoading(false);
+        }
+    }
+
+    async function cmUploadExcel(input) {
+        const f = input.files && input.files[0];
+        input.value = '';
+        if (!f) return;
+        if (!/\.(xlsx|xlsm)$/i.test(f.name)) { alert('請選擇 .xlsx 檔案。'); return; }
+        if (!confirm('用「' + f.name + '」取代現時版面？\n\n顏色仍由系統自動計算，唔會影響交更紀錄同報表。')) return;
+        bsLoading(true, '解析 Excel 中…', true);
+        try {
+            const fd = new FormData();
+            fd.append('file', f);
+            const r = await fetch('/api/chair_map/import', { method: 'POST', body: fd });
+            const d = await r.json();
+            if (!d || d.status !== 'success') { alert((d && d.message) || '❌ 上傳失敗'); return; }
+            cmSel = null;
+            await loadChairMap();
+            cmToast('✅ 已套用（' + (d.codes || 0) + ' 個台號）');
+        } catch (e) {
+            alert('❌ 上傳失敗：' + e.message);
+        } finally {
+            bsLoading(false);
+        }
     }
 
     function cmToggleEdit() {
