@@ -3279,6 +3279,7 @@ def chair_map_get():
                     'maxRu': layout.get('maxRu', layout.get('maxR')),
                     'maxCu': layout.get('maxCu', layout.get('maxC')),
                     'cols': layout.get('cols', []), 'rows': layout.get('rows', []),
+                    'hlines': layout.get('hlines', []), 'vlines': layout.get('vlines', []),
                     'today': _up_today(), 'counts': cnt,
                     'pits': layout.get('pits', []), 'extras': layout.get('extras', []),
                     'merges': layout.get('merges', []), 'cells': cells})
