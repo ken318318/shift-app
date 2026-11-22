@@ -3014,12 +3014,30 @@ function updatePendingCardState(card) {
             map.appendChild(el);
         });
 
+        // 淡灰格線（模擬 Excel View Gridlines）
+        for (let c = minC; c <= maxC; c++) {
+            const el = document.createElement('div');
+            el.style.cssText = 'position:absolute;background:#e2e2e2;width:1px;pointer-events:none;';
+            el.style.left = X[c] + 'px';
+            el.style.top = Y[minR] + 'px';
+            el.style.height = (Y[maxR + 1] - Y[minR]) + 'px';
+            map.appendChild(el);
+        }
+        for (let r = minR; r <= maxR; r++) {
+            const el = document.createElement('div');
+            el.style.cssText = 'position:absolute;background:#e2e2e2;height:1px;pointer-events:none;';
+            el.style.left = X[minC] + 'px';
+            el.style.top = Y[r] + 'px';
+            el.style.width = (X[maxC + 1] - X[minC]) + 'px';
+            map.appendChild(el);
+        }
+
         (cmData.hlines || []).forEach(function (l) {
             const el = document.createElement('div');
             el.style.cssText = 'position:absolute;background:#000;height:2px;pointer-events:none;';
             el.style.left = X[l.c1] + 'px';
             el.style.top = (Y[l.r] - 1) + 'px';
-            el.style.width = (X[l.c2] - X[l.c1]) + 'px';
+            el.style.width = (X[l.c2] - X[l.c1] + 2) + 'px';
             map.appendChild(el);
         });
         (cmData.vlines || []).forEach(function (l) {
@@ -3027,7 +3045,7 @@ function updatePendingCardState(card) {
             el.style.cssText = 'position:absolute;background:#000;width:2px;pointer-events:none;';
             el.style.left = (X[l.c] - 1) + 'px';
             el.style.top = Y[l.r1] + 'px';
-            el.style.height = (Y[l.r2] - Y[l.r1]) + 'px';
+            el.style.height = (Y[l.r2] - Y[l.r1] + 2) + 'px';
             map.appendChild(el);
         });
 
