@@ -303,7 +303,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-3", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -789,6 +789,10 @@ def _record_items(note, checklist=''):
             if '|' not in key:
                 continue
             if key in seen:
+                # 同一 key 已在本文出現：覆蓋為已處理（否則 overwrite 重算後問題會復活）
+                for _it in items:
+                    if _it.get('key') == key:
+                        _it['status'] = '已處理'
                 continue
             seen.add(key)
             parts = key.split('|')
@@ -923,7 +927,8 @@ def get_records_home():
                             created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
                             COALESCE(reviewed, FALSE),
                             reviewed_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
-                            COALESCE(reviewed_by, '')
+                            COALESCE(reviewed_by, ''),
+                            items
                      FROM records""" + sql_where + " ORDER BY id DESC LIMIT %s OFFSET %s",
                   params + [limit, offset])
         rows = c.fetchall()
@@ -935,7 +940,8 @@ def get_records_home():
             "created_at": str(r[17]) if r[17] else None,
             "reviewed": bool(r[18]),
             "reviewed_at": str(r[19]) if r[19] else '',
-            "reviewed_by": r[20] or ''
+            "reviewed_by": r[20] or '',
+            "items": r[21] or []
         } for r in rows]
         resp = jsonify({"records": records, "total": total, "limit": limit, "offset": offset})
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
@@ -957,7 +963,8 @@ def get_records():
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
                  COALESCE(reviewed, FALSE),
                  reviewed_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
-                 COALESCE(reviewed_by, '')
+                 COALESCE(reviewed_by, ''),
+                 items
                  FROM records ORDER BY id DESC""")
     rows = c.fetchall()
     release_db_connection(conn)
@@ -971,7 +978,8 @@ def get_records():
             "created_at": str(row[17]) if row[17] else None,
             "reviewed": bool(row[18]),
             "reviewed_at": str(row[19]) if row[19] else '',
-            "reviewed_by": row[20] or ''
+            "reviewed_by": row[20] or '',
+            "items": row[21] or []
         })
     return jsonify(records)
 
@@ -1828,6 +1836,109 @@ def get_pending_issues():
     resp = jsonify(payload)
     resp.headers['Cache-Control'] = 'no-store, max-age=0'
     return resp
+
+@app.route('/api/mark_done', methods=['POST'])
+def mark_done():
+    """勾選完成：把指定 key 標記 status=已處理（items + note 雙寫）。
+    雙寫的原因：/api/overwrite_record 會 DELETE 舊 row 再 INSERT，items 由 note 重算，
+    所以必須同時將 key 寫入 note 的【早前已處理】段落，標記才不會遺失。"""
+    data = request.json or {}
+    raw = data.get('keys') or []
+    if isinstance(raw, str):
+        raw = [raw]
+    keys = [str(k).strip() for k in raw if str(k).strip()]
+    if not keys:
+        return jsonify({"status": "error", "message": "❌ 未選擇任何項目"})
+
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        done_count = 0
+        skipped = []
+
+        for key in keys:
+            parts = key.split('|')
+            code = parts[1].strip() if len(parts) > 1 and parts[1].strip() else ''
+            like = '%' + code + '%' if code else '%'
+            # 用台號做粗篩，避免全表掃描；再由新到舊逐筆重算 items 找出真正擁有者
+            c.execute("""SELECT id, note, checklist, items FROM records
+                         WHERE COALESCE(note, '') LIKE %s OR COALESCE(checklist, '') LIKE %s
+                         ORDER BY id DESC""", (like, like))
+            rows = c.fetchall()
+
+            owner_id, owner_note, owner_items = None, None, None
+            for rid, note, checklist, items in rows:
+                ritems = items
+                if not ritems:
+                    try:
+                        ritems = _record_items(note, checklist)
+                    except Exception:
+                        ritems = []
+                if any(isinstance(it, dict) and (it.get('key') or '') == key for it in (ritems or [])):
+                    owner_id, owner_note, owner_items = rid, note, list(ritems or [])
+                    break
+
+            if owner_id is None:
+                # 備援：找不到擁有者（舊資料 items 不一致）→ 寫入最新一筆紀錄做標記
+                c.execute("SELECT id, note, checklist, items FROM records ORDER BY id DESC LIMIT 1")
+                last = c.fetchone()
+                if not last:
+                    skipped.append(key)
+                    continue
+                owner_id, owner_note, owner_items = last[0], last[1], list(last[3] or [])
+
+            # 1) items 內該 key 的 status 改為已處理
+            new_items = []
+            for it in owner_items:
+                if isinstance(it, dict) and (it.get('key') or '') == key:
+                    it = dict(it)
+                    it['status'] = '已處理'
+                new_items.append(it)
+
+            # 若擁有者 items 內根本冇這個 key（舊資料不一致）→ 直接補一項已處理
+            if not any(isinstance(it, dict) and (it.get('key') or '') == key for it in new_items):
+                _p = key.split('|')
+                new_items.append({'key': key,
+                                  'type': _p[0] if len(_p) > 0 else '',
+                                  'code': _p[1] if len(_p) > 1 else '',
+                                  'detail': _p[2] if len(_p) > 2 else '',
+                                  'status': '已處理'})
+
+            # 2) note 追加【早前已處理】（冪等：同一 key 唔會重複寫）
+            note = owner_note or ''
+            head = note.split('【早前已處理】')[0].rstrip()
+            old_tail = ''
+            if '【早前已處理】' in note:
+                old_tail = note.split('【早前已處理】', 1)[1].split('【早前未處理】')[0]
+            done_lines = [l.split(' [狀態:')[0].strip() for l in old_tail.split('\n') if l.strip()]
+            if key not in done_lines:
+                done_lines.append(key)
+            new_note = head + '\n\n【早前已處理】\n' + '\n'.join(done_lines)
+
+            c.execute("UPDATE records SET items = %s, note = %s WHERE id = %s",
+                      (psycopg2.extras.Json(new_items), new_note, owner_id))
+            done_count += 1
+
+        conn.commit()
+        cache_clear('pending')
+        if done_count:
+            log_action('勾選完成', ','.join(keys)[:200])
+
+        msg = '✅ 已標記 %d 項為已完成' % done_count
+        if skipped:
+            msg += '；另有 %d 項找不到來源紀錄，已略過' % len(skipped)
+        return jsonify({"status": "success" if done_count else "error",
+                        "message": msg, "done_count": done_count, "skipped": skipped})
+    except Exception as e:
+        print('MarkDone Error:', e)
+        if conn:
+            conn.rollback()
+        return jsonify({"status": "error", "message": "❌ 標記失敗：%s" % str(e)})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
 
 @app.route('/api/delete_record', methods=['POST'])
 def delete_record():
