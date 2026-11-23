@@ -457,7 +457,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-7", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-8", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -2173,11 +2173,13 @@ def delete_record():
     data = request.json
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("DELETE FROM records WHERE id = %s", (data.get('id'),))
+    _rid = data.get('id')
+    c.execute("DELETE FROM shift_items WHERE record_id = %s", (_rid,))
+    c.execute("DELETE FROM records WHERE id = %s", (_rid,))
     conn.commit()
     release_db_connection(conn)
-    cache_clear('pending')
-    log_action('刪除紀錄', f"紀錄 ID {data.get('id')}")
+    cache_clear('pending', 'pending_items')
+    log_action('刪除紀錄', f"紀錄 ID {_rid}")
     return jsonify({"status": "success", "message": "✅ 紀錄已成功刪除！"})
 
 @app.route('/api/record_review', methods=['POST'])
