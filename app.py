@@ -778,6 +778,24 @@ def _record_items(note, checklist=''):
             st = re.search(r'\[狀態[:：]\s*([^\]]*)\]', seg)
             items.append({'key': key, 'type': 'NFC', 'code': code,
                           'detail': detail, 'status': (st.group(1).strip() if st else '')})
+    # 【早前已處理】段落：把 key 標記為已處理（用於覆蓋舊 pending）
+    m = re.search(r'【早前已處理】([\s\S]*?)(?=【|$)', str(note or ''))
+    if m:
+        for line in m.group(1).split('\n'):
+            line = line.strip()
+            if not line:
+                continue
+            key = line.split(' [狀態:')[0].strip()
+            if '|' not in key:
+                continue
+            if key in seen:
+                continue
+            seen.add(key)
+            parts = key.split('|')
+            items.append({'key': key, 'type': parts[0] if parts else '',
+                          'code': parts[1] if len(parts) > 1 else '',
+                          'detail': parts[2] if len(parts) > 2 else '',
+                          'status': '已處理'})
     return items
 
 
