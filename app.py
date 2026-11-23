@@ -471,7 +471,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-16", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-17", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -2202,14 +2202,17 @@ def api_pending_items():
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        sql = ("SELECT DISTINCT ON (item_key) id, record_id, item_key, type, code, category,"
+        sql = ("SELECT d.id, d.record_id, d.item_key, d.type, d.code, d.category,"
+               " d.problem, d.detail, d.side, d.status, d.note, d.display, d.source, d.created_at,"
+               " (SELECT MIN(x.event_at) FROM shift_items x WHERE x.item_key = d.item_key) AS first_at"
+               " FROM (SELECT DISTINCT ON (item_key) id, record_id, item_key, type, code, category,"
                " problem, detail, side, status, note, display, source, created_at"
                " FROM shift_items")
         params = []
         if before_id:
             sql += " WHERE (record_id IS NULL OR record_id < %s)"
             params.append(before_id)
-        sql += " ORDER BY item_key, event_at DESC, id DESC"
+        sql += " ORDER BY item_key, event_at DESC, id DESC) d ORDER BY d.item_key"
         c.execute(sql, params)
         rows = c.fetchall()
         release_db_connection(conn)
@@ -2220,7 +2223,8 @@ def api_pending_items():
             rec = {"occ_id": r[0], "record_id": r[1], "key": r[2], "type": r[3], "code": r[4],
                    "category": r[5], "problem": r[6], "detail": r[7], "side": r[8],
                    "status": r[9] or '', "note": r[10] or '', "display": r[11] or '',
-                   "source": r[12], "created_at": str(r[13]) if r[13] else None}
+                   "source": r[12], "created_at": str(r[13]) if r[13] else None,
+                   "first_at": str(r[14]) if len(r) > 14 and r[14] else None}
             if any(d in rec['status'] for d in _done):
                 done.append(rec)
             else:
