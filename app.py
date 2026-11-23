@@ -332,16 +332,18 @@ def _done_keys_from_note(note):
     return keys
 
 
-def _si_insert(c, record_id, source, key, it=None, status='', resolved_at=None, resolved_by=''):
+def _si_insert(c, record_id, source, key, it=None, status='', event_at=None, resolved_by=''):
     """寫一筆 shift_items（occurrence）。"""
     it = it or {}
     t, code, detail = _split_key(key)
     itype = it.get('type') or t
     icode = it.get('code') or code
+    _st = status or it.get('status') or '待處理'
+    _is_done = any(x in _st for x in ('已處理', '已完成', '已解決'))
     c.execute("""INSERT INTO shift_items
                  (record_id, source, item_key, type, code, category, problem, detail, side,
-                  status, note, display, created_at, resolved_at, resolved_by)
-                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, COALESCE(%s, NOW()), %s, %s)""",
+                  status, note, display, created_at, event_at, resolved_at, resolved_by)
+                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, NOW(), COALESCE(%s, NOW()), %s, %s)""",
               (record_id, source, key, itype, icode,
                it.get('category') or '', it.get('problem') or '',
                it.get('detail') or detail, it.get('side') or '',
@@ -349,7 +351,7 @@ def _si_insert(c, record_id, source, key, it=None, status='', resolved_at=None, 
                _item_display({'type': itype, 'code': icode,
                               'category': it.get('category') or '', 'problem': it.get('problem') or '',
                               'detail': it.get('detail') or detail}),
-               resolved_at, resolved_at, resolved_by or ''))
+               event_at, (event_at if _is_done else None), resolved_by or ''))
 
 
 def _backfill_shift_items(c):
@@ -400,18 +402,22 @@ def ensure_shift_items():
                         note TEXT NOT NULL DEFAULT '',
                         display TEXT NOT NULL DEFAULT '',
                         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        event_at TIMESTAMPTZ,
                         resolved_at TIMESTAMPTZ,
                         resolved_by TEXT NOT NULL DEFAULT ''
                      )""")
-        c.execute("CREATE INDEX IF NOT EXISTS idx_si_key ON shift_items(item_key, id DESC)")
+        c.execute("ALTER TABLE shift_items ADD COLUMN IF NOT EXISTS event_at TIMESTAMPTZ")
+        c.execute("UPDATE shift_items SET event_at = COALESCE(resolved_at, created_at) WHERE event_at IS NULL")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_si_key ON shift_items(item_key, event_at DESC, id DESC)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_si_record ON shift_items(record_id)")
         conn.commit()
-        c.execute("SELECT COUNT(*) FROM shift_items WHERE source = 'submit'")
-        if c.fetchone()[0] == 0:
-            # 尚未有任何正式提交 → 清掉舊 backfill 行，重新由 records 轉換
+        # 一次性 seed：用 app_settings 記版本，重建也不會亂序
+        if str(get_setting('shift_items_seed', '')) != 'v1':
             c.execute("DELETE FROM shift_items WHERE source = 'backfill'")
             _backfill_shift_items(c)
             conn.commit()
+            set_setting('shift_items_seed', 'v1')
+            print('shift_items seed v1 完成')
         print('shift_items 就緒')
     except Exception as e:
         print('shift_items 初始化失敗:', e)
@@ -457,7 +463,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-8", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-9", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -974,8 +980,8 @@ def _si_resolve(c, record_id, key, who=''):
              _item_display({'type': t, 'code': code, 'detail': detail})]
     c.execute("""INSERT INTO shift_items
                  (record_id, source, item_key, type, code, category, problem, detail, side,
-                  status, note, display, resolved_at, resolved_by)
-                 VALUES (%s,'resolve',%s,%s,%s,%s,%s,%s,%s,'已處理',%s,%s,NOW(),%s)""",
+                  status, note, display, event_at, resolved_at, resolved_by)
+                 VALUES (%s,'resolve',%s,%s,%s,%s,%s,%s,%s,'已處理',%s,%s,NOW(),NOW(),%s)""",
               (record_id, v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], who or ''))
     return True
 
@@ -2117,7 +2123,7 @@ def api_pending_items():
         if before_id:
             sql += " WHERE (record_id IS NULL OR record_id < %s)"
             params.append(before_id)
-        sql += " ORDER BY item_key, id DESC"
+        sql += " ORDER BY item_key, event_at DESC, id DESC"
         c.execute(sql, params)
         rows = c.fetchall()
         release_db_connection(conn)
