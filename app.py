@@ -3657,7 +3657,15 @@ def _chair_issues():
             except Exception: pass
 
     for (note,) in rows:
-        for line in str(note or '').split('\n'):
+        text = str(note or '')
+        done_pos = -1
+        dm = re.search(r'【早前已處理】', text)
+        if dm:
+            done_pos = dm.start()
+        pos = 0
+        for line in text.split('\n'):
+            in_done = done_pos >= 0 and pos > done_pos
+            pos += len(line) + 1
             for it in _up_parse_line(line):
                 cat = it.get('category') or ''
                 is_dlr = ('DLR' in cat and ('櫈' in cat or '椅' in cat))
@@ -3667,7 +3675,10 @@ def _chair_issues():
                 key = _up_norm(it['code'])
                 rec = out.setdefault(key, {'dlr_bad': False, 'guest_bad': False})
                 st_ = it.get('status') or ''
-                bad = not (('已處理' in st_) or ('已处理' in st_) or ('已完成' in st_) or ('已解決' in st_))
+                if in_done:
+                    bad = False
+                else:
+                    bad = not (('已處理' in st_) or ('已处理' in st_) or ('已完成' in st_) or ('已解決' in st_))
                 if is_dlr:
                     rec['dlr_bad'] = bad
                 if is_guest:
