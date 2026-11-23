@@ -1670,252 +1670,83 @@ async function markSelectedDone() {
     }
 }
 
-    function loadPendingIssues() {
-        let _pid = (typeof editingRecordId !== 'undefined' && editingRecordId) ? ('?before_id=' + editingRecordId) : '';
-        fetch('/api/pending_issues' + _pid).then(res => res.json()).then(data => {
-            let issues = data.issues; 
-            let doneSet = data.done_items || []; 
-            let container = document.getElementById('pending-container'); 
-            let listDiv = document.getElementById('pending-list');
-            // ===== 新增：用後端結構化 pending_items 渲染（唔靠文字比對）=====
-            if (data.pending_items && data.pending_items.length) {
-                const _items = data.pending_items;
-                const _typeName = { '場面': '🪑 櫈/座位', 'NFC': '📡 NFC 異常', 'Lux': '💡 Lux', '溫度': '🌡️ 溫度', '分貝': '🔊 分貝' };
-                const _groups = {};
-                _items.forEach(function (it) { const t = it.type || '其他'; (_groups[t] = _groups[t] || []).push(it); });
-                let _html = '';
-                Object.keys(_groups).forEach(function (t) {
-                    _html += '<div class="pending-card" style="border-left:4px solid #ffa000;margin-bottom:15px;"><details open><summary style="cursor:pointer;font-weight:bold;color:#856404;padding:6px;">' + (_typeName[t] || t) + '（' + _groups[t].length + ' 項）</summary>';
-                    _groups[t].forEach(function (it) {
-                        const _dt = (it.key || '') + ' [狀態:' + (it.status || '待處理') + ']';
-                        _html += '<div style="display:flex;align-items:center;background:#ffebee;padding:9px;margin:6px 0;border-radius:6px;border:1px solid #ffcdd2;"><input type="checkbox" class="pending-checkbox" data-key="' + (it.key || '') + '" data-text="' + _dt + '" style="width:20px;height:20px;margin-right:10px;"><div style="font-size:13px;color:#d32f2f;flex:1;"><strong>⚠️ ' + (it.detail || '') + '（' + (it.code || '') + '）</strong> <span style="background:#9c27b0;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;">' + (it.status || '待處理') + '</span><br><span style="font-size:11px;color:#888;">' + (it.name || '') + '</span></div></div>';
-                    });
-                    _html += '</details></div>';
-                });
-                listDiv.innerHTML = _html;
-                container.style.display = 'block';
-                document.getElementById('home-pending-list').innerHTML = _html.replace(/<input[^>]*>/g, '');
-                document.getElementById('home-pending-container').style.display = 'block';
-                document.getElementById('home-pending-title').innerHTML = '⚠️ 有 ' + _items.length + ' 項早前已通知相關部門跟進(尚待解決)';
-                // 修改時：按 key 還原勾選狀態（優先用 items，note 只作舊資料 fallback）
-                if (editingRecordId) {
-                    let _r = allRecords.find(function (x) { return x.id == editingRecordId; });
-                    let _doneKeys = [];
-                    if (_r && Array.isArray(_r.items)) {
-                        _doneKeys = _r.items.filter(function (it) {
-                            return it && it.key && (it.status || '').indexOf('已處理') >= 0;
-                        }).map(function (it) { return it.key; });
-                    }
-                    let _doneLines = [];
-                    if (_doneKeys.length === 0 && _r && _r.note && _r.note.indexOf('【早前已處理】') >= 0) {
-                        _doneLines = parseNote(_r.note).doneOld.split('\n').map(function (l) { return l.replace(/\[狀態:.*?\]/g, '').trim(); }).filter(function (l) { return l; });
-                    }
-                    document.querySelectorAll('.pending-checkbox').forEach(function (cb) {
-                        const k = cb.getAttribute('data-key');
-                        if (!k) return;
-                        if (_doneKeys.indexOf(k) >= 0 || _doneLines.some(function (l) { return l.indexOf(k) >= 0 || k.indexOf(l) >= 0; })) cb.checked = true;
-                    });
-                }
-                return;
-            }
+    async function loadPendingIssues() {
+    const container = document.getElementById('pending-container');
+    const listDiv = document.getElementById('pending-list');
+    const homeC = document.getElementById('home-pending-container');
+    const homeL = document.getElementById('home-pending-list');
+    const homeT = document.getElementById('home-pending-title');
+    const titleEl = document.getElementById('pending-title');
+    if (!container || !listDiv) return;
 
-            
-            if (issues.length === 0) { 
-                container.style.display = 'none'; 
-                document.getElementById('home-pending-container').style.display = 'none'; 
-                listDiv.innerHTML = ''; 
-                document.getElementById('home-pending-list').innerHTML = ''; 
-                return; 
-            }
-            
-            let editingRecordData = editingRecordId ? allRecords.find(x=>x.id==editingRecordId) : null;
-            let doneItemsInEditing = [];
-            
-            if (editingRecordData && editingRecordData.note) {
-                let parsedEdit = parseNote(editingRecordData.note);
-                if (parsedEdit.doneOld) {
-                    doneItemsInEditing = parsedEdit.doneOld.split('\n').map(s=>s.trim()).filter(s=>s).map(s => s.replace(/\[狀態:.*?\]/g, '').trim().toUpperCase());
-                }
-            }
+    let url = '/api/pending_items';
+    if (editingRecordId) url += '?before_id=' + editingRecordId;
 
-            container.style.display = 'block'; 
-            let totalItems = 0; 
-            let seenItems = new Set(); 
-            window.globalGroupedItems = {}; 
-            
-            issues.forEach(issue => {
-                let timeStr = issue.created_at ? fmtDateTime(issue.created_at) : '';
-                let addItem = (type, text, recordId, skipDone) => {
-                    if (!text) return;
-                    // 修改紀錄時：不重複顯示「本張紀錄」自己的項目，
-                    // 否則提交時會把今日的 NFC／場面問題重複寫入「早前未處理」。
-                    if (editingRecordId && recordId != null && String(recordId) === String(editingRecordId)) return;
-                    
-                    if (type === '場面' && text.includes('位置:')) { 
-                        let parts = text.split('位置:'); 
-                        if (parts.length === 2) { 
-                            let beforePos = parts[0]; 
-                            let afterPos = parts[1]; 
-                            let statusMatch = afterPos.match(/\[狀態:.*?\]/); 
-                            let statusStr = statusMatch ? statusMatch[0] : ''; 
-                            let tablesStr = afterPos.replace(/\[狀態:.*?\]/g, '').trim(); 
-                            if (tablesStr.includes(',') || tablesStr.includes('，')) { 
-                                let tables = tablesStr.split(/[,，]/).map(t => t.trim()).filter(Boolean); 
-                                if (tables.every(t => /^[A-Za-z]{2,4}\d+$/i.test(t))) { 
-                                    tables.forEach(table => addItem(type, `${beforePos}位置: ${table} ${statusStr}`.trim(), recordId)); 
-                                    return; 
-                                } 
-                            } 
-                        } 
-                    }
-                    
-                    let statusMatch = text.match(/\[狀態:(.*?)\]/); 
-                    let currentStatus = statusMatch ? statusMatch[1] : '待處理'; 
-                    
-                    let clean = text.replace(/\[狀態:.*?\]/g, '').replace('⚠️', '').replace('✅', '').trim(); 
-                    if (!clean) return;
-                    
-                    let checkText = `${type} - ${clean}`.toUpperCase(); 
-                    let _mcN = clean.match(/[A-Za-z]{2}\d{3,6}/);
-                    let dedupeKey = type + '|' + (_mcN ? _mcN[0].toUpperCase() : clean.toUpperCase());
-                    let dataText = `${type} - ${clean} [狀態:${currentStatus}]`;
-                    
-                    if (seenItems.has(dedupeKey)) return; 
-                    let _cleanU = clean.toUpperCase();
-                    let _inDone = doneSet.some(function (d) { if (d.indexOf(_cleanU) >= 0 || _cleanU.indexOf(d) >= 0) return true; if (type === 'NFC' && _mcN && d.indexOf(_mcN[0].toUpperCase()) >= 0) return true; return false; });
-                    if (!skipDone && _inDone) { seenItems.add(dedupeKey); return; }
-                    if (currentStatus === '已處理') { seenItems.add(dedupeKey); return; }
-                    
-                    let isInEditingDone = doneItemsInEditing.some(l => l.includes(checkText) || checkText.includes(l));
-                    
-                    if (skipDone === 'never') { return; }
-                    
-                    seenItems.add(dedupeKey);
-                    
-                    let badgeColor = currentStatus === '已 Send mail' ? '#9c27b0' : (currentStatus === '已通知相關部門跟進' ? '#e67c73' : '#f5b041');
-                    let checkedAttr = isInEditingDone ? 'checked' : '';
-                    let itemHtml = `<div class="pending-item-row" data-text="${dataText}" style="display:flex; align-items:center; background:#ffebee; padding:10px; margin-bottom:5px; border-radius:6px; border: 1px solid #ffcdd2;"><input type="checkbox" class="pending-checkbox" data-text="${dataText}" ${checkedAttr} style="width:20px; height:20px; margin-right:10px;"><div style="font-size:13px; color:#d32f2f; flex:1; line-height: 1.5; padding: 5px 0;"><strong>⚠️ ${type} - ${clean}</strong><span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:4px; font-size:11px; margin-left:5px; display: inline-block; white-space: nowrap;">${currentStatus}</span><br><span style="font-size:11px; color:#888;">交更時間: ${timeStr}</span></div></div>`;
-                    
-                    let cat = "其他問題"; 
-                    if (checkText.includes('LUX')) cat = "💡 Lux 異常"; 
-                    else if (checkText.includes('溫度')) cat = "🌡️ 溫度"; 
-                    else if (checkText.includes('分貝')) cat = "🔊 分貝"; 
-                    else if (checkText.includes('NFC')) cat = "📡 NFC 異常"; 
-                    else if (checkText.includes('場面 - [櫈')) cat = "🪑 櫈/座位"; 
-                    else if (checkText.includes('場面 - [')) { 
-                        let match = checkText.match(/\[(.*?)\]/); 
-                        if (match) { 
-                            let parts = match[1].split('-'); 
-                            cat = "🛠️ " + parts[0].trim() + (parts.length >= 2 ? " - " + parts[1].trim() : ""); 
-                        } else { 
-                            cat = "🛠️ 場面"; 
-                        } 
-                    }
-                    
-                    if (!window.globalGroupedItems[cat]) window.globalGroupedItems[cat] = [];
-                    window.globalGroupedItems[cat].push(`<div style="margin-bottom:8px;"><div style="font-size:11px; color:#856404; margin-bottom:3px;">👤 ${issue.name}</div>${itemHtml}</div>`); 
-                    totalItems++;
-                };
-                
-                if (issue.lux_issue) addItem('Lux', issue.lux_issue, issue.id); 
-                if (issue.temp_issue) addItem('溫度', issue.temp_issue, issue.id); 
-                if (issue.db_issue) addItem('分貝', issue.db_issue, issue.id);
-                
-                if (issue.checklist && issue.checklist.includes('NFC異常:')) { 
-                    let parts = issue.checklist.split(' | ');
-                    parts.forEach(part => {
-                        if (part.startsWith('NFC異常:')) {
-                            let nfcText = part.replace('NFC異常:', '').trim();
-                            if (nfcText) splitNfcDetails(nfcText).forEach(d => addItem('NFC', d, issue.id));
-                        }
-                    });
-                }
-                
-                let parsedIssue = parseNote(issue.note || "");
-                
-                if (parsedIssue.venue) {
-                    if (issue.id !== editingRecordId) {
-                        parsedIssue.venue.split('\n').forEach(line => { if (line.trim()) addItem('場面', line.replace(/^場面\s*[-－]\s*/, ''), issue.id); });
-                    }
-                }
+    let data = { pending_items: [] };
+    try {
+        const res = await fetch(url, { credentials: 'same-origin' });
+        data = await res.json();
+    } catch (e) { console.error('pending_items 讀取失敗', e); }
 
-                
-                if (parsedIssue.pendingOld) {
-                    parsedIssue.pendingOld.split('\n').forEach(line => {
-                        line = line.trim();
-                        if (line) {
-                            let m = line.match(/^(Lux|溫度|分貝|NFC|場面)\s*-\s*/); 
-                            let t = m ? m[1] : '場面'; 
-                            let txt = m ? line.slice(m[0].length) : line; 
-                            addItem(t, txt, issue.id);
-                        }
-                    });
-                }
-            });
-            
-            let finalHtml = ""; 
-            for (let cat in window.globalGroupedItems) {
-                finalHtml += `<div class="pending-card" style="border-left: 4px solid #ffa000; margin-bottom: 15px;">
-                    <details style="background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 5px;">
-                        <summary style="cursor: pointer; font-weight: bold; color: #856404; padding: 5px; display: flex; align-items: center;">
-                            <input type="checkbox" class="select-all-cb" onchange="toggleSelectAll(this)" onclick="event.stopPropagation()" style="width:18px; height:18px; margin-right:10px; cursor:pointer;">
-                            ${cat} (${window.globalGroupedItems[cat].length} 項)
-                        </summary>
-                        <div style="padding: 5px 0 0 0;">${window.globalGroupedItems[cat].join('')}</div>
-                    </details>
-                </div>`;
-            }
-            
-            if (totalItems === 0) { 
-                container.style.display = 'none'; 
-                listDiv.innerHTML = ''; 
-                document.getElementById('home-pending-container').style.display = 'none'; 
-                document.getElementById('home-pending-list').innerHTML = '';
-            } else { 
-                document.getElementById('pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決) (點擊展開剔選)`; 
-                listDiv.innerHTML = finalHtml; 
-                            listDiv.innerHTML = finalHtml;
-            
-            // ★ 新增：為每個子項目 checkbox 綁定 change 事件，自動更新頂層全選狀態
-            listDiv.querySelectorAll('.pending-checkbox').forEach(cb => {
-                cb.addEventListener('change', function() {
-                    let card = this.closest('.pending-card');
-                    updatePendingCardState(card);
-                });
-            });
-
-                document.getElementById('home-pending-container').style.display = 'block'; 
-                document.getElementById('home-pending-title').innerHTML = `⚠️ 有 ${totalItems} 項早前已通知相關部門跟進(尚待解決)`; 
-                document.getElementById('home-pending-list').innerHTML = finalHtml.replace(/<input type="checkbox"[^>]*>/g, ''); 
-            }
-
-            if (editingRecordId) {
-                let r = allRecords.find(x => x.id == editingRecordId);
-                if (r && r.note && r.note.includes('【早前已處理】')) {
-                    let parsedEdit = parseNote(r.note);
-                    let doneLines = parsedEdit.doneOld.split('\n').map(l => l.replace(/\[狀態:.*?\]/g, '').trim().toUpperCase()).filter(l=>l);
-                    
-                    document.querySelectorAll('.pending-checkbox').forEach(cb => {
-                        let cbText = cb.getAttribute('data-text'); 
-                        let cleanCb = cbText.split(' [狀態:')[0].trim().toUpperCase(); 
-                        if (doneLines.some(line => line.includes(cleanCb) || cleanCb.includes(line))) {
-                            cb.checked = true;
-                        }
-                    });
-                                        document.querySelectorAll('.pending-checkbox').forEach(cb => {
-                        let cbText = cb.getAttribute('data-text'); 
-                        let cleanCb = cbText.split(' [狀態:')[0].trim().toUpperCase(); 
-                        if (doneLines.some(line => line.includes(cleanCb) || cleanCb.includes(line))) {
-                            cb.checked = true;
-                        }
-                    });
-                    // ★ 新增：編輯模式手動勾選後，更新每個分類頂層的半選狀態
-                    document.querySelectorAll('#pending-list .pending-card').forEach(card => updatePendingCardState(card));
-
-                }
-            }
-        }).catch(err => console.error(err));
+    const items = data.pending_items || [];
+    if (!items.length) {
+        container.style.display = 'none';
+        listDiv.innerHTML = '';
+        if (homeC) homeC.style.display = 'none';
+        if (homeL) homeL.innerHTML = '';
+        return;
     }
+
+    // 按類型分組（完全用結構化欄位，不再比對文字）
+    const typeName = { '場面': '🪑 場面問題', 'NFC': '📡 NFC 異常', 'Lux': '💡 Lux', '溫度': '🌡️ 溫度', '分貝': '🔊 分貝' };
+    const groups = {};
+    items.forEach(it => {
+        const t = it.type || '其他';
+        (groups[t] = groups[t] || []).push(it);
+    });
+
+    let html = '';
+    Object.keys(groups).forEach(t => {
+        const arr = groups[t];
+        html += '<div class="pending-card" style="border-left:4px solid #ffa000;margin-bottom:15px;">'
+             + '<details open><summary style="cursor:pointer;font-weight:bold;color:#856404;padding:6px;display:flex;align-items:center;">'
+             + '<input type="checkbox" class="select-all-cb" onclick="event.stopPropagation()" onchange="toggleSelectAll(this)" style="width:18px;height:18px;margin-right:10px;cursor:pointer;">'
+             + (typeName[t] || t) + '（' + arr.length + ' 項）</summary>';
+        arr.forEach(it => {
+            const badge = it.status || '待處理';
+            const color = badge.indexOf('已 Send mail') >= 0 ? '#9c27b0'
+                        : badge.indexOf('已通知') >= 0 ? '#e67c73'
+                        : badge.indexOf('觀察中') >= 0 ? '#f39c12' : '#f5b041';
+            html += '<div style="display:flex;align-items:center;background:#ffebee;padding:9px;margin:6px 0;border-radius:6px;border:1px solid #ffcdd2;">'
+                 + '<input type="checkbox" class="pending-checkbox" data-key="' + htmlEsc(it.key) + '" data-text="' + htmlEsc(it.key) + '" style="width:20px;height:20px;margin-right:10px;">'
+                 + '<div style="font-size:13px;color:#d32f2f;flex:1;">'
+                 + '<strong>⚠️ ' + htmlEsc(it.display || it.key) + '</strong> '
+                 + '<span style="background:' + color + ';color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;">' + htmlEsc(badge) + '</span>'
+                 + (it.note ? '<br><span style="font-size:11px;color:#777;">備註：' + htmlEsc(it.note) + '</span>' : '')
+                 + '</div></div>';
+        });
+        html += '</details></div>';
+    });
+
+    listDiv.innerHTML = html;
+    container.style.display = 'block';
+    if (titleEl) titleEl.innerHTML = '⚠️ 有 ' + items.length + ' 項早前已通知相關部門跟進(尚待解決)（點擊展開剔選）';
+    if (homeC) homeC.style.display = 'block';
+    if (homeT) homeT.innerHTML = '⚠️ 有 ' + items.length + ' 項早前已通知相關部門跟進(尚待解決)';
+    if (homeL) homeL.innerHTML = html.replace(/<input[^>]*>/g, '');
+
+    // 修改紀錄時：把該筆已完成的項目還原為打勾
+    if (editingRecordId) {
+        try {
+            const rr = await fetch('/api/record_items/' + editingRecordId, { credentials: 'same-origin' });
+            const rd = await rr.json();
+            const doneKeys = (rd.items || []).filter(x => /已處理|已完成|已解決/.test(x.status || '')).map(x => x.key);
+            document.querySelectorAll('.pending-checkbox').forEach(cb => {
+                if (doneKeys.indexOf(cb.getAttribute('data-key')) >= 0) cb.checked = true;
+            });
+        } catch (e) {}
+    }
+}
 
     function formatIssueText(text, defaultPrefix, statusStr) {
         if (!text) return "";
@@ -2658,6 +2489,81 @@ async function markSelectedDone() {
         } 
     }
 
+function htmlEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+}
+
+function collectItems() {
+    const out = [];
+    // 場面
+    document.querySelectorAll('.venue-item').forEach(item => {
+        const cat = (item.querySelector('.venue-category') || {}).value || '';
+        const prob = (item.querySelector('.venue-problem') || {}).value || '';
+        const st = (item.querySelector('.issue-status') || {}).value || '待處理';
+        if (!cat) return;
+        item.querySelectorAll('.venue-loc-row').forEach(row => {
+            const t = ((row.querySelector('.venue-location') || {}).value || '').trim();
+            if (!t) return;
+            out.push({
+                type: '場面', code: t, category: cat, problem: prob, detail: '',
+                side: ((row.querySelector('.venue-side') || {}).value || ''),
+                status: st,
+                note: ((row.querySelector('.venue-loc-note') || {}).value || '').trim()
+            });
+        });
+    });
+    // Lux（每個 Box 各自一項）
+    if (!document.getElementById('skip-lux').checked) {
+        document.querySelectorAll('.lux-item').forEach(item => {
+            const table = (item.querySelector('.lux-table') || {}).value || '';
+            const st = (item.querySelector('.issue-status') || {}).value || '待處理';
+            let anyBox = false;
+            [['lux-box1', 'Box 1'], ['lux-box3', 'Box 3'], ['lux-box6', 'Box 6']].forEach(pair => {
+                const el = item.querySelector('.' + pair[0]);
+                const v = el ? el.value : '';
+                if (v) { anyBox = true; out.push({ type: 'Lux', code: table, detail: pair[1] + ': ' + v, status: st, note: '' }); }
+            });
+            if (table && !anyBox) out.push({ type: 'Lux', code: table, detail: '', status: st, note: '' });
+        });
+    }
+    // 溫度
+    if (!document.getElementById('skip-temp').checked) {
+        document.querySelectorAll('.temp-item').forEach(item => {
+            const table = (item.querySelector('.temp-table') || {}).value || '';
+            const val = (item.querySelector('.temp-value') || {}).value || '';
+            const st = (item.querySelector('.issue-status') || {}).value || '待處理';
+            if (!table && !val) return;
+            out.push({ type: '溫度', code: table, detail: val ? ('數值: ' + val) : '',
+                       status: st, note: ((item.querySelector('.issue-note') || {}).value || '').trim() });
+        });
+    }
+    // 分貝
+    if (!document.getElementById('skip-bgm').checked) {
+        document.querySelectorAll('.bgm-item').forEach(item => {
+            const table = (item.querySelector('.bgm-table') || {}).value || '';
+            const val = (item.querySelector('.bgm-value') || {}).value || '';
+            const st = (item.querySelector('.issue-status') || {}).value || '待處理';
+            if (!table && !val) return;
+            out.push({ type: '分貝', code: table, detail: val ? ('數值: ' + val) : '',
+                       status: st, note: ((item.querySelector('.issue-note') || {}).value || '').trim() });
+        });
+    }
+    // NFC（每個 Box 各自一項）
+    if (!document.getElementById('skip-nfc').checked && document.getElementById('nfc-status').value === '有異常') {
+        document.querySelectorAll('.nfc-item').forEach(item => {
+            const table = (item.querySelector('.nfc-table') || {}).value || '';
+            const st = (item.querySelector('.issue-status') || {}).value || '待處理';
+            const boxes = Array.from(item.querySelectorAll('.nfc-box:checked')).map(cb => cb.value);
+            if (!table && !boxes.length) return;
+            if (!boxes.length) out.push({ type: 'NFC', code: table, detail: '未選Box', status: st, note: '' });
+            boxes.forEach(b => out.push({ type: 'NFC', code: table, detail: b, status: st, note: '' }));
+        });
+    }
+    return out;
+}
+
     function submitForm() {
         let pendingCheckboxes = document.querySelectorAll('.pending-checkbox'); 
         let doneOldItems = []; 
@@ -2795,7 +2701,9 @@ async function markSelectedDone() {
             layout_side: Object.keys(layoutSide).length ? JSON.stringify(layoutSide) : '',
             lux_issue: document.getElementById('skip-lux').checked ? "" : luxIssue, 
             temp_issue: document.getElementById('skip-temp').checked ? "" : tempIssue, 
-            db_issue: document.getElementById('skip-bgm').checked ? "" : dbIssue 
+            db_issue: document.getElementById('skip-bgm').checked ? "" : dbIssue,
+            items: collectItems(),
+            done_keys: doneOldItems.map(x => String(x).split(' [狀態:')[0].trim()).filter(x => x.indexOf('|') >= 0)
         };
         
         if (!data.name) { alert("請選擇交更人！"); return; }
