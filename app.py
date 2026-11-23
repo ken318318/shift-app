@@ -463,7 +463,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-12", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-13", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -844,6 +844,35 @@ def delete_config():
             release_db_connection(conn)
 
 @app.route('/api/rename_config', methods=['POST'])
+
+def _si_rename_keys(c, old_third, new_third, new_cat=None, new_prob=None):
+    """改名時同步 shift_items 的 item_key。
+    old_third／new_third 是 key 的第三段（例如「櫈 - 客櫈 - 扶手鬆脫」）。
+    不依賴 category/problem 欄位（reopen 行可能為空）。"""
+    c.execute("SELECT id, item_key, display FROM shift_items WHERE item_key LIKE %s",
+              ('%|' + old_third,))
+    rows = c.fetchall()
+    n = 0
+    for rid, key, disp in rows:
+        parts = key.split('|')
+        if len(parts) < 3:
+            continue
+        new_key = parts[0] + '|' + parts[1] + '|' + new_third
+        new_disp = (disp or '').replace(old_third, new_third)
+        sets = ["item_key=%s", "display=%s"]
+        params = [new_key, new_disp]
+        if new_cat is not None:
+            sets.append("category=%s")
+            params.append(new_cat)
+        if new_prob is not None:
+            sets.append("problem=%s")
+            params.append(new_prob)
+        params.append(rid)
+        c.execute("UPDATE shift_items SET " + ", ".join(sets) + " WHERE id=%s", params)
+        n += 1
+    return n
+
+
 def rename_config():
     """修改類別名稱或問題名稱（任何已登入同事都可用）。"""
     data = request.json or {}
@@ -866,12 +895,14 @@ def rename_config():
                 return jsonify({"status": "error", "message": "⚠️ 已存在同名類別，請用其他名稱。"})
             c.execute("UPDATE venue_configs SET category = %s WHERE category = %s", (new_cat, old_cat))
             # 同步已存在的問題項（否則改名後同一問題會變兩項）
-            c.execute("""UPDATE shift_items
-                         SET item_key = replace(item_key, '|' || %s || ' - ', '|' || %s || ' - '),
-                             category = %s,
-                             display  = replace(display, %s || ' - ', %s || ' - ')
-                         WHERE type = '場面' AND category = %s""",
-                      (old_cat, new_cat, new_cat, old_cat, new_cat, old_cat))
+            c.execute("SELECT DISTINCT item_key FROM shift_items WHERE type = '場面' AND item_key LIKE %s",
+                      ('%|' + old_cat + ' - %',))
+            for (_k,) in c.fetchall():
+                _p = _k.split('|')
+                if len(_p) < 3:
+                    continue
+                _new_third = new_cat + _p[2][len(old_cat):]
+                _si_rename_keys(c, _p[2], _new_third, new_cat=new_cat)
 
         elif rtype == 'problem':
             category = (data.get('category') or '').strip()
@@ -885,13 +916,8 @@ def rename_config():
             if c.fetchone():
                 return jsonify({"status": "error", "message": "⚠️ 該類別已有同名問題，請用其他名稱。"})
             # 同步已存在的問題項
-            c.execute("""UPDATE shift_items
-                         SET item_key = replace(item_key, '|' || %s || ' - ' || %s, '|' || %s || ' - ' || %s),
-                             problem  = %s,
-                             display  = replace(display, %s || ' - ' || %s, %s || ' - ' || %s)
-                         WHERE type = '場面' AND category = %s AND problem = %s""",
-                      (category, old_prob, category, new_prob, new_prob,
-                       category, old_prob, category, new_prob, category, old_prob))
+            _si_rename_keys(c, category + ' - ' + old_prob, category + ' - ' + new_prob,
+                            new_cat=category, new_prob=new_prob)
             c.execute("UPDATE venue_configs SET problem = %s WHERE category = %s AND problem = %s",
                       (new_prob, category, old_prob))
 
