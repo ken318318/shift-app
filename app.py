@@ -463,7 +463,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-13", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-14", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -843,8 +843,6 @@ def delete_config():
         if conn:
             release_db_connection(conn)
 
-@app.route('/api/rename_config', methods=['POST'])
-
 def _si_rename_keys(c, old_third, new_third, new_cat=None, new_prob=None):
     """改名時同步 shift_items 的 item_key。
     old_third／new_third 是 key 的第三段（例如「櫈 - 客櫈 - 扶手鬆脫」）。
@@ -872,6 +870,8 @@ def _si_rename_keys(c, old_third, new_third, new_cat=None, new_prob=None):
         n += 1
     return n
 
+
+@app.route('/api/rename_config', methods=['POST'])
 
 def rename_config():
     """修改類別名稱或問題名稱（任何已登入同事都可用）。"""
