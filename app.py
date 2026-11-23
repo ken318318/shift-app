@@ -213,6 +213,7 @@ def bump_epoch(role):
 
 # ---------- 簡單記憶體快取（單一 worker 有效，減少重複查詢） ----------
 _RESULT_CACHE = {}
+_DBG = {}
 
 
 def cache_get(key):
@@ -2669,6 +2670,9 @@ def _si_overlay_detect(out, date_str):
             except Exception:
                 pass
 
+    _DBG['overlay_latest'] = len(latest)
+    _DBG['overlay_keys'] = [list(k) + [v['status']] for k, v in list(latest.items())[:6]]
+    _DBG['out_keys_before_pop'] = [list(k) for k in list(out.keys())[:6]]
     for k, v in latest.items():
         if any(x in v['status'] for x in ('已處理', '已处理', '已完成', '已解決')):
             out.pop(k, None)
@@ -2701,7 +2705,9 @@ def _up_detect(date_str):
                        AND (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date <= %s
                      ORDER BY id ASC""", (date_str,))
         rows = c.fetchall()
+        _DBG['rows'] = len(rows)
     except Exception as e:
+        _DBG['rows_error'] = str(e)
         print('更新表讀取紀錄失敗:', e)
     finally:
         if conn:
@@ -2807,8 +2813,11 @@ def _up_detect(date_str):
                     continue
         rec['side'] = sides.get(rec['code'], '')
 
+    _DBG['out_before_overlay'] = len(out)
+    _DBG['done_at_size'] = len(done_at)
     # 以 shift_items 的最新狀態為準（完成／復發即時反映）
     _si_overlay_detect(out, date_str)
+    _DBG['out_after_overlay'] = len(out)
 
     return out, done_at, nfc_nocode
 
@@ -2933,7 +2942,7 @@ def update_debug():
         if conn:
             try: release_db_connection(conn)
             except Exception: pass
-    return jsonify({'detected': len(out), 'sample': [(k[0], k[1], v.get('status')) for k, v in list(out.items())[:5]],
+    return jsonify({'dbg': dict(_DBG), 'detected': len(out), 'sample': [(k[0], k[1], v.get('status')) for k, v in list(out.items())[:5]],
                     'done_at': [(k[0], k[1], str(v[0])) for k, v in list(done_at.items())[:5]],
                     'info': info})
 
