@@ -2074,7 +2074,7 @@ def _up_parse_line(line):
     problem = parts[-1] if parts else ''
     category = ' - '.join(parts[:-1]).strip() if len(parts) > 1 else ''
     loc_text = m.group(2)
-    st = re.search(r'\[狀態\s*[:：]\s*([^\]]*)\]', loc_text)
+    st = re.search(r'[\[【]狀態\s*[:：]\s*([^\]】]*)[\]】]', loc_text)
     status = st.group(1).strip() if st else ''
     if st:
         loc_text = loc_text[:st.start()]
@@ -3666,7 +3666,8 @@ def _chair_issues():
                     continue
                 key = _up_norm(it['code'])
                 rec = out.setdefault(key, {'dlr_bad': False, 'guest_bad': False})
-                bad = (it.get('status') != '已處理')
+                st_ = it.get('status') or ''
+                bad = not (('已處理' in st_) or ('已处理' in st_) or ('已完成' in st_) or ('已解決' in st_))
                 if is_dlr:
                     rec['dlr_bad'] = bad
                 if is_guest:
@@ -3706,7 +3707,7 @@ def chair_map_get():
         key = _up_norm(code)
         st = hall_status.get(key, '營運') if key else ''
         iss = issues.get(key, {}) if key else {}
-        stand = bool(key) and (code.upper().startswith(('RL', 'DS')) or code.upper() in
+        stand = bool(key) and (code.upper().startswith(('RL', 'DS', 'SB')) or code.upper() in
                                ('NB1626','NB1627','NB1628','NB1629','NB1630','NB1631','NB1632','NB1633'))
         cells.append({
             'r': cell.get('r'), 'c': cell.get('c'),
