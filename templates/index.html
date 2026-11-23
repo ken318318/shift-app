@@ -618,6 +618,14 @@
                     <button class="cm-sw" style="color:#c62828" onclick="cmClearAllEdits()">🗑️ 清空全部</button>
                     <button class="cm-sw" style="background:#2e7d32;color:#fff;border-color:#2e7d32" onclick="cmToggleEdit()">✅ 完成編輯</button>
                 </div>
+                <div class="cm-tools-row">
+                    <span class="cm-tools-lbl">台狀態</span>
+                    <button class="cm-sw" onclick="cmSetChairAction('new')">🆕 新櫈</button>
+                    <button class="cm-sw" onclick="cmSetChairAction('old')">🕰️ 舊櫈</button>
+                    <button class="cm-sw" onclick="cmSetChairAction('none')">➖ 取消新舊</button>
+                    <button class="cm-sw" onclick="cmSetChairAction('operating')">✅ 營運</button>
+                    <button class="cm-sw" onclick="cmSetChairAction('inactive')">⛔ 停運</button>
+                </div>
                 <div id="cm-selinfo" class="cm-tools-lbl" style="margin:2px;font-weight:normal;color:#455a64;">未選取格仔（點一下或拖選）</div>
             </div>
             <div id="cm-scroll" style="overflow:auto; background:#fff; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,.08);">
@@ -3301,6 +3309,33 @@ function collectItems() {
         }
     }
 
+
+    async function cmSetChairAction(action) {
+        const s = cmSelRange();
+        if (!s) { alert('請先選取台號。'); return; }
+        const codes = [];
+        cmTargetCells().forEach(function (c) {
+            const cell = (cmData.cells || []).find(function (x) { return x.r === c.r && x.c === c.c; });
+            if (cell && cell.code) codes.push(cell.code);
+        });
+        if (!codes.length) { alert('選取範圍內冇台號。'); return; }
+        const names = { new: '設為新櫈', old: '設為舊櫈', none: '取消新舊設定',
+                        operating: '設為營運', inactive: '設為停運' };
+        const label = names[action] || action;
+        if (!confirm(label + '（' + codes.length + ' 台）？\n\n' + codes.slice(0, 12).join('、') + (codes.length > 12 ? ' …' : ''))) return;
+        try {
+            const r = await fetch('/api/chair_map/bulk', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: action, codes: codes })
+            });
+            const d = await r.json();
+            if (!d || d.status !== 'success') { alert((d && d.message) || '❌ 失敗'); return; }
+            await loadChairMap();
+            cmToast(d.message || ('✅ ' + label));
+        } catch (e) {
+            alert('❌ 連線失敗');
+        }
+    }
     async function cmSetEvent(on) {
         const s = cmSelRange();
         if (!s) { alert('請先選取台號。'); return; }
