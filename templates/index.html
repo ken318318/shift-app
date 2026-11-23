@@ -1641,7 +1641,7 @@ async function markSelectedDone() {
             const res = await fetch('/api/mark_done', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ keys: keys })
+                body: JSON.stringify({ keys: keys, record_id: (typeof editingRecordId !== 'undefined' && editingRecordId) ? editingRecordId : null })
             });
             try {
                 return await res.json();
@@ -1688,16 +1688,28 @@ async function markSelectedDone() {
         data = await res.json();
     } catch (e) { console.error('pending_items 讀取失敗', e); }
 
-    // 修改紀錄時：本張紀錄自己已報告的項目，不再於「待跟進」重複列出
-    let ownKeys = [];
+    // 修改紀錄時：
+    //   ① 本張紀錄「上報」的項目 → 已在表單，黃框不重複列出
+    //   ② 本張紀錄「標記完成」的項目 → 要還原勾選狀態，所以補回清單並打勾
+    let ownReported = [], resolvedHere = [];
     if (editingRecordId) {
         try {
             const rr = await fetch('/api/record_items/' + editingRecordId, { credentials: 'same-origin' });
             const rd = await rr.json();
-            ownKeys = (rd.items || []).map(x => x.key);
+            (rd.items || []).forEach(x => {
+                if (x.source === 'resolve') resolvedHere.push(x); else ownReported.push(x);
+            });
         } catch (e) {}
     }
-    const items = (data.pending_items || []).filter(it => ownKeys.indexOf(it.key) < 0);
+    const _reportedKeys = ownReported.map(x => x.key);
+    const _resolvedKeys = resolvedHere.map(x => x.key);
+    let items = (data.pending_items || []).filter(it =>
+        _reportedKeys.indexOf(it.key) < 0 && _resolvedKeys.indexOf(it.key) < 0);
+    // 補回本張已標記完成的項目（打勾顯示）
+    resolvedHere.forEach(x => {
+        items.push({ key: x.key, type: x.type, code: x.code, display: x.display || x.key,
+                     status: '已處理', note: x.note || '', __done: true });
+    });
     if (!items.length) {
         container.style.display = 'none';
         listDiv.innerHTML = '';
@@ -1723,11 +1735,13 @@ async function markSelectedDone() {
              + (typeName[t] || t) + '（' + arr.length + ' 項）</summary>';
         arr.forEach(it => {
             const badge = it.status || '待處理';
-            const color = badge.indexOf('已 Send mail') >= 0 ? '#9c27b0'
+            const _done = it.__done || badge.indexOf('已處理') >= 0;
+            const color = _done ? '#2e7d32'
+                        : badge.indexOf('已 Send mail') >= 0 ? '#9c27b0'
                         : badge.indexOf('已通知') >= 0 ? '#e67c73'
                         : badge.indexOf('觀察中') >= 0 ? '#f39c12' : '#f5b041';
-            html += '<div style="display:flex;align-items:center;background:#ffebee;padding:9px;margin:6px 0;border-radius:6px;border:1px solid #ffcdd2;">'
-                 + '<input type="checkbox" class="pending-checkbox" data-key="' + htmlEsc(it.key) + '" data-text="' + htmlEsc(it.key) + '" style="width:20px;height:20px;margin-right:10px;">'
+            html += '<div style="display:flex;align-items:center;background:' + (_done ? '#e8f5e9' : '#ffebee') + ';padding:9px;margin:6px 0;border-radius:6px;border:1px solid ' + (_done ? '#c8e6c9' : '#ffcdd2') + ';">'
+                 + '<input type="checkbox" class="pending-checkbox" data-key="' + htmlEsc(it.key) + '" data-text="' + htmlEsc(it.key) + '" data-done="' + (_done ? '1' : '0') + '"' + (_done ? ' checked' : '') + ' style="width:20px;height:20px;margin-right:10px;">'
                  + '<div style="font-size:13px;color:#d32f2f;flex:1;">'
                  + '<strong>⚠️ ' + htmlEsc(it.display || it.key) + '</strong> '
                  + '<span style="background:' + color + ';color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;">' + htmlEsc(badge) + '</span>'
@@ -1739,9 +1753,13 @@ async function markSelectedDone() {
 
     listDiv.innerHTML = html;
     container.style.display = 'block';
-    if (titleEl) titleEl.innerHTML = '⚠️ 有 ' + items.length + ' 項早前已通知相關部門跟進(尚待解決)（點擊展開剔選）';
+    const _openCount = items.filter(x => !x.__done).length;
+    const _titleText = _openCount > 0
+        ? ('⚠️ 有 ' + _openCount + ' 項早前已通知相關部門跟進(尚待解決)（點擊展開剔選）')
+        : '✅ 本張紀錄已標記完成的項目（僅供核對；取消勾選會回復為待處理）';
+    if (titleEl) titleEl.innerHTML = _titleText;
     if (homeC) homeC.style.display = 'block';
-    if (homeT) homeT.innerHTML = '⚠️ 有 ' + items.length + ' 項早前已通知相關部門跟進(尚待解決)';
+    if (homeT) homeT.innerHTML = _titleText.replace('（點擊展開剔選）', '');
     if (homeL) homeL.innerHTML = html.replace(/<input[^>]*>/g, '');
 
 }
@@ -2565,7 +2583,11 @@ function collectItems() {
 
     function submitForm() {
         let pendingCheckboxes = document.querySelectorAll('.pending-checkbox'); 
-        let doneOldItems = []; 
+        let doneOldItems = [];
+        let reopenKeys = [];
+        document.querySelectorAll('.pending-checkbox[data-done="1"]').forEach(cb => {
+            if (!cb.checked) reopenKeys.push(cb.getAttribute('data-key'));
+        }); 
         
         pendingCheckboxes.forEach(cb => { 
             let text = cb.getAttribute('data-text'); 
@@ -2702,7 +2724,8 @@ function collectItems() {
             temp_issue: document.getElementById('skip-temp').checked ? "" : tempIssue, 
             db_issue: document.getElementById('skip-bgm').checked ? "" : dbIssue,
             items: collectItems(),
-            done_keys: doneOldItems.map(x => String(x).split(' [狀態:')[0].trim()).filter(x => x.indexOf('|') >= 0)
+            done_keys: doneOldItems.map(x => String(x).split(' [狀態:')[0].trim()).filter(x => x.indexOf('|') >= 0),
+            reopen_keys: reopenKeys
         };
         
         if (!data.name) { alert("請選擇交更人！"); return; }
