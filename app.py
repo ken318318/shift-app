@@ -471,7 +471,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-17", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-18", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -4393,6 +4393,83 @@ def chair_map_get():
                     'pits': layout.get('pits', []), 'extras': layout.get('extras', []),
                     'merges': layout.get('merges', []), 'cells': cells,
                     'edits': _chair_edits()})
+
+
+@app.route('/api/chair_map/bulk', methods=['POST'])
+def chair_map_bulk():
+    """批量設定：新櫈／舊櫈／取消新舊／營運／停運／活動台（管理員）。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以修改。'})
+
+    data = request.json or {}
+    action = (data.get('action') or '').strip()
+    codes = data.get('codes') or []
+    if not isinstance(codes, list):
+        codes = [codes]
+    codes = [_up_norm(str(c)) for c in codes]
+    codes = [c for c in codes if c]
+    if not codes:
+        return jsonify({'status': 'error', 'message': '缺少台號。'})
+
+    n = 0
+    try:
+        if action in ('new', 'old', 'none'):
+            types = _chair_types()
+            typ = '' if action == 'none' else action
+            for c in codes:
+                if typ:
+                    types[c] = typ
+                else:
+                    types.pop(c, None)
+                n += 1
+            if not set_setting(_CHAIR_TYPE_KEY, json.dumps(types, ensure_ascii=False)):
+                return jsonify({'status': 'error', 'message': '❌ 儲存失敗。'})
+            label = {'new': '設為新櫈', 'old': '設為舊櫈', 'none': '取消新舊設定'}[action]
+
+        elif action in ('operating', 'inactive'):
+            st = '營運' if action == 'operating' else '停運'
+            conn = None
+            try:
+                conn = get_db_connection()
+                c = conn.cursor()
+                c.execute("UPDATE hall_tables SET status = %s WHERE UPPER(table_code) = ANY(%s)", (st, codes))
+                n = c.rowcount
+                conn.commit()
+            finally:
+                if conn:
+                    try:
+                        release_db_connection(conn)
+                    except Exception:
+                        pass
+            label = '設為' + st
+
+        elif action in ('event_on', 'event_off'):
+            cur = _chair_event_tables()
+            on = (action == 'event_on')
+            for c in codes:
+                if on:
+                    cur.add(c)
+                else:
+                    cur.discard(c)
+                n += 1
+            if not set_setting(_CHAIR_EVENT_KEY, json.dumps(sorted(cur), ensure_ascii=False)):
+                return jsonify({'status': 'error', 'message': '❌ 儲存失敗。'})
+            label = '標記活動台' if on else '恢復台'
+
+        else:
+            return jsonify({'status': 'error', 'message': '❌ 未知操作。'})
+
+        try:
+            log_action('櫈況圖批量', '%s %d 台' % (label, n))
+        except Exception:
+            pass
+        return jsonify({'status': 'success', 'count': n,
+                        'message': '✅ 已%s %d 台' % (label, n)})
+    except Exception as e:
+        print('chair_map_bulk Error:', e)
+        return jsonify({'status': 'error', 'message': '❌ 失敗：%s' % str(e)})
 
 
 @app.route('/api/chair_map/type', methods=['POST'])
