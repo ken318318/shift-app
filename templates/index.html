@@ -1691,6 +1691,10 @@ function updatePendingCardState(card) {
                     let dataText = `${type} - ${clean} [狀態:${currentStatus}]`;
                     
                     if (seenItems.has(dedupeKey)) return; 
+                    let _cleanU = clean.toUpperCase();
+                    let _inDone = doneSet.some(function (d) { return d.indexOf(_cleanU) >= 0 || _cleanU.indexOf(d) >= 0; });
+                    if (!skipDone && _inDone) { seenItems.add(dedupeKey); return; }
+                    if (currentStatus === '已處理') { seenItems.add(dedupeKey); return; }
                     
                     let isInEditingDone = doneItemsInEditing.some(l => l.includes(checkText) || checkText.includes(l));
                     
