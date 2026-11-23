@@ -1723,6 +1723,7 @@ def get_pending_issues():
                  WHERE status NOT IN ('已處理') 
                  AND (lux_issue != '' OR temp_issue != '' OR db_issue != '' 
                       OR note LIKE '%【場面問題】%' OR note LIKE '%【早前未處理】%'
+                      OR note LIKE '%客櫈%' OR note LIKE '%DLR櫈%' OR note LIKE '%客椅%'
                       OR checklist LIKE '%NFC異常%')
                  ORDER BY id DESC""")
     rows = c.fetchall()
@@ -3737,7 +3738,7 @@ def chair_map_get():
             'bg': cell.get('bg', ''),
             'event': bool(key) and _up_norm(code) in event_codes
         })
-    cnt = {'total': 0, 'active': 0, 'inactive': 0, 'dlr_bad': 0, 'guest_bad': 0, 'spare': 0, 'new': 0, 'old': 0}
+    cnt = {'total': 0, 'active': 0, 'inactive': 0, 'dlr_bad': 0, 'guest_bad': 0, 'spare': 0, 'new': 0, 'old': 0, 'event': 0}
     for x in cells:
         if x.get('event'):
             continue
@@ -3749,6 +3750,7 @@ def chair_map_get():
         if not x.get('code'):
             continue
         if x.get('event'):
+            cnt['event'] += 1
             continue
         cnt['total'] += 1
         if x.get('status') == '停運':
