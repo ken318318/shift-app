@@ -477,15 +477,14 @@
                 <h3 id="pending-title" style="margin: 0; font-size: 15px; color: #856404;">⚠️ 未完成跟進項目</h3>
                 <span id="pending-arrow" style="color: #856404; font-weight: bold;">▼ 展開</span>
             </div>
-            <div style="font-size: 12px; color: #856404; margin-top: 6px;">已完成的請打勾；未勾選的項目會繼續保留在「待跟進」，不會寫入本紀錄。</div>
+            <div style="font-size: 12px; color: #856404; margin-top: 6px;">已完成的請打勾；未勾選的會視為尚未處理，繼續保留在「待跟進」。</div>
             <div id="pending-list" style="display: none; margin-top: 15px; border-top: 1px dashed #e0c97e; padding-top: 15px;"></div>
             <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #ffeeba; font-size: 13px; color: #856404;">
                 <label style="display: flex; align-items: flex-start; cursor: pointer; margin: 0;">
                     <input type="checkbox" id="confirm-pending" style="margin-right: 8px; margin-top: 2px; width: 16px; height: 16px;">
-                    <span>我已核對以上項目（已完成的經已勾選）</span>
+                    <span>我已確定未勾選的項目為尚未處理</span>
                 </label>
             </div>
-            <button type="button" onclick="markSelectedDone()" style="margin-top:10px; width:100%; padding:11px; background:#2e7d32; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer; box-sizing:border-box;">✅ 標記勾選項目為「已完成」（即時從待跟進移除）</button>
         </div>
         <button class="submit-btn" id="submit-btn-main" onclick="submitForm()">提交交更</button>
         <div id="result"></div>
@@ -2615,7 +2614,7 @@ function collectItems() {
         if (pendingCheckboxes.length > 0) {
             let cbx = document.getElementById('confirm-pending');
             if (!cbx || !cbx.checked) {
-                alert('⚠️ 請先核對「待跟進」清單：\n\n已完成的項目請打勾，並勾選「我已核對以上項目」，然後再次提交。');
+                alert('⚠️ 請先確認「待跟進」清單：\n\n已完成的請打勾；未勾選的會視為尚未處理。\n請勾選「我已確定未勾選的項目為尚未處理」，然後再次提交。');
                 return;
             }
         }
