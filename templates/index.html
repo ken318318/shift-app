@@ -2050,11 +2050,11 @@ async function loadPendingIssues() {
                         if (hallSeg) hallName = hallSeg.replace(/^NFC正常[:：]\s*/, '').trim();
                         hasNfcIssue = r.checklist.includes('NFC異常');
                     }
-                    let chip = (label, st) => `<span style="display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap; background:${st === 'ok' ? '#e6f4ea' : (st === 'warn' ? '#fff4e5' : '#f1f3f4')}; color:${st === 'ok' ? '#137333' : (st === 'warn' ? '#b26a00' : '#5f6368')}; border:1px solid ${st === 'ok' ? '#b7e1cd' : (st === 'warn' ? '#ffd8a8' : '#dadce0')};">${st === 'ok' ? '✅' : (st === 'warn' ? '⚠️' : '—')} ${label}</span>`;
+                    let chip = (label, st) => `<span style="display:inline-block; padding:2px 6px; border-radius:10px; font-size:11px; white-space:nowrap; background:${st === 'ok' ? '#e6f4ea' : (st === 'warn' ? '#fff4e5' : '#f1f3f4')}; color:${st === 'ok' ? '#137333' : (st === 'warn' ? '#b26a00' : '#5f6368')}; border:1px solid ${st === 'ok' ? '#b7e1cd' : (st === 'warn' ? '#ffd8a8' : '#dadce0')};">${st === 'ok' ? '✅' : (st === 'warn' ? '⚠️' : '—')} ${label}</span>`;
                     let meterState = (val, issue) => (!val ? 'none' : (issue ? 'warn' : 'ok'));
                     let rows = [];
                     if (r.lux || r.temp || r.bgm) {
-                        rows.push(`<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-bottom:6px;"><span style="font-weight:bold; white-space:nowrap;">🏢 全場檢測：</span>${chip('Lux', meterState(r.lux, r.lux_issue))}${chip('溫度', meterState(r.temp, r.temp_issue))}${chip('分貝', meterState(r.bgm, r.db_issue))}</div>`);
+                        rows.push(`<div style="display:flex; flex-wrap:nowrap; align-items:center; gap:4px; margin-bottom:6px;"><span style="font-weight:bold; white-space:nowrap; font-size:12px;">🏢 全場檢測：</span>${chip('Lux', meterState(r.lux, r.lux_issue))}${chip('溫度', meterState(r.temp, r.temp_issue))}${chip('分貝', meterState(r.bgm, r.db_issue))}</div>`);
                     }
                     if (hallName) {
                         rows.push(`<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px;"><span style="font-weight:bold; white-space:nowrap;">🛰️ 本更 NFC 檢測：</span><span style="font-weight:bold; white-space:nowrap;">${hallName}</span><span style="background:#1a73e8; color:#fff; padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap;">✅ 已完成</span></div>`);
@@ -2104,11 +2104,11 @@ async function loadPendingIssues() {
 
                 let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${fmtDateTime(r.created_at)}</div>` : "";
                 let luxStr = !r.lux ? 'Lux 未檢測'
-                    : (r.lux === '450-650' ? 'Lux 450–650 lx（正常）' : `Lux ${r.lux} lx（個別台號異常）`);
+                    : (r.lux === '450-650' ? 'Lux 450–650 lx' : `Lux ${r.lux} lx`);
                 let tempStr = !r.temp ? '溫度 未檢測'
-                    : ((r.temp === '正常 (22.5-24.5)' || r.temp === '正常') ? '溫度 22.5–24.5 °C（正常）' : `溫度 ${unitTempText(r.temp)}`);
+                    : ((r.temp === '正常 (22.5-24.5)' || r.temp === '正常') ? '溫度 22.5–24.5 °C' : `溫度 ${unitTempText(r.temp)}`);
                 let bgmStr = !r.bgm ? '分貝 未檢測'
-                    : ((r.bgm === '正常 (65-75)' || r.bgm === '正常') ? '分貝 65–75 dB（正常）' : `分貝 ${unitBgmText(r.bgm)}`);
+                    : ((r.bgm === '正常 (65-75)' || r.bgm === '正常') ? '分貝 65–75 dB' : `分貝 ${unitBgmText(r.bgm)}`);
                 let dataHtml = `<div class="record-data">📊 全場檢測：${luxStr} ｜ ${tempStr} ｜ ${bgmStr}</div>`;
                 
                 let onDutyHtml = '';
