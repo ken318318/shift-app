@@ -1742,14 +1742,14 @@ function updatePendingCardState(card) {
                     if (issue.id !== editingRecordId) {
                         parsedIssue.venue.split('\n').forEach(line => { if (line.trim()) addItem('場面', line, issue.id); });
                     }
-                } else if (/場面\s*[-－]\s*【/.test(issue.note || '')) {
-                    (issue.note || '').split('\n').forEach(function (line) {
-                        if (/場面\s*[-－]\s*【/.test(line) && line.indexOf('位置') >= 0) {
-                            let norm = line.replace(/【/g, '[').replace(/】/g, ']').replace(/^.*?場面\s*[-－]\s*/, '');
-                            addItem('場面', norm, issue.id);
-                        }
-                    });
                 }
+                // 兼容「場面 -【...】位置: ...」格式（無條件逐行抽）
+                (issue.note || '').split('\n').forEach(function (line) {
+                    if (/場面\s*[-－]\s*【/.test(line) && line.indexOf('位置') >= 0) {
+                        let norm = line.replace(/【/g, '[').replace(/】/g, ']').replace(/^.*?場面\s*[-－]\s*/, '');
+                        addItem('場面', norm, issue.id);
+                    }
+                });
                 
                 if (parsedIssue.pendingOld) {
                     parsedIssue.pendingOld.split('\n').forEach(line => {
