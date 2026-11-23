@@ -1691,6 +1691,13 @@ function updatePendingCardState(card) {
                     if (seenItems.has(checkText)) return; 
                     
                     let inDoneSet = doneSet.includes(checkText);
+                    if (!inDoneSet) {
+                        let mCode = clean.match(/[A-Za-z]{2}\d{3,6}/);
+                        if (mCode) {
+                            let cs = mCode[0].toUpperCase();
+                            inDoneSet = doneSet.some(function (d) { return d.indexOf(cs) >= 0; });
+                        }
+                    }
                     let isInEditingDone = doneItemsInEditing.some(l => l.includes(checkText) || checkText.includes(l));
                     
                     if (!skipDone && inDoneSet && !isInEditingDone) { return; }
