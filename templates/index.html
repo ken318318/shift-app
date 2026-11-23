@@ -1700,8 +1700,14 @@ async function loadPendingIssues() {
         try {
             const rr = await fetch('/api/record_items/' + editingRecordId, { credentials: 'same-origin' });
             const rd = await rr.json();
-            (rd.items || []).forEach(x => {
-                if (x.source === 'resolve') resolvedHere.push(x); else ownReported.push(x);
+            // 同一 key 可能有多個事件（submit / resolve / reopen），以「最後一個」為準
+            const _byKey = {};
+            (rd.items || []).forEach(x => { _byKey[x.key] = x; });   // items 已按 id 升序，後者覆蓋
+            Object.keys(_byKey).forEach(k => {
+                const x = _byKey[k];
+                if (x.source === 'resolve') resolvedHere.push(x);        // 最後係完成 → 打勾
+                else if (x.source === 'reopen') { /* 最後係復發 → 交由 pending 決定 */ }
+                else ownReported.push(x);                                 // 本張上報 → 隱藏
             });
         } catch (e) {}
     }
