@@ -271,7 +271,160 @@ def init_config_order():
             release_db_connection(conn)
 
 
+# ---------- 問題項編碼化（shift_items）：每個問題項有獨立身份 ----------
+_FW = '０１２３４５６７８９ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ'
+_HW = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
+_FW_TABLE = str.maketrans(_FW, _HW)
+
+
+def _norm_code(s):
+    """台號正規化：全形轉半形、去空白、轉大寫。"""
+    s = (s or '').strip().translate(_FW_TABLE)
+    return re.sub(r'\s+', '', s).upper()
+
+
+def _split_key(key):
+    p = (key or '').split('|')
+    return (p[0] if p else ''), (p[1] if len(p) > 1 else ''), (p[2] if len(p) > 2 else '')
+
+
+def _item_key(it):
+    """由結構化欄位決定性計算身份證（不靠文字反推）。
+    場面｜台號｜類別-問題；Lux/NFC｜台號｜Box n；溫度/分貝｜台號"""
+    t = (it.get('type') or '').strip()
+    code = _norm_code(it.get('code'))
+    if t == '場面':
+        d = ' - '.join([x.strip() for x in [it.get('category') or '', it.get('problem') or ''] if x and x.strip()])
+        if not d:
+            d = (it.get('detail') or '').strip()
+        return '場面|%s|%s' % (code, d)
+    if t in ('Lux', 'NFC'):
+        m = re.search(r'(\d+)', it.get('detail') or '')
+        return '%s|%s|Box %s' % (t, code, m.group(1) if m else '-')
+    return '%s|%s' % (t, code)
+
+
+def _item_display(it):
+    t = it.get('type') or ''
+    code = it.get('code') or ''
+    if t == '場面':
+        d = ' - '.join([x.strip() for x in [it.get('category') or '', it.get('problem') or ''] if x and str(x).strip()])
+        s = d or (it.get('detail') or '')
+    else:
+        s = ('%s %s' % (t, it.get('detail') or '')).strip()
+    s = (s or '').strip()
+    return ('%s（%s）' % (s, code)) if code else s
+
+
+def _done_keys_from_note(note):
+    """抽出 note 裡【早前已處理】的 key（只要新 key 格式，舊文字格式不理）。"""
+    keys = []
+    m = re.search(r'【早前已處理】([\s\S]*?)(?=【|$)', str(note or ''))
+    if not m:
+        return keys
+    for line in m.group(1).split('\n'):
+        line = line.strip()
+        if not line:
+            continue
+        k = line.split(' [狀態:')[0].strip()
+        if '|' in k and k not in keys:
+            keys.append(k)
+    return keys
+
+
+def _si_insert(c, record_id, source, key, it=None, status='', resolved_at=None, resolved_by=''):
+    """寫一筆 shift_items（occurrence）。"""
+    it = it or {}
+    t, code, detail = _split_key(key)
+    itype = it.get('type') or t
+    icode = it.get('code') or code
+    c.execute("""INSERT INTO shift_items
+                 (record_id, source, item_key, type, code, category, problem, detail, side,
+                  status, note, display, created_at, resolved_at, resolved_by)
+                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s, COALESCE(%s, NOW()), %s, %s)""",
+              (record_id, source, key, itype, icode,
+               it.get('category') or '', it.get('problem') or '',
+               it.get('detail') or detail, it.get('side') or '',
+               status or it.get('status') or '待處理', it.get('note') or '',
+               _item_display({'type': itype, 'code': icode,
+                              'category': it.get('category') or '', 'problem': it.get('problem') or '',
+                              'detail': it.get('detail') or detail}),
+               resolved_at, resolved_at, resolved_by or ''))
+
+
+def _backfill_shift_items(c):
+    """一次性：把 records 舊資料轉成 shift_items。"""
+    c.execute("SELECT id, name, note, checklist, items, created_at FROM records ORDER BY id ASC")
+    rows = c.fetchall()
+    n = 0
+    for rid, name, note, checklist, items, created in rows:
+        ritems = items or []
+        if not ritems:
+            try:
+                ritems = _record_items(note, checklist)
+            except Exception:
+                ritems = []
+        done_keys = _done_keys_from_note(note)
+        seen = set()
+        for it in (ritems or []):
+            key = it.get('key') or ''
+            if not key or key in seen or key in done_keys:
+                continue
+            seen.add(key)
+            _si_insert(c, rid, 'backfill', key, it, it.get('status') or '待處理', created, '')
+            n += 1
+        for key in done_keys:
+            _si_insert(c, rid, 'backfill', key, None, '已處理', created, name or '')
+            n += 1
+    print('shift_items backfill 完成，共', n, '筆')
+
+
+def ensure_shift_items():
+    """建表 + 首次自動 backfill（部署即執行）。"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""CREATE TABLE IF NOT EXISTS shift_items (
+                        id BIGSERIAL PRIMARY KEY,
+                        record_id BIGINT,
+                        source TEXT NOT NULL DEFAULT 'submit',
+                        item_key TEXT NOT NULL,
+                        type TEXT NOT NULL DEFAULT '',
+                        code TEXT NOT NULL DEFAULT '',
+                        category TEXT NOT NULL DEFAULT '',
+                        problem TEXT NOT NULL DEFAULT '',
+                        detail TEXT NOT NULL DEFAULT '',
+                        side TEXT NOT NULL DEFAULT '',
+                        status TEXT NOT NULL DEFAULT '待處理',
+                        note TEXT NOT NULL DEFAULT '',
+                        display TEXT NOT NULL DEFAULT '',
+                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                        resolved_at TIMESTAMPTZ,
+                        resolved_by TEXT NOT NULL DEFAULT ''
+                     )""")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_si_key ON shift_items(item_key, id DESC)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_si_record ON shift_items(record_id)")
+        conn.commit()
+        c.execute("SELECT COUNT(*) FROM shift_items")
+        if c.fetchone()[0] == 0:
+            _backfill_shift_items(c)
+            conn.commit()
+        print('shift_items 就緒')
+    except Exception as e:
+        print('shift_items 初始化失敗:', e)
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
 ensure_tables()
+ensure_shift_items()
 init_config_order()
 
 # ---------- 舊域名自動跳轉新域名（令舊微信名片／舊連結仍然可用） ----------
@@ -303,7 +456,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-4", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-5", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -803,6 +956,59 @@ def _record_items(note, checklist=''):
     return items
 
 
+
+def _si_resolve(c, record_id, key, who=''):
+    """寫一筆 source='resolve' 的 shift_items（標記完成）。"""
+    key = (key or '').strip()
+    if not key or '|' not in key:
+        return False
+    c.execute("""SELECT item_key, type, code, category, problem, detail, side, note, display
+                 FROM shift_items WHERE item_key = %s ORDER BY id DESC LIMIT 1""", (key,))
+    row = c.fetchone()
+    if row:
+        v = list(row)
+    else:
+        t, code, detail = _split_key(key)
+        v = [key, t, code, '', '', detail, '', '',
+             _item_display({'type': t, 'code': code, 'detail': detail})]
+    c.execute("""INSERT INTO shift_items
+                 (record_id, source, item_key, type, code, category, problem, detail, side,
+                  status, note, display, resolved_at, resolved_by)
+                 VALUES (%s,'resolve',%s,%s,%s,%s,%s,%s,%s,'已處理',%s,%s,NOW(),%s)""",
+              (record_id, v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], who or ''))
+    return True
+
+
+def _si_write_done(c, record_id, keys, who=''):
+    """把前端勾選完成的 key 寫成 resolve 行。"""
+    n = 0
+    for key in (keys or []):
+        if _si_resolve(c, record_id, key, who):
+            n += 1
+    return n
+
+
+def _si_write_items(c, record_id, items, source='submit'):
+    """把前端送來的結構化 items 寫入 shift_items（同 key 只寫一次）。"""
+    if not items:
+        return 0
+    seen = set()
+    n = 0
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        key = _item_key(it)
+        if not key or key in seen:
+            continue
+        code = (it.get('code') or '').strip()
+        if not code:
+            continue
+        seen.add(key)
+        _si_insert(c, record_id, source, key, it, it.get('status') or '待處理', None, '')
+        n += 1
+    return n
+
+
 @app.route('/api/submit', methods=['POST'])
 def submit():
     data = request.json
@@ -814,15 +1020,18 @@ def submit():
         _items = _record_items(data.get('note'), data.get('checklist'))
         c.execute("""INSERT INTO records 
                      (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, created_at, items) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                    data.get('checklist'), data.get('status'), data.get('follower'), data.get('on_duty'), data.get('note'),
                    data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
                    data.get('guest_feedback'), data.get('dlr_feedback'),
                    data.get('layout_side'), now_macau, psycopg2.extras.Json(_items)))
+        _new_rid = c.fetchone()[0]
+        _si_write_items(c, _new_rid, data.get('items'), 'submit')
+        _si_write_done(c, _new_rid, data.get('done_keys'), session.get('user_name') or '')
         conn.commit()
-        cache_clear('pending')
-        return jsonify({"message": "交更成功！", "status": "success"})
+        cache_clear('pending', 'pending_items')
+        return jsonify({"message": "交更成功！", "status": "success", "record_id": _new_rid})
     except Exception as e:
         print("Submit Error:", e)
         return jsonify({"status": "error", "message": "❌ 數據庫連線超時，請重新整理後再試！"})
@@ -855,22 +1064,26 @@ def overwrite_record():
             if not is_within_5_mins:
                 return jsonify({"status": "error", "message": "⏰ 已超過 5 分鐘修改時限，無法修改！"})
 
-        c.execute("DELETE FROM records WHERE id = %s", (old_id,))
-
+        # ★ 改為 UPDATE 同一 row：保留 id／created_at／reviewed，修改後 items 身份不會流失
         now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
         _items = _record_items(data.get('note'), data.get('checklist'))
-        c.execute("""INSERT INTO records 
-                     (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, reviewed, reviewed_at, reviewed_by, created_at, items) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+        c.execute("""UPDATE records SET
+                     name=%s, shift=%s, lux=%s, temp=%s, bgm=%s, checklist=%s, status=%s,
+                     follower=%s, on_duty=%s, note=%s, lux_issue=%s, temp_issue=%s, db_issue=%s,
+                     guest_feedback=%s, dlr_feedback=%s, layout_side=%s, items=%s
+                     WHERE id=%s""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                    data.get('checklist'), data.get('status'), data.get('follower'), data.get('on_duty'), data.get('note'),
                    data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
                    data.get('guest_feedback'), data.get('dlr_feedback'),
-                   data.get('layout_side'), old_reviewed, old_reviewed_at, old_reviewed_by, now_macau, psycopg2.extras.Json(_items)))
-        
+                   data.get('layout_side'), psycopg2.extras.Json(_items), old_id))
+        # 該筆的問題項重寫（保留 mark_done 寫下的 resolve 記錄）
+        c.execute("DELETE FROM shift_items WHERE record_id = %s AND source <> 'resolve'", (old_id,))
+        _si_write_items(c, old_id, data.get('items'), 'submit')
+        _si_write_done(c, old_id, data.get('done_keys'), session.get('user_name') or '')
         conn.commit()
-        cache_clear('pending')
-        log_action('修改紀錄', f"舊紀錄 ID {old_id}")
+        cache_clear('pending', 'pending_items')
+        log_action('修改紀錄', f"紀錄 ID {old_id}")
         return jsonify({"status": "success", "message": "✅ 紀錄已成功修改並覆蓋！"})
     except Exception as e:
         print("Overwrite Error:", e)
@@ -1850,9 +2063,8 @@ def get_pending_issues():
 
 @app.route('/api/mark_done', methods=['POST'])
 def mark_done():
-    """勾選完成：把指定 key 標記 status=已處理（items + note 雙寫）。
-    雙寫的原因：/api/overwrite_record 會 DELETE 舊 row 再 INSERT，items 由 note 重算，
-    所以必須同時將 key 寫入 note 的【早前已處理】段落，標記才不會遺失。"""
+    """勾選完成：插入一筆 source='resolve' 的 shift_items（append-only）。
+    最新一筆自然覆蓋舊狀態，結構上不可能「復活」，且保留完整處理歷史。"""
     data = request.json or {}
     raw = data.get('keys') or []
     if isinstance(raw, str):
@@ -1865,87 +2077,89 @@ def mark_done():
     try:
         conn = get_db_connection()
         c = conn.cursor()
+        who = session.get('user_name') or session.get('role') or ''
+        c.execute("SELECT id FROM records ORDER BY id DESC LIMIT 1")
+        last = c.fetchone()
+        rid = last[0] if last else None
         done_count = 0
-        skipped = []
-
         for key in keys:
-            parts = key.split('|')
-            code = parts[1].strip() if len(parts) > 1 and parts[1].strip() else ''
-            like = '%' + code + '%' if code else '%'
-            # 用台號做粗篩，避免全表掃描；再由新到舊逐筆重算 items 找出真正擁有者
-            c.execute("""SELECT id, note, checklist, items FROM records
-                         WHERE COALESCE(note, '') LIKE %s OR COALESCE(checklist, '') LIKE %s
-                         ORDER BY id DESC""", (like, like))
-            rows = c.fetchall()
-
-            owner_id, owner_note, owner_items = None, None, None
-            for rid, note, checklist, items in rows:
-                ritems = items
-                if not ritems:
-                    try:
-                        ritems = _record_items(note, checklist)
-                    except Exception:
-                        ritems = []
-                if any(isinstance(it, dict) and (it.get('key') or '') == key for it in (ritems or [])):
-                    owner_id, owner_note, owner_items = rid, note, list(ritems or [])
-                    break
-
-            if owner_id is None:
-                # 備援：找不到擁有者（舊資料 items 不一致）→ 寫入最新一筆紀錄做標記
-                c.execute("SELECT id, note, checklist, items FROM records ORDER BY id DESC LIMIT 1")
-                last = c.fetchone()
-                if not last:
-                    skipped.append(key)
-                    continue
-                owner_id, owner_note, owner_items = last[0], last[1], list(last[3] or [])
-
-            # 1) items 內該 key 的 status 改為已處理
-            new_items = []
-            for it in owner_items:
-                if isinstance(it, dict) and (it.get('key') or '') == key:
-                    it = dict(it)
-                    it['status'] = '已處理'
-                new_items.append(it)
-
-            # 若擁有者 items 內根本冇這個 key（舊資料不一致）→ 直接補一項已處理
-            if not any(isinstance(it, dict) and (it.get('key') or '') == key for it in new_items):
-                _p = key.split('|')
-                new_items.append({'key': key,
-                                  'type': _p[0] if len(_p) > 0 else '',
-                                  'code': _p[1] if len(_p) > 1 else '',
-                                  'detail': _p[2] if len(_p) > 2 else '',
-                                  'status': '已處理'})
-
-            # 2) note 追加【早前已處理】（冪等：同一 key 唔會重複寫）
-            note = owner_note or ''
-            head = note.split('【早前已處理】')[0].rstrip()
-            old_tail = ''
-            if '【早前已處理】' in note:
-                old_tail = note.split('【早前已處理】', 1)[1].split('【早前未處理】')[0]
-            done_lines = [l.split(' [狀態:')[0].strip() for l in old_tail.split('\n') if l.strip()]
-            if key not in done_lines:
-                done_lines.append(key)
-            new_note = head + '\n\n【早前已處理】\n' + '\n'.join(done_lines)
-
-            c.execute("UPDATE records SET items = %s, note = %s WHERE id = %s",
-                      (psycopg2.extras.Json(new_items), new_note, owner_id))
-            done_count += 1
-
+            if _si_resolve(c, rid, key, who):
+                done_count += 1
         conn.commit()
-        cache_clear('pending')
+        cache_clear('pending', 'pending_items')
         if done_count:
             log_action('勾選完成', ','.join(keys)[:200])
-
-        msg = '✅ 已標記 %d 項為已完成' % done_count
-        if skipped:
-            msg += '；另有 %d 項找不到來源紀錄，已略過' % len(skipped)
-        return jsonify({"status": "success" if done_count else "error",
-                        "message": msg, "done_count": done_count, "skipped": skipped})
+        return jsonify({"status": "success", "done_count": done_count,
+                        "message": "✅ 已標記 %d 項為已完成" % done_count})
     except Exception as e:
         print('MarkDone Error:', e)
         if conn:
             conn.rollback()
         return jsonify({"status": "error", "message": "❌ 標記失敗：%s" % str(e)})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/pending_items', methods=['GET'])
+def api_pending_items():
+    """黃框唯一資料來源：每個 item_key 取最新一筆，不用任何文字解析。"""
+    before_id = request.args.get('before_id', type=int)
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        sql = ("SELECT DISTINCT ON (item_key) id, record_id, item_key, type, code, category,"
+               " problem, detail, side, status, note, display, source, created_at"
+               " FROM shift_items")
+        params = []
+        if before_id:
+            sql += " WHERE (record_id IS NULL OR record_id < %s)"
+            params.append(before_id)
+        sql += " ORDER BY item_key, id DESC"
+        c.execute(sql, params)
+        rows = c.fetchall()
+        release_db_connection(conn)
+        conn = None
+        _done = ('已處理', '已处理', '已完成', '已解決')
+        pending, done = [], []
+        for r in rows:
+            rec = {"occ_id": r[0], "record_id": r[1], "key": r[2], "type": r[3], "code": r[4],
+                   "category": r[5], "problem": r[6], "detail": r[7], "side": r[8],
+                   "status": r[9] or '', "note": r[10] or '', "display": r[11] or '',
+                   "source": r[12], "created_at": str(r[13]) if r[13] else None}
+            if any(d in rec['status'] for d in _done):
+                done.append(rec)
+            else:
+                pending.append(rec)
+        resp = jsonify({"pending_items": pending, "done_items": done, "count": len(pending)})
+        resp.headers['Cache-Control'] = 'no-store, max-age=0'
+        return resp
+    except Exception as e:
+        print('pending_items Error:', e)
+        return jsonify({"pending_items": [], "done_items": [], "count": 0, "error": str(e)})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/record_items/<int:rid>', methods=['GET'])
+def api_record_items(rid):
+    """修改紀錄時還原勾選用。"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""SELECT item_key, type, code, category, problem, detail, side, status, note, display, source
+                     FROM shift_items WHERE record_id = %s ORDER BY id ASC""", (rid,))
+        rows = c.fetchall()
+        return jsonify({"items": [{"key": r[0], "type": r[1], "code": r[2], "category": r[3],
+                                   "problem": r[4], "detail": r[5], "side": r[6],
+                                   "status": r[7] or '', "note": r[8] or '',
+                                   "display": r[9] or '', "source": r[10]} for r in rows]})
+    except Exception as e:
+        print('record_items Error:', e)
+        return jsonify({"items": [], "error": str(e)})
     finally:
         if conn:
             release_db_connection(conn)
