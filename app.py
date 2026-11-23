@@ -2903,6 +2903,30 @@ def update_debug():
                             (event_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date
                      FROM shift_items ORDER BY id DESC LIMIT 10""")
         info['si_rows'] = [(r[0], r[1], r[2], r[3], r[4], str(r[5])) for r in c.fetchall()]
+        # 逐步重現 _up_detect 的查詢與解析，定位失敗點
+        try:
+            c.execute("""SELECT COALESCE(note,''),
+                                (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date,
+                                COALESCE(layout_side,''), COALESCE(checklist,''),
+                                COALESCE(lux_issue,''), COALESCE(temp_issue,''), COALESCE(db_issue,'')
+                         FROM records
+                         WHERE (COALESCE(note,'') <> '' OR COALESCE(checklist,'') <> '')
+                           AND (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date <= %s
+                         ORDER BY id ASC""", (request.args.get('date') or _up_today(),))
+            rr = c.fetchall()
+            info['detect_rows'] = len(rr)
+            if rr:
+                info['first_note'] = rr[0][0]
+                info['first_date'] = str(rr[0][1])
+                secs = _up_split_sections(rr[0][0])
+                info['secs'] = {k: (v[:60] if isinstance(v, str) else v) for k, v in secs.items()}
+                parsed = []
+                for name, seg in secs.items():
+                    for line in seg.split('\n'):
+                        parsed.append((name, line[:50], _up_parse_line(line)))
+                info['parsed'] = parsed
+        except Exception as ee:
+            info['detect_error'] = str(ee)
     except Exception as e:
         info['error'] = str(e)
     finally:
