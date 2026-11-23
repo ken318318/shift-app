@@ -1717,15 +1717,19 @@ def get_pending_issues():
                     else:
                         done_items.add(clean_line)
 
-    c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status, checklist,
-                 created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
-                 FROM records 
-                 WHERE (status IS NULL OR status NOT IN ('已處理')) 
-                 AND (COALESCE(lux_issue,'') != '' OR COALESCE(temp_issue,'') != '' OR COALESCE(db_issue,'') != '' 
-                      OR note LIKE '%【場面問題】%' OR note LIKE '%【早前未處理】%'
-                      OR note LIKE '%客櫈%' OR note LIKE '%DLR櫈%' OR note LIKE '%客椅%'
-                      OR checklist LIKE '%NFC異常%')
-                 ORDER BY id DESC""")
+    before_id = request.args.get('before_id', type=int)
+    _sql = ("SELECT id, name, lux_issue, temp_issue, db_issue, note, status, checklist,"
+            " created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau'"
+            " FROM records"
+            " WHERE (status IS NULL OR status NOT IN ('已處理'))"
+            " AND (COALESCE(lux_issue,'') != '' OR COALESCE(temp_issue,'') != '' OR COALESCE(db_issue,'') != ''"
+            " OR note LIKE '%【場面問題】%' OR note LIKE '%【早前未處理】%'"
+            " OR note LIKE '%客櫈%' OR note LIKE '%DLR櫈%' OR note LIKE '%客椅%'"
+            " OR checklist LIKE '%NFC異常%')")
+    if before_id:
+        _sql += " AND id < %d" % before_id
+    _sql += " ORDER BY id DESC"
+    c.execute(_sql)
     rows = c.fetchall()
     release_db_connection(conn)
     pending = []
