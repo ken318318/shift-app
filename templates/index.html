@@ -2976,6 +2976,11 @@ function updatePendingCardState(card) {
                 yy += 32 * dpr;
                 octx.fillStyle = '#2e7d32';
                 octx.fillText('Spare: ' + (cc.spare || 0), sx, yy);
+                if (cc.event) {
+                    yy += 32 * dpr;
+                    octx.fillStyle = '#c2185b';
+                    octx.fillText('Event: ' + cc.event, sx, yy);
+                }
             }
             const url = out.toDataURL('image/png');
             document.getElementById('cm-img').src = url;
