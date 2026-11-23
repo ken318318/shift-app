@@ -3760,8 +3760,8 @@ function updatePendingCardState(card) {
             ctx.fillStyle = '#ffffff';
             ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
             ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(Math.round(x0) + 1, Math.round(y0) + 1, Math.round(x1 - x0) - 2, Math.round(y1 - y0) - 2);
+            ctx.lineWidth = 1.6;
+            ctx.strokeRect(Math.round(x0) + 0.5, Math.round(y0) + 0.5, Math.round(x1 - x0) - 1, Math.round(y1 - y0) - 1);
             ctx.lineWidth = 1.6;
             ctx.beginPath();
             ctx.moveTo(x0, Math.round(ym) + 0.5); ctx.lineTo(x1, Math.round(ym) + 0.5);
@@ -3814,9 +3814,23 @@ function updatePendingCardState(card) {
                 ctx.strokeRect(b[0] + 0.5, b[2] + 0.5, b[1] - b[0] - 1, b[3] - b[2] - 1);
             });
             [[r0, 25, x0, xm, y0, ym], [r0, 27, xm, x1, y0, ym], [r1, 25, x0, xm, ym, y1], [r1, 27, xm, x1, ym, y1]].forEach(function (p) {
-                const cellData = (cmData.cells || []).find(function (x) { return x.r === p[0] && x.c === p[1]; });
-                if (!cellData) return;
-                drawText(p[2], p[4], p[3], p[5], cellData.v, cellData.fs || 14, cellData.bold, rgb(cellData.fc, '#111'));
+                const cd = (cmData.cells || []).find(function (x) { return x.r === p[0] && x.c === p[1]; });
+                if (!cd) return;
+                let bg = null, fc = '#111', bold = !!cd.bold;
+                if (cd.event) { bg = '#FF99CC'; }
+                else if (cmMode === 'status') {
+                    if (cd.guest_bad) bg = '#99CCFF';
+                    else if (cd.status === '停運') bg = '#cfd8dc';
+                    else if (cd.stand) bg = '#c5cae9';
+                    fc = cd.dlr_bad ? '#e53935' : (cd.status === '停運' ? '#2e7d32' : '#111');
+                } else {
+                    if (cd.status === '停運') bg = '#cfd8dc';
+                    else if (cd.stand) bg = '#c5cae9';
+                    fc = cd.stand ? '#111' : (cd.chair === 'new' ? '#7b2fd0' : (cd.chair === 'old' ? '#d95a00' : '#111'));
+                    if (cd.chair && !cd.stand) bold = true;
+                }
+                if (bg) { ctx.fillStyle = bg; ctx.fillRect(p[2] + 1, p[4] + 1, p[3] - p[2] - 2, p[5] - p[4] - 2); }
+                drawText(p[2], p[4], p[3], p[5], cd.v, cd.fs || 11, bold, fc);
             });
         }
         drawPit8(58, 59);
