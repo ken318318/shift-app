@@ -1755,7 +1755,7 @@ async function loadPendingIssues() {
                  + '<input type="checkbox" class="pending-checkbox" data-key="' + htmlEsc(it.key) + '" data-text="' + htmlEsc(it.key) + '" data-done="' + (_done ? '1' : '0') + '"' + (_done ? ' checked' : '') + ' style="width:20px;height:20px;margin-right:10px;">'
                  + '<div style="font-size:13px;color:#d32f2f;flex:1;">'
                  + '<strong>⚠️ ' + htmlEsc(it.display || it.key) + '</strong> '
-                 + '<span style="background:' + color + ';color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;">' + htmlEsc(badge) + '</span>'
+                 + '<span style="background:' + color + ';color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;white-space:nowrap;display:inline-block;flex:0 0 auto;margin-left:4px;">' + htmlEsc(badge) + '</span>'
                  + (it.note ? '<br><span style="font-size:11px;color:#777;">備註：' + htmlEsc(it.note) + '</span>' : '')
                  + '</div></div>';
         });
@@ -1765,9 +1765,15 @@ async function loadPendingIssues() {
     listDiv.innerHTML = html;
     container.style.display = 'block';
     const _openCount = items.filter(x => !x.__done).length;
-    const _titleText = _openCount > 0
-        ? ('⚠️ 有 ' + _openCount + ' 項早前已通知相關部門跟進(尚待解決)（點擊展開剔選）')
-        : '✅ 本張紀錄已標記完成的項目（僅供核對；取消勾選會回復為待處理）';
+    const _doneCount = items.length - _openCount;
+    let _titleText;
+    if (_openCount > 0 && _doneCount > 0) {
+        _titleText = '⚠️ ' + _openCount + ' 項尚待解決，另有 ' + _doneCount + ' 項本張已標記完成（點擊展開剔選）';
+    } else if (_openCount > 0) {
+        _titleText = '⚠️ 有 ' + _openCount + ' 項早前已通知相關部門跟進(尚待解決)（點擊展開剔選）';
+    } else {
+        _titleText = '✅ 本張紀錄已標記完成的項目（僅供核對；取消勾選會回復為待處理）';
+    }
     if (titleEl) titleEl.innerHTML = _titleText;
     if (homeC) homeC.style.display = 'block';
     if (homeT) homeT.innerHTML = _titleText.replace('（點擊展開剔選）', '');
