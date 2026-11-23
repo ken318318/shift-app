@@ -2944,37 +2944,50 @@ function updatePendingCardState(card) {
     }
 
     function cmSaveImage() {
-        const map = document.getElementById('cm-map');
-        if (!map) return;
-        const go = function () {
-            bsLoading(true, '產生圖片中…', true);
-            const oldZoom = map.style.zoom;
-            map.style.zoom = '1';
-            map.classList.add('cm-exporting');
-            const sb = document.getElementById('cm-selbox');
-            const sbOld = sb ? sb.style.display : '';
-            if (sb) sb.style.display = 'none';
-            const restore = function () {
-                map.style.zoom = oldZoom;
-                map.classList.remove('cm-exporting');
-                if (sb) sb.style.display = sbOld;
-            };
-            html2canvas(map, { backgroundColor: '#fff', scale: 2, useCORS: true }).then(function (canvas) {
-                restore();
-                bsLoading(false);
-                const url = canvas.toDataURL('image/png');
-                document.getElementById('cm-img').src = url;
-                document.getElementById('cm-dl').href = url;
-                document.getElementById('cm-imgbox').style.display = 'block';
-            }).catch(function () { restore(); bsLoading(false); alert('❌ 產生圖片失敗'); });
-        };
-        if (window.html2canvas) { go(); return; }
-        urLoadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js', go, function () {
-            urLoadScript('https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js', go, function () {
-                alert('❌ 無法載入圖片組件（可能被網絡攔截）');
-            });
-        });
+        const cv = document.getElementById('cm-canvas');
+        if (!cv || !cmGeo) { alert('尚未載入，請稍後再試。'); return; }
+        bsLoading(true, '產生圖片中…', true);
+        try {
+            const dpr = window.devicePixelRatio || 1;
+            const out = document.createElement('canvas');
+            out.width = cv.width;
+            out.height = cv.height;
+            const octx = out.getContext('2d');
+            octx.drawImage(cv, 0, 0);
+            const cc = cmData.counts || {};
+            const sx = cmGeo.X[37] * dpr;
+            let yy = (cmGeo.Y[14] + 4) * dpr;
+            octx.textAlign = 'left';
+            octx.textBaseline = 'top';
+            octx.fillStyle = '#444';
+            octx.font = 'bold ' + Math.round(18 * dpr) + 'px "Microsoft JhengHei",sans-serif';
+            octx.fillText('更新日期 ' + (cmData.today || ''), sx, yy);
+            yy += 30 * dpr;
+            octx.fillStyle = '#222';
+            octx.font = 'bold ' + Math.round(24 * dpr) + 'px "Microsoft JhengHei",sans-serif';
+            octx.fillText('台數 ' + (cc.total || 0) + '（' + (cc.active || 0) + ' 營運／' + (cc.inactive || 0) + ' 停運）', sx, yy);
+            if (cmMode === 'status') {
+                yy += 34 * dpr;
+                octx.fillStyle = '#e53935';
+                octx.fillText('壞 DLR ' + (cc.dlr_bad || 0), sx, yy);
+                yy += 32 * dpr;
+                octx.fillStyle = '#1565c0';
+                octx.fillText('壞客櫈 ' + ((cc.guest_bad || 0) * 5) + ' 張', sx, yy);
+                yy += 32 * dpr;
+                octx.fillStyle = '#2e7d32';
+                octx.fillText('spare ' + (cc.spare || 0), sx, yy);
+            }
+            const url = out.toDataURL('image/png');
+            document.getElementById('cm-img').src = url;
+            document.getElementById('cm-dl').href = url;
+            document.getElementById('cm-imgbox').style.display = 'block';
+        } catch (e) {
+            alert('❌ 產生圖片失敗');
+        } finally {
+            bsLoading(false);
+        }
     }
+
 
     function cmEditKey(r, c) { return r + ',' + c; }
 
@@ -3815,33 +3828,6 @@ function updatePendingCardState(card) {
         }
         drawPit8(58, 59);
         drawPit8(61, 62);
-
-        // 統計（放 Pit 63 上方空白，彩色大字，存圖會包含）
-        (function () {
-            const cc = cmData.counts || {};
-            const sx = X[37];
-            let yy = Y[14] + 4;
-            ctx.textAlign = 'left';
-            ctx.textBaseline = 'top';
-            ctx.fillStyle = '#444';
-            ctx.font = 'bold 18px "Microsoft JhengHei","Microsoft YaHei",sans-serif';
-            ctx.fillText('更新日期 ' + (cmData.today || ''), sx, yy);
-            yy += 28;
-            ctx.fillStyle = '#222';
-            ctx.font = 'bold 24px "Microsoft JhengHei","Microsoft YaHei",sans-serif';
-            ctx.fillText('台數 ' + (cc.total || 0) + '（' + (cc.active || 0) + ' 營運／' + (cc.inactive || 0) + ' 停運）', sx, yy);
-            yy += 34;
-            if (cmMode === 'status') {
-                ctx.fillStyle = '#e53935';
-                ctx.fillText('壞 DLR ' + (cc.dlr_bad || 0), sx, yy);
-                yy += 32;
-                ctx.fillStyle = '#1565c0';
-                ctx.fillText('壞客櫈 ' + ((cc.guest_bad || 0) * 5) + ' 張', sx, yy);
-                yy += 32;
-                ctx.fillStyle = '#2e7d32';
-                ctx.fillText('spare ' + (cc.spare || 0), sx, yy);
-            }
-        })();
 
         if (legend) {
             if (cmMode === 'status') {
