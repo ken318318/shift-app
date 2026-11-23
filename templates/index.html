@@ -1680,14 +1680,13 @@ function updatePendingCardState(card) {
                     
                     let statusMatch = text.match(/\[狀態:(.*?)\]/); 
                     let currentStatus = statusMatch ? statusMatch[1] : '待處理'; 
-                    if (currentStatus === '已處理') { let _mc2 = clean.match(/[A-Za-z]{2}\d{3,6}/); if (_mc2) seenItems.add(type + '|' + _mc2[0].toUpperCase()); return; } 
+                    if (currentStatus === '已處理') { seenItems.add(dedupeKey); return; } 
                     
                     let clean = text.replace(/\[狀態:.*?\]/g, '').replace('⚠️', '').replace('✅', '').trim(); 
                     if (!clean) return;
                     
                     let checkText = `${type} - ${clean}`.toUpperCase(); 
-                    let _mc = clean.match(/[A-Za-z]{2}\d{3,6}/);
-                    let dedupeKey = type + '|' + (_mc ? _mc[0].toUpperCase() : clean.toUpperCase());
+                    let dedupeKey = type + '|' + clean.toUpperCase();
                     let dataText = `${type} - ${clean} [狀態:${currentStatus}]`;
                     
                     if (seenItems.has(dedupeKey)) return; 
