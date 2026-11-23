@@ -463,7 +463,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-14", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-15", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -2640,6 +2640,46 @@ def _up_parse_note(note):
     return out
 
 
+
+def _si_overlay_detect(out, date_str):
+    """用 shift_items 的最新狀態覆寫更新表結果（令「完成／復發」即時反映）。"""
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""SELECT type, code, category, problem, status,
+                            (event_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date
+                     FROM shift_items
+                     WHERE (event_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date <= %s
+                     ORDER BY event_at ASC, id ASC""", (date_str,))
+        latest = {}
+        for typ, code, cat, prob, status, _d in c.fetchall():
+            catname = {'NFC': 'NFC', 'Lux': 'Lux 異常',
+                       '溫度': '溫度 異常', '分貝': '分貝 異常'}.get(typ, cat or '')
+            if not catname or not code:
+                continue
+            latest[(catname, _up_norm(code))] = {'status': status or '', 'problem': prob or ''}
+    except Exception as e:
+        print('更新表覆寫失敗:', e)
+        return
+    finally:
+        if conn:
+            try:
+                release_db_connection(conn)
+            except Exception:
+                pass
+
+    for k, v in latest.items():
+        if any(x in v['status'] for x in ('已處理', '已处理', '已完成', '已解決')):
+            out.pop(k, None)
+        else:
+            rec = out.get(k)
+            if rec is not None:
+                rec['status'] = v['status']
+                if v['problem']:
+                    rec['problem'] = v['problem']
+
+
 def _up_detect(date_str):
     """截至指定日期，每個「類別＋台號」最新一次的資料。
     回傳 (out, done_at, nfc_nocode)
@@ -2766,6 +2806,9 @@ def _up_detect(date_str):
                     out.pop(key, None)
                     continue
         rec['side'] = sides.get(rec['code'], '')
+
+    # 以 shift_items 的最新狀態為準（完成／復發即時反映）
+    _si_overlay_detect(out, date_str)
 
     return out, done_at, nfc_nocode
 
@@ -4135,8 +4178,54 @@ def _chair_edits():
     return out
 
 
+
 def _chair_issues():
-    """由交更紀錄推算每張台的最新椅況（只計未處理項目）。"""
+    """由 shift_items 推算每張台的最新椅況（已處理不計；復發會自動回復）。"""
+    out = {}
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""SELECT DISTINCT ON (item_key) item_key, code, category, status
+                     FROM shift_items
+                     WHERE type = '場面'
+                     ORDER BY item_key, event_at DESC, id DESC""")
+        rows = c.fetchall()
+    except Exception as e:
+        print('櫈況圖讀取 shift_items 失敗:', e)
+        rows = []
+    finally:
+        if conn:
+            try:
+                release_db_connection(conn)
+            except Exception:
+                pass
+
+    for _k, code, cat, status in rows:
+        cat = cat or ''
+        is_dlr = ('DLR' in cat and ('櫈' in cat or '椅' in cat))
+        is_guest = ('客櫈' in cat or '客椅' in cat)
+        if not (is_dlr or is_guest):
+            continue
+        if not code:
+            continue
+        key = _up_norm(code)
+        rec = out.setdefault(key, {'dlr_bad': False, 'guest_bad': False})
+        st_ = status or ''
+        bad = not any(x in st_ for x in ('已處理', '已处理', '已完成', '已解決'))
+        if is_dlr:
+            rec['dlr_bad'] = bad
+        if is_guest:
+            rec['guest_bad'] = bad
+
+    if not out:
+        # 萬一 shift_items 未有資料，退回舊文字解析
+        return _chair_issues_text()
+    return out
+
+
+def _chair_issues_text():
+    """（後備）由交更紀錄文字推算每張台的椅況。"""
     out = {}
     conn = None
     try:
