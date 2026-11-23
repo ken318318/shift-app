@@ -2961,21 +2961,21 @@ function updatePendingCardState(card) {
             octx.textBaseline = 'top';
             octx.fillStyle = '#444';
             octx.font = 'bold ' + Math.round(18 * dpr) + 'px "Microsoft JhengHei",sans-serif';
-            octx.fillText('更新日期 ' + (cmData.today || ''), sx, yy);
+            octx.fillText('Update: ' + (cmData.today || ''), sx, yy);
             yy += 30 * dpr;
             octx.fillStyle = '#222';
             octx.font = 'bold ' + Math.round(24 * dpr) + 'px "Microsoft JhengHei",sans-serif';
-            octx.fillText('台數 ' + (cc.total || 0) + '（' + (cc.active || 0) + ' 營運／' + (cc.inactive || 0) + ' 停運）', sx, yy);
+            octx.fillText('Tables: ' + (cc.total || 0) + '  (Active ' + (cc.active || 0) + ' / Closed ' + (cc.inactive || 0) + ')', sx, yy);
             if (cmMode === 'status') {
                 yy += 34 * dpr;
                 octx.fillStyle = '#e53935';
-                octx.fillText('壞 DLR ' + (cc.dlr_bad || 0), sx, yy);
+                octx.fillText('Bad DLR: ' + (cc.dlr_bad || 0), sx, yy);
                 yy += 32 * dpr;
                 octx.fillStyle = '#1565c0';
-                octx.fillText('壞客櫈 ' + ((cc.guest_bad || 0) * 5) + ' 張', sx, yy);
+                octx.fillText('Bad Guest: ' + ((cc.guest_bad || 0) * 5), sx, yy);
                 yy += 32 * dpr;
                 octx.fillStyle = '#2e7d32';
-                octx.fillText('spare ' + (cc.spare || 0), sx, yy);
+                octx.fillText('Spare: ' + (cc.spare || 0), sx, yy);
             }
             const url = out.toDataURL('image/png');
             document.getElementById('cm-img').src = url;
@@ -3814,7 +3814,7 @@ function updatePendingCardState(card) {
             const xm = x0 + w25, x1 = xm + w27;
             const y0 = Y[r0], ym = Y[r1], y1 = Y[r1 + 1];
             ctx.fillStyle = '#fff';
-            ctx.fillRect(x0, y0, X[28] - x0 + 24, y1 - y0);
+            ctx.fillRect(x0 - 1, y0 - 6, X[30] - x0, y1 - y0 + 12);
             ctx.strokeStyle = '#000';
             ctx.lineWidth = 1;
             [[x0, xm, y0, ym], [xm, x1, y0, ym], [x0, xm, ym, y1], [xm, x1, ym, y1]].forEach(function (b) {
