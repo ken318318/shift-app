@@ -406,8 +406,10 @@ def ensure_shift_items():
         c.execute("CREATE INDEX IF NOT EXISTS idx_si_key ON shift_items(item_key, id DESC)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_si_record ON shift_items(record_id)")
         conn.commit()
-        c.execute("SELECT COUNT(*) FROM shift_items")
+        c.execute("SELECT COUNT(*) FROM shift_items WHERE source IN ('submit', 'backfill')")
         if c.fetchone()[0] == 0:
+            # 清掉先前產生的 backfill 行，重新由 records 轉換
+            c.execute("DELETE FROM shift_items WHERE source = 'backfill'")
             _backfill_shift_items(c)
             conn.commit()
         print('shift_items 就緒')
@@ -424,7 +426,6 @@ def ensure_shift_items():
 
 
 ensure_tables()
-ensure_shift_items()
 init_config_order()
 
 # ---------- 舊域名自動跳轉新域名（令舊微信名片／舊連結仍然可用） ----------
@@ -456,7 +457,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-5", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-6", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -4384,6 +4385,9 @@ def index():
     # 將是否為管理員的狀態傳給前端
     is_admin = (session.get('role') == 'admin')
     return render_template('index.html', is_admin=is_admin, user_name=session.get('user_name', ''))
+
+# 所有函數定義完成後才做資料表遷移（backfill 需要 _record_items）
+ensure_shift_items()
 
 if __name__ == '__main__':
     app.run()
