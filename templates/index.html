@@ -96,8 +96,12 @@
         /* ===== 櫈況圖 ===== */
         .cm-modal { display: none; position: fixed; inset: 0; background: #eef2f7; z-index: 10001; overflow: auto; -webkit-overflow-scrolling: touch; }
         .cm-wrap { padding: 8px 8px 40px; }
-        .cm-bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; background: #fff; padding: 8px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 8px; position: sticky; top: 0; z-index: 3; }
-        .cm-bar button { padding: 9px 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; }
+        .cm-bar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; background: #fff; padding: 8px 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); margin-bottom: 8px; position: sticky; top: 0; z-index: 3; }
+        .cm-bar button { padding: 8px 10px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; line-height: 1.2; }
+        .cm-sep { width: 1px; height: 22px; background: #e0e6ed; margin: 0 2px; }
+        .cm-zoom { display: flex; align-items: center; gap: 3px; background: #f4f6f8; border-radius: 9px; padding: 3px; }
+        .cm-zoom button { background: #fff; }
+        .cm-zoom-label { font-size: 12px; color: #455a64; min-width: 42px; text-align: center; font-weight: bold; }
         .cm-cell { position: absolute; width: 26px; height: 22px; border: 1px solid #d6dde6; font-size: 11px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; background: #fff; -webkit-user-select: none; user-select: none; }
         .cm-cell.off { background: #cfd8dc; }
         .cm-cell.guest { background: #99CCFF; }
@@ -111,10 +115,13 @@
         .cm-legend span { display: inline-flex; align-items: center; gap: 4px; margin: 3px 12px 3px 0; font-size: 13px; color: #333; font-weight: bold; }
         .cm-dot { width: 12px; height: 12px; border: 1px solid #ccc; display: inline-block; }
         /* 櫈況圖編輯器 */
+        .cm-legend { flex-basis: 100% !important; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed #e0e6ed; font-size: 12px; }
         .cm-tools { display: none; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.08); padding: 8px; margin-bottom: 8px; }
         .cm-tools.on { display: block; }
-        .cm-tools-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0; }
-        .cm-tools-lbl { font-size: 12px; color: #607d8b; font-weight: bold; }
+        .cm-tools-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 6px 0; }
+        .cm-tools-lbl { font-size: 12px; color: #607d8b; font-weight: bold; min-width: 46px; }
+        .cm-sw { padding: 7px 10px; font-size: 12px; font-weight: 600; border: 1px solid #d6dde6; background: #fff; color: #37474f; border-radius: 8px; cursor: pointer; line-height: 1.2; }
+        .cm-sw.on { background: #1a73e8; color: #fff; border-color: #1a73e8; }
         .cm-sw { border: 1px solid #c7d0d8; background: #fff; border-radius: 6px; padding: 6px 9px; font-size: 12px; font-weight: bold; cursor: pointer; color: #37474f; }
         .cm-sw.on { background: #1565c0; color: #fff; border-color: #1565c0; }
         .cm-swatch { width: 28px; height: 28px; border-radius: 6px; border: 1px solid #90a4ae; cursor: pointer; padding: 0; }
@@ -564,12 +571,17 @@
         <div class="cm-wrap">
             <div class="cm-bar">
                 <button class="lr-b-close" onclick="closeChairMap()">✖ 返回</button>
+                <span class="cm-sep"></span>
                 <button id="cm-b-status" class="lr-b-blue" onclick="setChairMode('status')">🪑 好壞櫈</button>
                 <button id="cm-b-type" class="lr-b-gray" onclick="setChairMode('type')">🆕 新舊櫈</button>
-                <button class="lr-b-gray" onclick="cmZoomStep(-1)">➖</button>
-                <span id="cm-zoom-label" style="font-size:12px;color:#455a64;min-width:38px;text-align:center;">100%</span>
-                <button class="lr-b-gray" onclick="cmZoomStep(1)">➕</button>
-                <button class="lr-b-gray" onclick="cmZoomFit()">適合螢幕</button>
+                <span class="cm-sep"></span>
+                <div class="cm-zoom">
+                    <button class="lr-b-gray" onclick="cmZoomStep(-1)">➖</button>
+                    <span id="cm-zoom-label" class="cm-zoom-label">100%</span>
+                    <button class="lr-b-gray" onclick="cmZoomStep(1)">➕</button>
+                    <button class="lr-b-gray" onclick="cmZoomFit()">適合</button>
+                </div>
+                <span class="cm-sep"></span>
                 <button class="lr-b-blue" onclick="cmSaveImage()">🖼️ 存為圖片</button>
                 <button id="cm-b-reset" class="lr-b-gray" onclick="cmResetLayout()" style="display:none;">↩️ 還原版面</button>
                 <button id="cm-b-edit" class="lr-b-gray" onclick="cmToggleEdit()" style="display:none;">✏️ 編輯</button>
@@ -632,6 +644,41 @@
                     }
                 }
                 return res;
+            };
+        })();
+
+        // ===== 全局轉轉圈：所有 API 載入／儲存／更改自動顯示 =====
+        (function () {
+            const inner = window.fetch.bind(window);
+            let pending = 0;
+            const SKIP = [/\/api\/pending_items/, /\/api\/record_items\//,
+                          /\/api\/records_home/, /\/api\/get_auth_status/, /healthz/];
+            function shouldShow(url, method) {
+                if (method !== 'GET') return true;
+                for (let i = 0; i < SKIP.length; i++) { if (SKIP[i].test(url)) return false; }
+                return url.indexOf('/api/') >= 0;
+            }
+            window.fetch = function (input, init) {
+                const url = (typeof input === 'string') ? input : ((input && input.url) || '');
+                const method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+                if (!shouldShow(url, method)) return inner(input, init);
+                const write = method !== 'GET';
+                pending++;
+                if (typeof bsLoading === 'function') {
+                    bsLoading(true, write ? '儲存中…' : '載入中…', write);
+                }
+                const done = function () {
+                    pending = Math.max(0, pending - 1);
+                    if (pending === 0 && typeof bsLoading === 'function') bsLoading(false);
+                };
+                let p;
+                try {
+                    p = inner(input, init);
+                } catch (e) { done(); throw e; }
+                return Promise.resolve(p).then(
+                    function (r) { done(); return r; },
+                    function (e) { done(); throw e; }
+                );
             };
         })();
     // 安全獲取權限，防止 Jinja 語法錯誤導致死機

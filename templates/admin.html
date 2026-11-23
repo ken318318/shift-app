@@ -355,6 +355,41 @@
                 return res;
             };
         })();
+
+        // ===== 全局轉轉圈：所有 API 載入／儲存／更改自動顯示 =====
+        (function () {
+            const inner = window.fetch.bind(window);
+            let pending = 0;
+            const SKIP = [/\/api\/pending_items/, /\/api\/record_items\//,
+                          /\/api\/records_home/, /\/api\/get_auth_status/, /healthz/];
+            function shouldShow(url, method) {
+                if (method !== 'GET') return true;
+                for (let i = 0; i < SKIP.length; i++) { if (SKIP[i].test(url)) return false; }
+                return url.indexOf('/api/') >= 0;
+            }
+            window.fetch = function (input, init) {
+                const url = (typeof input === 'string') ? input : ((input && input.url) || '');
+                const method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+                if (!shouldShow(url, method)) return inner(input, init);
+                const write = method !== 'GET';
+                pending++;
+                if (typeof bsLoading === 'function') {
+                    bsLoading(true, write ? '儲存中…' : '載入中…', write);
+                }
+                const done = function () {
+                    pending = Math.max(0, pending - 1);
+                    if (pending === 0 && typeof bsLoading === 'function') bsLoading(false);
+                };
+                let p;
+                try {
+                    p = inner(input, init);
+                } catch (e) { done(); throw e; }
+                return Promise.resolve(p).then(
+                    function (r) { done(); return r; },
+                    function (e) { done(); throw e; }
+                );
+            };
+        })();
         let configs = {};
         let allRecords = [];
         let currentTab = 'options';
