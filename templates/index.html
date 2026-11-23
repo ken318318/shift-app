@@ -1623,7 +1623,8 @@ function updatePendingCardState(card) {
 
 
     function loadPendingIssues() {
-        fetch('/api/pending_issues').then(res => res.json()).then(data => {
+        let _pid = (typeof editingRecordId !== 'undefined' && editingRecordId) ? ('?before_id=' + editingRecordId) : '';
+        fetch('/api/pending_issues' + _pid).then(res => res.json()).then(data => {
             let issues = data.issues; 
             let doneSet = data.done_items || []; 
             let container = document.getElementById('pending-container'); 
