@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for, Response
 from flask_cors import CORS
 import psycopg2
+import psycopg2.extras
 from psycopg2 import pool
 import os
 import io
@@ -57,6 +58,7 @@ def ensure_tables():
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS reviewed BOOLEAN DEFAULT FALSE")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS reviewed_by TEXT")
+        c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb")
         c.execute("""CREATE TABLE IF NOT EXISTS audit_logs (
                         id BIGSERIAL PRIMARY KEY,
                         actor TEXT,
@@ -739,6 +741,46 @@ def rename_config():
             release_db_connection(conn)
 
 
+def _record_items(note, checklist=''):
+    """把一筆交更解析成結構化問題項（每個有獨立 key）。"""
+    items = []
+    seen = set()
+    for line in str(note or '').split('\n'):
+        if '位置' not in line:
+            continue
+        for it in _up_parse_line(line):
+            code = _up_norm(it.get('code') or '')
+            cat = it.get('category') or ''
+            prob = it.get('problem') or ''
+            detail = (' - '.join([x for x in (cat, prob) if x])).strip()
+            key = '場面|%s|%s' % (code, detail)
+            if key in seen:
+                continue
+            seen.add(key)
+            items.append({'key': key, 'type': '場面', 'code': code,
+                          'detail': detail, 'status': it.get('status') or ''})
+    for part in str(checklist or '').split(' | '):
+        part = part.strip()
+        if not part.startswith('NFC異常:'):
+            continue
+        raw = part.replace('NFC異常:', '').strip()
+        for seg in re.split(r',\s*(?=[A-Za-z]{2}\d{3,6}\s*\()', raw):
+            seg = seg.strip()
+            m = re.match(r'([A-Za-z]{2}\d{3,6})\s*\((.*?)\)', seg)
+            if not m:
+                continue
+            code = _up_norm(m.group(1))
+            detail = m.group(2).replace('Box:', '').strip()
+            key = 'NFC|%s|%s' % (code, detail)
+            if key in seen:
+                continue
+            seen.add(key)
+            st = re.search(r'\[狀態[:：]\s*([^\]]*)\]', seg)
+            items.append({'key': key, 'type': 'NFC', 'code': code,
+                          'detail': detail, 'status': (st.group(1).strip() if st else '')})
+    return items
+
+
 @app.route('/api/submit', methods=['POST'])
 def submit():
     data = request.json
@@ -747,14 +789,15 @@ def submit():
         conn = get_db_connection()
         c = conn.cursor()
         now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
+        _items = _record_items(data.get('note'), data.get('checklist'))
         c.execute("""INSERT INTO records 
-                     (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, created_at) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+                     (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, created_at, items) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                    data.get('checklist'), data.get('status'), data.get('follower'), data.get('on_duty'), data.get('note'),
                    data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
                    data.get('guest_feedback'), data.get('dlr_feedback'),
-                   data.get('layout_side'), now_macau))
+                   data.get('layout_side'), now_macau, psycopg2.extras.Json(_items)))
         conn.commit()
         cache_clear('pending')
         return jsonify({"message": "交更成功！", "status": "success"})
@@ -793,14 +836,15 @@ def overwrite_record():
         c.execute("DELETE FROM records WHERE id = %s", (old_id,))
 
         now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
+        _items = _record_items(data.get('note'), data.get('checklist'))
         c.execute("""INSERT INTO records 
-                     (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, reviewed, reviewed_at, reviewed_by, created_at) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+                     (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, reviewed, reviewed_at, reviewed_by, created_at, items) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                    data.get('checklist'), data.get('status'), data.get('follower'), data.get('on_duty'), data.get('note'),
                    data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
                    data.get('guest_feedback'), data.get('dlr_feedback'),
-                   data.get('layout_side'), old_reviewed, old_reviewed_at, old_reviewed_by, now_macau))
+                   data.get('layout_side'), old_reviewed, old_reviewed_at, old_reviewed_by, now_macau, psycopg2.extras.Json(_items)))
         
         conn.commit()
         cache_clear('pending')
@@ -1721,7 +1765,7 @@ def get_pending_issues():
                         done_items.add(clean_line)
 
     _sql = ("SELECT id, name, lux_issue, temp_issue, db_issue, note, status, checklist,"
-            " created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau'"
+            " created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau', items"
             " FROM records"
             " WHERE (status IS NULL OR status NOT IN ('已處理'))"
             " AND (COALESCE(lux_issue,'') != '' OR COALESCE(temp_issue,'') != '' OR COALESCE(db_issue,'') != ''"
@@ -1742,7 +1786,26 @@ def get_pending_issues():
             "checklist": row[7],
             "created_at": str(row[8]) if row[8] else None
         })
-    payload = {"issues": pending, "done_items": list(done_items)}
+    # 用 items 計算每個問題項最新狀態（id 升序、後者覆蓋）
+    latest = {}
+    for row in reversed(rows):
+        rid = row[0]
+        ritems = row[9] if len(row) > 9 else None
+        if not ritems:
+            try:
+                ritems = _record_items(row[5], row[7])
+            except Exception:
+                ritems = []
+        for it in ritems or []:
+            key = it.get('key') or ''
+            if not key:
+                continue
+            latest[key] = {'key': key, 'type': it.get('type') or '', 'code': it.get('code') or '',
+                           'detail': it.get('detail') or '', 'status': it.get('status') or '',
+                           'record_id': rid, 'name': row[1], 'created_at': str(row[8]) if row[8] else None}
+    _done = ('已處理', '已处理', '已完成', '已解決')
+    pending_items = [v for v in latest.values() if not any(d in (v.get('status') or '') for d in _done)]
+    payload = {"issues": pending, "done_items": list(done_items), "pending_items": pending_items}
     cache_set('pending', payload, 45)
     resp = jsonify(payload)
     resp.headers['Cache-Control'] = 'no-store, max-age=0'
