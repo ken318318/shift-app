@@ -1625,6 +1625,10 @@ function updatePendingCardState(card) {
     function loadPendingIssues() {
         let _pid = (typeof editingRecordId !== 'undefined' && editingRecordId) ? ('?before_id=' + editingRecordId) : '';
         fetch('/api/pending_issues' + _pid).then(res => res.json()).then(data => {
+            let issues = data.issues; 
+            let doneSet = data.done_items || []; 
+            let container = document.getElementById('pending-container'); 
+            let listDiv = document.getElementById('pending-list');
             // ===== 新增：用後端結構化 pending_items 渲染（唔靠文字比對）=====
             if (data.pending_items && data.pending_items.length) {
                 const _items = data.pending_items;
@@ -1659,10 +1663,7 @@ function updatePendingCardState(card) {
                 }
                 return;
             }
-            let issues = data.issues; 
-            let doneSet = data.done_items || []; 
-            let container = document.getElementById('pending-container'); 
-            let listDiv = document.getElementById('pending-list');
+
             
             if (issues.length === 0) { 
                 container.style.display = 'none'; 
