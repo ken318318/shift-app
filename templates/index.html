@@ -1745,8 +1745,8 @@ function updatePendingCardState(card) {
                 }
                 // 兼容「場面 -【...】位置: ...」格式（無條件逐行抽）
                 (issue.note || '').split('\n').forEach(function (line) {
-                    if (/場面\s*[-－]\s*【/.test(line) && line.indexOf('位置') >= 0) {
-                        let norm = line.replace(/【/g, '[').replace(/】/g, ']').replace(/^.*?場面\s*[-－]\s*/, '');
+                    if (/場面\s*[-－]\s*[\[【]/.test(line) && line.indexOf('位置') >= 0) {
+                        let norm = line.replace(/[\[【]/g, '[').replace(/[\]】]/g, ']').replace(/^.*?場面\s*[-－]\s*/, '');
                         addItem('場面', norm, issue.id);
                     }
                 });
@@ -3592,7 +3592,8 @@ function updatePendingCardState(card) {
             if (cmMode === 'status') {
                 html += '　<span style="color:#e53935;font-weight:bold">壞 DLR ' + (c.dlr_bad || 0) + '</span>' +
                     '　<span style="color:#1565c0;font-weight:bold">壞客櫈 ' + ((c.guest_bad || 0) * 5) + ' 張（' + (c.guest_bad || 0) + ' 台）</span>' +
-                    '　<span style="color:#2e7d32;font-weight:bold">spare ' + (c.spare || 0) + '</span>';
+                    '　<span style="color:#2e7d32;font-weight:bold">spare ' + (c.spare || 0) + '</span>' +
+                    '　<span style="color:#c2185b;font-weight:bold">活動區 ' + (c.event || 0) + ' 台</span>';
             } else {
                 html += '　新櫈 ' + (c.new || 0) + '、舊櫈 ' + (c.old || 0) + '、未設定 ' + Math.max(0, (c.total || 0) - (c.new || 0) - (c.old || 0));
             }
