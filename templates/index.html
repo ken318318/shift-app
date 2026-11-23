@@ -485,6 +485,7 @@
                     <span>我已核對以上項目（已完成的經已勾選）</span>
                 </label>
             </div>
+            <button type="button" onclick="markSelectedDone()" style="margin-top:10px; width:100%; padding:11px; background:#2e7d32; color:#fff; border:none; border-radius:8px; font-size:14px; font-weight:bold; cursor:pointer; box-sizing:border-box;">✅ 標記勾選項目為「已完成」（即時從待跟進移除）</button>
         </div>
         <button class="submit-btn" id="submit-btn-main" onclick="submitForm()">提交交更</button>
         <div id="result"></div>
@@ -1623,6 +1624,52 @@ function updatePendingCardState(card) {
 
 
 
+async function markSelectedDone() {
+    const boxes = Array.from(document.querySelectorAll('.pending-checkbox'));
+    const keys = boxes.filter(cb => cb.checked && cb.getAttribute('data-key')).map(cb => cb.getAttribute('data-key'));
+    if (!keys.length) {
+        if (boxes.length) {
+            alert('這批項目屬舊格式（沒有 key），請直接勾選後按「提交交更」即可。');
+        } else {
+            alert('請先勾選要標記完成的項目');
+        }
+        return;
+    }
+    if (!confirm('確定把 ' + keys.length + ' 項標記為已完成？\n\n標記後會即時從「待跟進」移除。')) return;
+    try {
+        const data0 = await (async () => {
+            const res = await fetch('/api/mark_done', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ keys: keys })
+            });
+            try {
+                return await res.json();
+            } catch (e) {
+                alert('❌ 伺服器回應異常（HTTP ' + res.status + '）\n\n可能線上 app.py 未更新（/api/mark_done 不存在）。\n請通知管理員重新部署 app.py 後再試。');
+                return null;
+            }
+        })();
+        if (!data0) return;
+        const data = data0;
+        alert(data.message || (data.status === 'success' ? '✅ 完成' : '❌ 失敗'));
+        if (data.status === 'success') {
+            loadPendingIssues();
+            if (typeof showList === 'function') { try { showList(); } catch (e) {} }
+            // 驗證：刷新後仍有同一批 key → 後端其實沒有寫入
+            setTimeout(function () {
+                const left = Array.from(document.querySelectorAll('.pending-checkbox'))
+                    .filter(cb => keys.indexOf(cb.getAttribute('data-key')) >= 0).length;
+                if (left > 0) {
+                    alert('⚠️ 伺服器回報成功，但仍有 ' + left + ' 項在清單上。\n\n請按 F5 重新整理；如仍然存在，代表線上 app.py 仍係舊版。');
+                }
+            }, 1000);
+        }
+    } catch (e) {
+        alert('❌ 連線失敗，請稍後再試。\n' + e);
+    }
+}
+
     function loadPendingIssues() {
         let _pid = (typeof editingRecordId !== 'undefined' && editingRecordId) ? ('?before_id=' + editingRecordId) : '';
         fetch('/api/pending_issues' + _pid).then(res => res.json()).then(data => {
@@ -1650,17 +1697,24 @@ function updatePendingCardState(card) {
                 document.getElementById('home-pending-list').innerHTML = _html.replace(/<input[^>]*>/g, '');
                 document.getElementById('home-pending-container').style.display = 'block';
                 document.getElementById('home-pending-title').innerHTML = '⚠️ 有 ' + _items.length + ' 項早前已通知相關部門跟進(尚待解決)';
-                // 修改時：按 key 還原勾選狀態
+                // 修改時：按 key 還原勾選狀態（優先用 items，note 只作舊資料 fallback）
                 if (editingRecordId) {
                     let _r = allRecords.find(function (x) { return x.id == editingRecordId; });
-                    if (_r && _r.note && _r.note.indexOf('【早前已處理】') >= 0) {
-                        let _p = parseNote(_r.note);
-                        let _doneLines = _p.doneOld.split('\n').map(function (l) { return l.replace(/\[狀態:.*?\]/g, '').trim(); }).filter(function (l) { return l; });
-                        document.querySelectorAll('.pending-checkbox').forEach(function (cb) {
-                            const k = cb.getAttribute('data-key');
-                            if (k && _doneLines.some(function (l) { return l.indexOf(k) >= 0 || k.indexOf(l) >= 0; })) cb.checked = true;
-                        });
+                    let _doneKeys = [];
+                    if (_r && Array.isArray(_r.items)) {
+                        _doneKeys = _r.items.filter(function (it) {
+                            return it && it.key && (it.status || '').indexOf('已處理') >= 0;
+                        }).map(function (it) { return it.key; });
                     }
+                    let _doneLines = [];
+                    if (_doneKeys.length === 0 && _r && _r.note && _r.note.indexOf('【早前已處理】') >= 0) {
+                        _doneLines = parseNote(_r.note).doneOld.split('\n').map(function (l) { return l.replace(/\[狀態:.*?\]/g, '').trim(); }).filter(function (l) { return l; });
+                    }
+                    document.querySelectorAll('.pending-checkbox').forEach(function (cb) {
+                        const k = cb.getAttribute('data-key');
+                        if (!k) return;
+                        if (_doneKeys.indexOf(k) >= 0 || _doneLines.some(function (l) { return l.indexOf(k) >= 0 || k.indexOf(l) >= 0; })) cb.checked = true;
+                    });
                 }
                 return;
             }
