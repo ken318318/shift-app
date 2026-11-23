@@ -1622,6 +1622,7 @@ function updatePendingCardState(card) {
 }
 
 
+
     function loadPendingIssues() {
         let _pid = (typeof editingRecordId !== 'undefined' && editingRecordId) ? ('?before_id=' + editingRecordId) : '';
         fetch('/api/pending_issues' + _pid).then(res => res.json()).then(data => {
