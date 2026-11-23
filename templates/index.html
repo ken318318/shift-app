@@ -3560,16 +3560,21 @@ function updatePendingCardState(card) {
 
         if (tip) {
             const c = cmData.counts || {};
-            const head = (cmData.today ? ('更新日期：' + cmData.today + '　') : '') +
-                '台數 ' + (c.total || 0) + '（營運 ' + (c.active || 0) + '／停運 ' + (c.inactive || 0) + '）' +
-                (cmMode === 'status'
-                    ? ('　壞 DLR ' + (c.dlr_bad || 0) + '、壞客櫈 ' + ((c.guest_bad || 0) * 5) + ' 張（' + (c.guest_bad || 0) + ' 台）、spare ' + (c.spare || 0))
-                    : ('　新櫈 ' + (c.new || 0) + '、舊櫈 ' + (c.old || 0) + '、未設定 ' + Math.max(0, (c.total || 0) - (c.new || 0) - (c.old || 0))));
-            let line = head + '　' + (cmMode === 'status'
+            let html = (cmData.today ? ('更新日期：' + cmData.today + '　') : '') +
+                '台數 <b>' + (c.total || 0) + '</b>' +
+                '（營運 <span style="color:#2e7d32;font-weight:bold">' + (c.active || 0) + '</span>／停運 <span style="color:#607d8b;font-weight:bold">' + (c.inactive || 0) + '</span>）';
+            if (cmMode === 'status') {
+                html += '　<span style="color:#e53935;font-weight:bold">壞 DLR ' + (c.dlr_bad || 0) + '</span>' +
+                    '　<span style="color:#1565c0;font-weight:bold">壞客櫈 ' + ((c.guest_bad || 0) * 5) + ' 張（' + (c.guest_bad || 0) + ' 台）</span>' +
+                    '　<span style="color:#2e7d32;font-weight:bold">spare ' + (c.spare || 0) + '</span>';
+            } else {
+                html += '　新櫈 ' + (c.new || 0) + '、舊櫈 ' + (c.old || 0) + '、未設定 ' + Math.max(0, (c.total || 0) - (c.new || 0) - (c.old || 0));
+            }
+            html += '　' + (cmMode === 'status'
                 ? '（紅字＝壞 DLR、藍底＝壞客櫈、綠字＝spare、灰底＝停運）'
                 : (isAdmin ? '（紫＝新、橙＝舊）' : '（紫＝新、橙＝舊；只有管理員可修改）'));
-            if (cmEditMode) line += '　【編輯模式】點或拖選格仔，再用下面工具列修改';
-            tip.textContent = line;
+            if (cmEditMode) html += '　【編輯模式】點或拖選格仔，再用下面工具列修改';
+            tip.innerHTML = html;
         }
 
         // 有效合併
@@ -3671,6 +3676,7 @@ function updatePendingCardState(card) {
             const key = cmEditKey(c.r, c.c);
             if (covered[key]) return;
             if ((c.r >= 26 && c.r <= 29 && c.c >= 37 && c.c <= 40) || (c.r >= 47 && c.r <= 50 && c.c >= 63 && c.c <= 66)) return;
+            if ((c.r === 58 || c.r === 59 || c.r === 61 || c.r === 62) && c.c >= 25 && c.c <= 27) return;
             const x0 = X[c.c], y0 = Y[c.r];
             const x1 = x0 + cw(c.c), y1 = y0 + rh(c.r);
             const ed = cmEdits.cells[key];
@@ -3787,6 +3793,31 @@ function updatePendingCardState(card) {
         });
 
         [[26, 37], [47, 63]].forEach(function (a) { drawSpecial(a[0], a[1]); });
+
+        // Pit 8：4 張台貼埋（5|1、3|2、9|6、8|7）
+        function drawPit8(r0, r1) {
+            const x0 = X[25], x1 = X[28];
+            const y0 = Y[r0], y1 = Y[r1 + 1];
+            const midX = (x0 + x1) / 2;
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 1.6;
+            ctx.strokeRect(x0 + 0.5, y0 + 0.5, x1 - x0 - 1, y1 - y0 - 1);
+            const ym = Y[r1];
+            ctx.beginPath();
+            ctx.moveTo(x0, ym); ctx.lineTo(x1, ym);
+            ctx.moveTo(midX, y0); ctx.lineTo(midX, y1);
+            ctx.stroke();
+            [[r0, x0, midX], [r0, midX, x1], [r1, x0, midX], [r1, midX, x1]].forEach(function (p) {
+                const col = (p[1] === x0) ? 25 : 27;
+                const cellData = (cmData.cells || []).find(function (x) { return x.r === p[0] && x.c === col; });
+                if (!cellData) return;
+                drawText(p[1], p[0] === r0 ? y0 : ym, p[2], p[0] === r0 ? ym : y1, cellData.v, 14, true, '#111');
+            });
+        }
+        drawPit8(58, 59);
+        drawPit8(61, 62);
 
         if (legend) {
             if (cmMode === 'status') {
