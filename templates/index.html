@@ -1729,11 +1729,21 @@ async function loadPendingIssues() {
     }
 
     // 按類型分組（完全用結構化欄位，不再比對文字）
-    const typeName = { '場面': '🪑 場面問題', 'NFC': '📡 NFC 異常', 'Lux': '💡 Lux', '溫度': '🌡️ 溫度', '分貝': '🔊 分貝' };
+    const typeName = { 'NFC': '📡 NFC 異常', 'Lux': '💡 Lux', '溫度': '🌡️ 溫度', '分貝': '🔊 分貝' };
     const groups = {};
+    const groupLabel = {};
     items.forEach(it => {
         const t = it.type || '其他';
-        (groups[t] = groups[t] || []).push(it);
+        let gk = t;
+        if (t === '場面') {
+            const cat = (it.category || '').trim() || '未分類';
+            gk = '場面|' + cat;
+            const isSeat = (cat.indexOf('櫈') >= 0 || cat.indexOf('椅') >= 0);
+            groupLabel[gk] = (isSeat ? '🪑 ' : '🛠️ ') + cat;
+        } else {
+            groupLabel[gk] = typeName[t] || t;
+        }
+        (groups[gk] = groups[gk] || []).push(it);
     });
 
     let html = '';
@@ -1742,7 +1752,7 @@ async function loadPendingIssues() {
         html += '<div class="pending-card" style="border-left:4px solid #ffa000;margin-bottom:15px;">'
              + '<details open><summary style="cursor:pointer;font-weight:bold;color:#856404;padding:6px;display:flex;align-items:center;">'
              + '<input type="checkbox" class="select-all-cb" onclick="event.stopPropagation()" onchange="toggleSelectAll(this)" style="width:18px;height:18px;margin-right:10px;cursor:pointer;">'
-             + (typeName[t] || t) + '（' + arr.length + ' 項）</summary>';
+             + (groupLabel[t] || (typeName[t] || t)) + '（' + arr.length + ' 項）</summary>';
         arr.forEach(it => {
             const badge = it.status || '待處理';
             const _done = it.__done || badge.indexOf('已處理') >= 0;
@@ -1756,6 +1766,7 @@ async function loadPendingIssues() {
                  + '<strong>⚠️ ' + htmlEsc(it.display || it.key) + '</strong> '
                  + '<span style="background:' + color + ';color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;white-space:nowrap;display:inline-block;flex:0 0 auto;margin-left:4px;">' + htmlEsc(badge) + '</span>'
                  + (it.note ? '<br><span style="font-size:11px;color:#777;">備註：' + htmlEsc(it.note) + '</span>' : '')
+                 + ((it.first_at || it.created_at) ? '<br><span style="font-size:11px;color:#888;">📅 發生日期: ' + htmlEsc(String(it.first_at || it.created_at).slice(0, 10)) + '</span>' : '')
                  + '</div></div>';
         });
         html += '</details></div>';
@@ -2091,14 +2102,14 @@ async function loadPendingIssues() {
                 if (parsedNote.doneOld) {
                     parsedNote.doneOld.split('\n').forEach(line => {
                         line = line.replace(/\s*\[狀態:.*?\]/g, '').trim();
-                            if (line) { doneOldCount++; doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 舊問題已處理: ${line}</span></div>`; }
+                            if (line) { doneOldCount++; doneOldHtml += `<div class="issue-data" style="background:#e8f5e9; color:#2e7d32; padding:8px; margin-bottom:5px; border-radius:4px;"><span>✅ 舊問題已處理: ${htmlEsc(keyToDisplay(line))}</span></div>`; }
                     });
                 }
 
                 if (parsedNote.pendingOld) {
                     parsedNote.pendingOld.split('\n').forEach(line => {
                         line = line.replace(/\s*\[狀態:.*?\]/g, '').trim();
-                        if (line) oldPendingList.push(`<div class="issue-data" style="background:#eceff1; color:#37474f;"><span>📌 ${line}</span><span class="status-badge" style="background:#90a4ae;">早前未處理</span></div>`);
+                        if (line) oldPendingList.push(`<div class="issue-data" style="background:#eceff1; color:#37474f;"><span>📌 ${htmlEsc(keyToDisplay(line))}</span><span class="status-badge" style="background:#90a4ae;">早前未處理</span></div>`);
                     });
                 }
 
@@ -2521,6 +2532,20 @@ async function loadPendingIssues() {
             .catch(err => alert("❌ 連線失敗，請稍後再試。")); 
         } 
     }
+
+function keyToDisplay(line) {
+    // 新格式 key「類型|台號|詳情」→ 友善文字；舊文字格式原樣返回
+    const s = String(line == null ? '' : line).trim();
+    if (s.indexOf('|') < 0) return s;
+    const p = s.split('|');
+    const t = (p[0] || '').trim();
+    const code = (p[1] || '').trim();
+    const detail = p.slice(2).join('|').trim();
+    const tail = code ? '（' + code + '）' : '';
+    if (t === '場面') return (detail || '場面') + tail;
+    if (t === 'Lux' || t === 'NFC') return t + ' ' + detail + tail;
+    return t + (detail ? ' ' + detail : '') + tail;
+}
 
 function htmlEsc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
