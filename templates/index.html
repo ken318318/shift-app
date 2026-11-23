@@ -1693,7 +1693,7 @@ function updatePendingCardState(card) {
                     let inDoneSet = doneSet.includes(checkText);
                     let isInEditingDone = doneItemsInEditing.some(l => l.includes(checkText) || checkText.includes(l));
                     
-                    if (inDoneSet && !isInEditingDone) { return; }
+                    // 唔再用舊「已處理」清單過濾（之前會誤把未處理嘅橱記錄隱藏）
                     
                     seenItems.add(checkText);
                     
