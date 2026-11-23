@@ -1692,7 +1692,7 @@ function updatePendingCardState(card) {
                     
                     if (seenItems.has(dedupeKey)) return; 
                     let _cleanU = clean.toUpperCase();
-                    let _inDone = doneSet.some(function (d) { return d.indexOf(_cleanU) >= 0 || _cleanU.indexOf(d) >= 0; });
+                    let _inDone = doneSet.some(function (d) { if (d.indexOf(_cleanU) >= 0 || _cleanU.indexOf(d) >= 0) return true; if (type === 'NFC' && _mcN && d.indexOf(_mcN[0].toUpperCase()) >= 0) return true; return false; });
                     if (!skipDone && _inDone) { seenItems.add(dedupeKey); return; }
                     if (currentStatus === '已處理') { seenItems.add(dedupeKey); return; }
                     
