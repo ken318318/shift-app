@@ -408,6 +408,13 @@ def ensure_shift_items():
                         resolved_by TEXT NOT NULL DEFAULT ''
                      )""")
         c.execute("ALTER TABLE shift_items ADD COLUMN IF NOT EXISTS event_at TIMESTAMPTZ")
+        # 修復舊 reopen/resolve 行空白欄位（由同一 item_key 的其他行補回）
+        c.execute("""UPDATE shift_items t
+                     SET category = s.category, problem = s.problem
+                     FROM (SELECT DISTINCT ON (item_key) item_key, category, problem
+                           FROM shift_items WHERE COALESCE(category,'') <> ''
+                           ORDER BY item_key, id DESC) s
+                     WHERE t.item_key = s.item_key AND COALESCE(t.category,'') = ''""")
         c.execute("UPDATE shift_items SET event_at = COALESCE(resolved_at, created_at) WHERE event_at IS NULL")
         c.execute("CREATE INDEX IF NOT EXISTS idx_si_key ON shift_items(item_key, event_at DESC, id DESC)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_si_record ON shift_items(record_id)")
@@ -464,7 +471,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-15", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-16", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1039,13 +1046,28 @@ def _si_write_done(c, record_id, keys, who=''):
 
 
 def _si_write_reopen(c, record_id, keys):
-    """把「取消勾選」的項目寫回待處理（append-only，不動舊事件）。"""
+    """把「取消勾選」的項目寫回待處理（append-only）。
+    會複製該問題項最新一筆的結構化欄位（類別／問題／顯示），
+    否則更新表／櫈況圖會因為欄位空白而辨認不到。"""
     n = 0
     for key in (keys or []):
         key = (key or '').strip()
         if not key or '|' not in key:
             continue
-        _si_insert(c, record_id, 'reopen', key, None, '待處理', None, '')
+        c.execute("""SELECT item_key, type, code, category, problem, detail, side, note, display
+                     FROM shift_items WHERE item_key = %s ORDER BY id DESC LIMIT 1""", (key,))
+        row = c.fetchone()
+        if row:
+            v = list(row)
+        else:
+            t, code, detail = _split_key(key)
+            v = [key, t, code, '', '', detail, '', '',
+                 _item_display({'type': t, 'code': code, 'detail': detail})]
+        c.execute("""INSERT INTO shift_items
+                     (record_id, source, item_key, type, code, category, problem, detail, side,
+                      status, note, display, event_at, resolved_at, resolved_by)
+                     VALUES (%s,'reopen',%s,%s,%s,%s,%s,%s,%s,'待處理',%s,%s,NOW(),NULL,'')""",
+                  (record_id, v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8]))
         n += 1
     return n
 
@@ -2889,62 +2911,6 @@ def _up_load_excl():
 
 def _up_key(date_str, rtype):
     return date_str + '|' + rtype
-
-
-@app.route('/api/update_debug', methods=['GET'])
-def update_debug():
-    """臨時診斷：更新表為何偵測不到項目"""
-    if session.get('role') != 'admin':
-        return jsonify({'status': 'error'})
-    out, done_at, nfc = _up_detect(request.args.get('date') or _up_today())
-    conn = None
-    info = {}
-    try:
-        conn = get_db_connection()
-        c = conn.cursor()
-        c.execute("SELECT COUNT(*) FROM records")
-        info['records'] = c.fetchone()[0]
-        c.execute("SELECT id, COALESCE(note,''), (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date FROM records ORDER BY id")
-        info['rows'] = [(r[0], len(r[1]), str(r[2])) for r in c.fetchall()]
-        c.execute("SELECT COUNT(*) FROM shift_items")
-        info['shift_items'] = c.fetchone()[0]
-        c.execute("""SELECT type, code, category, problem, status,
-                            (event_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date
-                     FROM shift_items ORDER BY id DESC LIMIT 10""")
-        info['si_rows'] = [(r[0], r[1], r[2], r[3], r[4], str(r[5])) for r in c.fetchall()]
-        # 逐步重現 _up_detect 的查詢與解析，定位失敗點
-        try:
-            c.execute("""SELECT COALESCE(note,''),
-                                (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date,
-                                COALESCE(layout_side,''), COALESCE(checklist,''),
-                                COALESCE(lux_issue,''), COALESCE(temp_issue,''), COALESCE(db_issue,'')
-                         FROM records
-                         WHERE (COALESCE(note,'') <> '' OR COALESCE(checklist,'') <> '')
-                           AND (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date <= %s
-                         ORDER BY id ASC""", (request.args.get('date') or _up_today(),))
-            rr = c.fetchall()
-            info['detect_rows'] = len(rr)
-            if rr:
-                info['first_note'] = rr[0][0]
-                info['first_date'] = str(rr[0][1])
-                secs = _up_split_sections(rr[0][0])
-                info['secs'] = {k: (v[:60] if isinstance(v, str) else v) for k, v in secs.items()}
-                parsed = []
-                for name, seg in secs.items():
-                    for line in seg.split('\n'):
-                        parsed.append((name, line[:50], _up_parse_line(line)))
-                info['parsed'] = parsed
-        except Exception as ee:
-            info['detect_error'] = str(ee)
-    except Exception as e:
-        info['error'] = str(e)
-    finally:
-        if conn:
-            try: release_db_connection(conn)
-            except Exception: pass
-    return jsonify({'dbg': dict(_DBG), 'detected': len(out), 'sample': [(k[0], k[1], v.get('status')) for k, v in list(out.items())[:5]],
-                    'done_at': [(k[0], k[1], str(v[0])) for k, v in list(done_at.items())[:5]],
-                    'info': info})
 
 
 @app.route('/api/update_report_cats', methods=['GET'])
