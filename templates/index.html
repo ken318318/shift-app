@@ -1680,29 +1680,23 @@ function updatePendingCardState(card) {
                     
                     let statusMatch = text.match(/\[狀態:(.*?)\]/); 
                     let currentStatus = statusMatch ? statusMatch[1] : '待處理'; 
-                    if (currentStatus === '已處理') return; 
+                    if (currentStatus === '已處理') { let _mc2 = clean.match(/[A-Za-z]{2}\d{3,6}/); if (_mc2) seenItems.add(type + '|' + _mc2[0].toUpperCase()); return; } 
                     
                     let clean = text.replace(/\[狀態:.*?\]/g, '').replace('⚠️', '').replace('✅', '').trim(); 
                     if (!clean) return;
                     
                     let checkText = `${type} - ${clean}`.toUpperCase(); 
+                    let _mc = clean.match(/[A-Za-z]{2}\d{3,6}/);
+                    let dedupeKey = type + '|' + (_mc ? _mc[0].toUpperCase() : clean.toUpperCase());
                     let dataText = `${type} - ${clean} [狀態:${currentStatus}]`;
                     
-                    if (seenItems.has(checkText)) return; 
+                    if (seenItems.has(dedupeKey)) return; 
                     
-                    let inDoneSet = doneSet.includes(checkText);
-                    if (!inDoneSet) {
-                        let mCode = clean.match(/[A-Za-z]{2}\d{3,6}/);
-                        if (mCode) {
-                            let cs = mCode[0].toUpperCase();
-                            inDoneSet = doneSet.some(function (d) { return d.indexOf(cs) >= 0; });
-                        }
-                    }
                     let isInEditingDone = doneItemsInEditing.some(l => l.includes(checkText) || checkText.includes(l));
                     
-                    if (!skipDone && inDoneSet && !isInEditingDone) { return; }
+                    if (skipDone === 'never') { return; }
                     
-                    seenItems.add(checkText);
+                    seenItems.add(dedupeKey);
                     
                     let badgeColor = currentStatus === '已 Send mail' ? '#9c27b0' : (currentStatus === '已通知相關部門跟進' ? '#e67c73' : '#f5b041');
                     let checkedAttr = isInEditingDone ? 'checked' : '';
