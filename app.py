@@ -1720,8 +1720,8 @@ def get_pending_issues():
     c.execute("""SELECT id, name, lux_issue, temp_issue, db_issue, note, status, checklist,
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' 
                  FROM records 
-                 WHERE status NOT IN ('已處理') 
-                 AND (lux_issue != '' OR temp_issue != '' OR db_issue != '' 
+                 WHERE (status IS NULL OR status NOT IN ('已處理')) 
+                 AND (COALESCE(lux_issue,'') != '' OR COALESCE(temp_issue,'') != '' OR COALESCE(db_issue,'') != '' 
                       OR note LIKE '%【場面問題】%' OR note LIKE '%【早前未處理】%'
                       OR note LIKE '%客櫈%' OR note LIKE '%DLR櫈%' OR note LIKE '%客椅%'
                       OR checklist LIKE '%NFC異常%')
