@@ -1693,8 +1693,11 @@ def get_pending_issues():
 
     conn = get_db_connection()
     c = conn.cursor()
-    
-    c.execute("SELECT note FROM records WHERE note LIKE '%【早前已處理】%'")
+    before_id = request.args.get('before_id', type=int)
+    _done_sql = "SELECT note FROM records WHERE note LIKE '%【早前已處理】%'"
+    if before_id:
+        _done_sql += " AND id < %d" % before_id
+    c.execute(_done_sql)
     done_rows = c.fetchall()
     done_items = set()
     for r in done_rows:
@@ -1717,7 +1720,6 @@ def get_pending_issues():
                     else:
                         done_items.add(clean_line)
 
-    before_id = request.args.get('before_id', type=int)
     _sql = ("SELECT id, name, lux_issue, temp_issue, db_issue, note, status, checklist,"
             " created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau'"
             " FROM records"
