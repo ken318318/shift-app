@@ -406,9 +406,9 @@ def ensure_shift_items():
         c.execute("CREATE INDEX IF NOT EXISTS idx_si_key ON shift_items(item_key, id DESC)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_si_record ON shift_items(record_id)")
         conn.commit()
-        c.execute("SELECT COUNT(*) FROM shift_items WHERE source IN ('submit', 'backfill')")
+        c.execute("SELECT COUNT(*) FROM shift_items WHERE source = 'submit'")
         if c.fetchone()[0] == 0:
-            # 清掉先前產生的 backfill 行，重新由 records 轉換
+            # 尚未有任何正式提交 → 清掉舊 backfill 行，重新由 records 轉換
             c.execute("DELETE FROM shift_items WHERE source = 'backfill'")
             _backfill_shift_items(c)
             conn.commit()
@@ -457,7 +457,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-6", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-7", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
