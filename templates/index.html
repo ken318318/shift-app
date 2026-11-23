@@ -3058,25 +3058,33 @@ function collectItems() {
             octx.textBaseline = 'top';
             octx.fillStyle = '#444';
             octx.font = 'bold ' + Math.round(18 * dpr) + 'px "Microsoft JhengHei",sans-serif';
-            octx.fillText('Update: ' + (cmData.today || ''), sx, yy);
+            // 日期格式：2026 Nov 24（同原本 Excel 一致）
+            const _MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            let _dateTxt = String(cmData.today || '');
+            const _dp = _dateTxt.split('-');
+            if (_dp.length === 3) {
+                const _mi = parseInt(_dp[1], 10) - 1;
+                _dateTxt = _dp[0] + ' ' + (_MON[_mi] || _dp[1]) + ' ' + _dp[2];
+            }
+            octx.fillText('Update date ' + _dateTxt, sx, yy);
             yy += 30 * dpr;
             octx.fillStyle = '#222';
             octx.font = 'bold ' + Math.round(24 * dpr) + 'px "Microsoft JhengHei",sans-serif';
             octx.fillText('Tables: ' + (cc.total || 0) + '  (Active ' + (cc.active || 0) + ' / Closed ' + (cc.inactive || 0) + ')', sx, yy);
             if (cmMode === 'status') {
                 yy += 34 * dpr;
-                octx.fillStyle = '#e53935';
-                octx.fillText('Bad DLR: ' + (cc.dlr_bad || 0), sx, yy);
-                yy += 32 * dpr;
                 octx.fillStyle = '#1565c0';
-                octx.fillText('Bad Guest: ' + ((cc.guest_bad || 0) * 5), sx, yy);
+                octx.fillText('Guest Chair ' + ((cc.guest_bad || 0) * 5), sx, yy);
+                yy += 32 * dpr;
+                octx.fillStyle = '#e53935';
+                octx.fillText('Broken DLR Chair ' + (cc.dlr_bad || 0), sx, yy);
                 yy += 32 * dpr;
                 octx.fillStyle = '#2e7d32';
-                octx.fillText('Spare: ' + (cc.spare || 0), sx, yy);
+                octx.fillText('Spare Chair ' + (cc.spare || 0), sx, yy);
                 if (cc.event) {
                     yy += 32 * dpr;
                     octx.fillStyle = '#c2185b';
-                    octx.fillText('Event: ' + cc.event, sx, yy);
+                    octx.fillText('Event Area ' + cc.event, sx, yy);
                 }
             }
             const url = out.toDataURL('image/png');
