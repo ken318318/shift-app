@@ -1686,7 +1686,8 @@ function updatePendingCardState(card) {
                     if (!clean) return;
                     
                     let checkText = `${type} - ${clean}`.toUpperCase(); 
-                    let dedupeKey = type + '|' + clean.toUpperCase();
+                    let _mcN = clean.match(/[A-Za-z]{2}\d{3,6}/);
+                    let dedupeKey = (type === 'NFC') ? ('NFC|' + (_mcN ? _mcN[0].toUpperCase() : clean.toUpperCase())) : (type + '|' + clean.toUpperCase());
                     let dataText = `${type} - ${clean} [狀態:${currentStatus}]`;
                     
                     if (seenItems.has(dedupeKey)) return; 
