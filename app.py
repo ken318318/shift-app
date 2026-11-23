@@ -2882,6 +2882,38 @@ def _up_key(date_str, rtype):
     return date_str + '|' + rtype
 
 
+@app.route('/api/update_debug', methods=['GET'])
+def update_debug():
+    """臨時診斷：更新表為何偵測不到項目"""
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error'})
+    out, done_at, nfc = _up_detect(request.args.get('date') or _up_today())
+    conn = None
+    info = {}
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM records")
+        info['records'] = c.fetchone()[0]
+        c.execute("SELECT id, COALESCE(note,''), (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date FROM records ORDER BY id")
+        info['rows'] = [(r[0], len(r[1]), str(r[2])) for r in c.fetchall()]
+        c.execute("SELECT COUNT(*) FROM shift_items")
+        info['shift_items'] = c.fetchone()[0]
+        c.execute("""SELECT type, code, category, problem, status,
+                            (event_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date
+                     FROM shift_items ORDER BY id DESC LIMIT 10""")
+        info['si_rows'] = [(r[0], r[1], r[2], r[3], r[4], str(r[5])) for r in c.fetchall()]
+    except Exception as e:
+        info['error'] = str(e)
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+    return jsonify({'detected': len(out), 'sample': [(k[0], k[1], v.get('status')) for k, v in list(out.items())[:5]],
+                    'done_at': [(k[0], k[1], str(v[0])) for k, v in list(done_at.items())[:5]],
+                    'info': info})
+
+
 @app.route('/api/update_report_cats', methods=['GET'])
 def update_report_cats():
     date_str = (request.args.get('date') or '').strip()
