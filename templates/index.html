@@ -1681,7 +1681,6 @@ function updatePendingCardState(card) {
                     
                     let statusMatch = text.match(/\[狀態:(.*?)\]/); 
                     let currentStatus = statusMatch ? statusMatch[1] : '待處理'; 
-                    if (currentStatus === '已處理') { seenItems.add(dedupeKey); return; } 
                     
                     let clean = text.replace(/\[狀態:.*?\]/g, '').replace('⚠️', '').replace('✅', '').trim(); 
                     if (!clean) return;
