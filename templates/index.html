@@ -1670,7 +1670,10 @@ async function markSelectedDone() {
     }
 }
 
-    async function loadPendingIssues() {
+    let _pendingSeq = 0;
+
+async function loadPendingIssues() {
+    const _seq = ++_pendingSeq;   // 每次呼叫遞增，丟棄過期回應
     const container = document.getElementById('pending-container');
     const listDiv = document.getElementById('pending-list');
     const homeC = document.getElementById('home-pending-container');
@@ -1687,6 +1690,7 @@ async function markSelectedDone() {
         const res = await fetch(url, { credentials: 'same-origin' });
         data = await res.json();
     } catch (e) { console.error('pending_items 讀取失敗', e); }
+    if (_seq !== _pendingSeq) return;   // 已有更新的請求，丟棄本次結果
 
     // 修改紀錄時：
     //   ① 本張紀錄「上報」的項目 → 已在表單，黃框不重複列出
@@ -1701,6 +1705,7 @@ async function markSelectedDone() {
             });
         } catch (e) {}
     }
+    if (_seq !== _pendingSeq) return;
     const _reportedKeys = ownReported.map(x => x.key);
     const _resolvedKeys = resolvedHere.map(x => x.key);
     let items = (data.pending_items || []).filter(it =>
