@@ -1623,7 +1623,42 @@ function updatePendingCardState(card) {
 
 
     function loadPendingIssues() {
-        fetch('/api/pending_issues').then(res => res.json()).then(data => {
+        let _pid = (typeof editingRecordId !== 'undefined' && editingRecordId) ? ('?before_id=' + editingRecordId) : '';
+        fetch('/api/pending_issues' + _pid).then(res => res.json()).then(data => {
+            // ===== 新增：用後端結構化 pending_items 渲染（唔靠文字比對）=====
+            if (data.pending_items && data.pending_items.length) {
+                const _items = data.pending_items;
+                const _typeName = { '場面': '🪑 櫈/座位', 'NFC': '📡 NFC 異常', 'Lux': '💡 Lux', '溫度': '🌡️ 溫度', '分貝': '🔊 分貝' };
+                const _groups = {};
+                _items.forEach(function (it) { const t = it.type || '其他'; (_groups[t] = _groups[t] || []).push(it); });
+                let _html = '';
+                Object.keys(_groups).forEach(function (t) {
+                    _html += '<div class="pending-card" style="border-left:4px solid #ffa000;margin-bottom:15px;"><details open><summary style="cursor:pointer;font-weight:bold;color:#856404;padding:6px;">' + (_typeName[t] || t) + '（' + _groups[t].length + ' 項）</summary>';
+                    _groups[t].forEach(function (it) {
+                        const _dt = (it.key || '') + ' [狀態:' + (it.status || '待處理') + ']';
+                        _html += '<div style="display:flex;align-items:center;background:#ffebee;padding:9px;margin:6px 0;border-radius:6px;border:1px solid #ffcdd2;"><input type="checkbox" class="pending-checkbox" data-key="' + (it.key || '') + '" data-text="' + _dt + '" style="width:20px;height:20px;margin-right:10px;"><div style="font-size:13px;color:#d32f2f;flex:1;"><strong>⚠️ ' + (it.detail || '') + '（' + (it.code || '') + '）</strong> <span style="background:#9c27b0;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;">' + (it.status || '待處理') + '</span><br><span style="font-size:11px;color:#888;">' + (it.name || '') + '</span></div></div>';
+                    });
+                    _html += '</details></div>';
+                });
+                listDiv.innerHTML = _html;
+                container.style.display = 'block';
+                document.getElementById('home-pending-list').innerHTML = _html.replace(/<input[^>]*>/g, '');
+                document.getElementById('home-pending-container').style.display = 'block';
+                document.getElementById('home-pending-title').innerHTML = '⚠️ 有 ' + _items.length + ' 項早前已通知相關部門跟進(尚待解決)';
+                // 修改時：按 key 還原勾選狀態
+                if (editingRecordId) {
+                    let _r = allRecords.find(function (x) { return x.id == editingRecordId; });
+                    if (_r && _r.note && _r.note.indexOf('【早前已處理】') >= 0) {
+                        let _p = parseNote(_r.note);
+                        let _doneLines = _p.doneOld.split('\n').map(function (l) { return l.replace(/\[狀態:.*?\]/g, '').trim(); }).filter(function (l) { return l; });
+                        document.querySelectorAll('.pending-checkbox').forEach(function (cb) {
+                            const k = cb.getAttribute('data-key');
+                            if (k && _doneLines.some(function (l) { return l.indexOf(k) >= 0 || k.indexOf(l) >= 0; })) cb.checked = true;
+                        });
+                    }
+                }
+                return;
+            }
             let issues = data.issues; 
             let doneSet = data.done_items || []; 
             let container = document.getElementById('pending-container'); 
@@ -1680,14 +1715,13 @@ function updatePendingCardState(card) {
                     
                     let statusMatch = text.match(/\[狀態:(.*?)\]/); 
                     let currentStatus = statusMatch ? statusMatch[1] : '待處理'; 
-                    if (currentStatus === '已處理') { seenItems.add(dedupeKey); return; } 
                     
                     let clean = text.replace(/\[狀態:.*?\]/g, '').replace('⚠️', '').replace('✅', '').trim(); 
                     if (!clean) return;
                     
                     let checkText = `${type} - ${clean}`.toUpperCase(); 
                     let _mcN = clean.match(/[A-Za-z]{2}\d{3,6}/);
-                    let dedupeKey = (type === 'NFC') ? ('NFC|' + (_mcN ? _mcN[0].toUpperCase() : clean.toUpperCase())) : (type + '|' + clean.toUpperCase());
+                    let dedupeKey = type + '|' + (_mcN ? _mcN[0].toUpperCase() : clean.toUpperCase());
                     let dataText = `${type} - ${clean} [狀態:${currentStatus}]`;
                     
                     if (seenItems.has(dedupeKey)) return; 
