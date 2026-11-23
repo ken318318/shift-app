@@ -3682,9 +3682,9 @@ function updatePendingCardState(card) {
             for (let i = 0; i < (m.rs || 1); i++) y1 += rh(m.r + i);
             const isManual = (cmEdits.merges || []).indexOf(m) >= 0;
             fillCell(x0, y0, x1, y1, m.bg ? rgb(m.bg, null) : null);
-            if (isManual) drawBorder(x0, y0, x1, y1, m.t, m.l, m.rr, m.b);
+            if (isManual || m.t || m.l || m.rr || m.b) drawBorder(x0, y0, x1, y1, m.t, m.l, m.rr, m.b);
             drawText(x0, y0, x1, y1, m.v || '', m.fs || 11, m.bold, m.fc ? rgb(m.fc, '#333') : '#333');
-            if (m.v) {
+            if (m.v && /^[0-9]+$/.test(String(m.v).trim())) {
                 ctx.strokeStyle = '#9e9e9e';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(Math.round(x0) + 0.5, Math.round(y0) + 0.5, Math.round(x1 - x0) - 1, Math.round(y1 - y0) - 1);
