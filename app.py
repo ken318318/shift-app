@@ -303,7 +303,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-3", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-4", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1803,7 +1803,19 @@ def get_pending_issues():
     _sql += " ORDER BY id DESC"
     c.execute(_sql)
     rows = c.fetchall()
+
+    # ★ 另外取【全部紀錄】計「最新狀態」：
+    #   已處理標記可能寫在 status='已處理' 的紀錄上，那些紀錄不入上面的 pending 查詢，
+    #   但必須參與最新狀態計算，否則標記會被舊紀錄的「已 Send mail」蓋.
+    _all_sql = ("SELECT id, name, note, checklist, items,"
+                " created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' FROM records")
+    if before_id:
+        _all_sql += " WHERE id < %d" % before_id
+    _all_sql += " ORDER BY id ASC"
+    c.execute(_all_sql)
+    all_rows = c.fetchall()
     release_db_connection(conn)
+
     pending = []
     for row in rows:
         pending.append({
@@ -1812,14 +1824,12 @@ def get_pending_issues():
             "checklist": row[7],
             "created_at": str(row[8]) if row[8] else None
         })
-    # 用 items 計算每個問題項最新狀態（id 升序、後者覆蓋）
+    # 用全部紀錄的 items 計算每個問題項最新狀態（id 升序、後者覆蓋）
     latest = {}
-    for row in reversed(rows):
-        rid = row[0]
-        ritems = row[9] if len(row) > 9 else None
+    for rid, rname, rnote, rchecklist, ritems, rcreated in all_rows:
         if not ritems:
             try:
-                ritems = _record_items(row[5], row[7])
+                ritems = _record_items(rnote, rchecklist)
             except Exception:
                 ritems = []
         for it in ritems or []:
@@ -1828,7 +1838,8 @@ def get_pending_issues():
                 continue
             latest[key] = {'key': key, 'type': it.get('type') or '', 'code': it.get('code') or '',
                            'detail': it.get('detail') or '', 'status': it.get('status') or '',
-                           'record_id': rid, 'name': row[1], 'created_at': str(row[8]) if row[8] else None}
+                           'record_id': rid, 'name': rname,
+                           'created_at': str(rcreated) if rcreated else None}
     _done = ('已處理', '已处理', '已完成', '已解決')
     pending_items = [v for v in latest.values() if not any(d in (v.get('status') or '') for d in _done)]
     payload = {"issues": pending, "done_items": list(done_items), "pending_items": pending_items}
