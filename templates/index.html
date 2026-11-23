@@ -578,43 +578,14 @@
             </div>
             <div id="cm-tip" class="lr-msg"></div>
             <div id="cm-tools" class="cm-tools">
-                <div class="cm-tools-row">
-                    <span class="cm-tools-lbl">文字</span>
-                    <button class="cm-swatch" style="background:#111" title="黑" onclick="cmSetProp('fc','#111')"></button>
-                    <button class="cm-swatch" style="background:#e53935" title="紅" onclick="cmSetProp('fc','#e53935')"></button>
-                    <button class="cm-swatch" style="background:#2e7d32" title="綠" onclick="cmSetProp('fc','#2e7d32')"></button>
-                    <button class="cm-swatch" style="background:#1565c0" title="藍" onclick="cmSetProp('fc','#1565c0')"></button>
-                    <button class="cm-swatch" style="background:#7b2fd0" title="紫" onclick="cmSetProp('fc','#7b2fd0')"></button>
-                    <button class="cm-swatch" style="background:#d95a00" title="橙" onclick="cmSetProp('fc','#d95a00')"></button>
-                    <button class="cm-sw" onclick="cmSetPropAuto('fc')">自動</button>
-                </div>
-                <div class="cm-tools-row">
-                    <span class="cm-tools-lbl">底色</span>
-                    <button class="cm-swatch" style="background:#ffffff" title="白" onclick="cmSetProp('bg','#ffffff')"></button>
-                    <button class="cm-swatch" style="background:#cfd8dc" title="灰" onclick="cmSetProp('bg','#cfd8dc')"></button>
-                    <button class="cm-swatch" style="background:#fff176" title="黃" onclick="cmSetProp('bg','#fff176')"></button>
-                    <button class="cm-swatch" style="background:#f8bbd0" title="粉" onclick="cmSetProp('bg','#f8bbd0')"></button>
-                    <button class="cm-swatch" style="background:#bbdefb" title="淺藍" onclick="cmSetProp('bg','#bbdefb')"></button>
-                    <button class="cm-sw" onclick="cmSetPropAuto('bg')">自動</button>
-                </div>
-                <div class="cm-tools-row">
-                    <span class="cm-tools-lbl">格式</span>
-                    <button id="cm-b-bold" class="cm-sw" onclick="cmToggleBold()">B 粗體</button>
-                    <button id="cm-b-t" class="cm-sw" onclick="cmToggleBorder('t')">上框</button>
-                    <button id="cm-b-b" class="cm-sw" onclick="cmToggleBorder('b')">下框</button>
-                    <button id="cm-b-l" class="cm-sw" onclick="cmToggleBorder('l')">左框</button>
-                    <button id="cm-b-rr" class="cm-sw" onclick="cmToggleBorder('rr')">右框</button>
-                    <button class="cm-sw" onclick="cmBorderAll(1)">全框</button>
-                    <button class="cm-sw" onclick="cmBorderAll(0)">去框</button>
-                </div>
+                
+                
+                
                 <div class="cm-tools-row">
                     <span class="cm-tools-lbl">操作</span>
                     <button class="cm-sw" onclick="cmSetEvent(true)">🏷️ 活動區</button>
                     <button class="cm-sw" onclick="cmSetEvent(false)">↩️ 恢復台</button>
-                    <button class="cm-sw" onclick="cmMerge()">合併</button>
-                    <button class="cm-sw" onclick="cmUnmerge()">取消合併</button>
-                    <button class="cm-sw" onclick="cmEditText()">✏️ 改字</button>
-                    <button class="cm-sw" onclick="cmResetSel()">↩️ 還原自動</button>
+                    <button class="cm-sw" onclick="cmResetSel()">↩️ 還原自動顏色</button>
                     <button class="cm-sw" style="color:#c62828" onclick="cmClearAllEdits()">🗑️ 清空全部</button>
                     <button class="cm-sw" style="background:#2e7d32;color:#fff;border-color:#2e7d32" onclick="cmToggleEdit()">✅ 完成編輯</button>
                 </div>
@@ -3330,6 +3301,18 @@ function collectItems() {
             });
             const d = await r.json();
             if (!d || d.status !== 'success') { alert((d && d.message) || '❌ 失敗'); return; }
+            // 清走格仔的手動顏色／粗體，令新舊櫈、停運顏色即時生效
+            let changed = false;
+            cmTargetCells().forEach(function (c) {
+                const k = cmEditKey(c.r, c.c);
+                const ed = cmEdits.cells[k];
+                if (ed && ('fc' in ed || 'bg' in ed || 'bold' in ed)) {
+                    delete ed.fc; delete ed.bg; delete ed.bold;
+                    if (!Object.keys(ed).length) delete cmEdits.cells[k];
+                    changed = true;
+                }
+            });
+            if (changed) await cmSaveEdits();
             await loadChairMap();
             cmToast(d.message || ('✅ ' + label));
         } catch (e) {
