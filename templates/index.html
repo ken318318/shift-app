@@ -4062,6 +4062,19 @@ function collectItems() {
         return urEscape(s).replace(/'/g, '&#39;');
     }
 
+    function urEnDate(ds) {
+        const M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const p = String(ds || '').split('-');
+        if (p.length !== 3) return String(ds || '');
+        return parseInt(p[2], 10) + ' ' + (M[parseInt(p[1], 10) - 1] || p[1]) + ' ' + p[0];
+    }
+
+    function urEnTitle() {
+        const d = urState ? urEnDate(urState.date) : '';
+        const sent = urState && urState.sent;
+        return 'Update Report - ' + d + (sent ? ' (Email Sent)' : ' (Email Pending)');
+    }
+
     function urDateLabel(ds) {
         const p = String(ds || '').split('-');
         if (p.length !== 3) return ds || '';
@@ -4073,7 +4086,15 @@ function collectItems() {
         document.body.style.overflow = 'hidden';
         const d = document.getElementById('ur-date');
         if (!d.value) d.value = urTodayStr();
-        loadUrCats().then(loadUpdateReport).catch(loadUpdateReport);
+        // 只載入類別清單（快）；報表等用戶揀類別才抓，避免一開就掃全部紀錄
+        urState = null;
+        const sheet = document.getElementById('lr-sheet');
+        if (sheet) sheet.innerHTML = '<div style="padding:30px;text-align:center;color:#999;font-size:13px;">請選擇上方類別開始</div>';
+        const pool = document.getElementById('ur-pool-box');
+        if (pool) pool.style.display = 'none';
+        loadUrCats().then(function () {
+            urMsg('ℹ️ 請選擇上方類別（選好即會抓取當日台號）');
+        }).catch(function () {});
     }
 
     function closeUpdateReport() {
@@ -4465,18 +4486,31 @@ function collectItems() {
         const sheet = document.getElementById('lr-sheet');
         if (!sheet) return;
         bsLoading(true, '正在產生圖片…', true);
+        // 圖片用英文（螢幕保持中文）：暫時換字，截完還原
+        const _tEl = sheet.querySelector('.lr-title');
+        const _totEl = sheet.querySelector('.lr-total');
+        const _oldT = _tEl ? _tEl.textContent : '';
+        const _oldTot = _totEl ? _totEl.textContent : '';
+        if (_tEl) _tEl.textContent = urEnTitle();
+        if (_totEl) _totEl.textContent = _oldTot.replace('總數', 'Total');
+        const _restore = function () {
+            if (_tEl) _tEl.textContent = _oldT;
+            if (_totEl) _totEl.textContent = _oldTot;
+        };
         html2canvas(sheet, { backgroundColor: '#ffffff', scale: 2, useCORS: true })
             .then(function (canvas) {
+                _restore();
                 bsLoading(false);
                 const url = canvas.toDataURL('image/png');
                 document.getElementById('ur-img').src = url;
                 const a = document.getElementById('ur-dl');
                 a.href = url;
-                a.download = '更新表_' + (urState ? urState.date : '') + '.png';
+                a.download = 'Update Report ' + (urState ? (urState.date || '') : '') + '.png';
                 document.getElementById('lr-imgbox').style.display = 'block';
                 urMsg('✅ 已產生圖片，長按圖片可儲存到相簿。');
             })
             .catch(function () {
+                if (typeof _restore === 'function') _restore();
                 bsLoading(false);
                 urMsg('❌ 產生圖片失敗，可直接手機截圖。');
             });
