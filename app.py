@@ -463,7 +463,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-9", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-11", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -995,6 +995,19 @@ def _si_write_done(c, record_id, keys, who=''):
     return n
 
 
+
+def _si_write_reopen(c, record_id, keys):
+    """把「取消勾選」的項目寫回待處理（append-only，不動舊事件）。"""
+    n = 0
+    for key in (keys or []):
+        key = (key or '').strip()
+        if not key or '|' not in key:
+            continue
+        _si_insert(c, record_id, 'reopen', key, None, '待處理', None, '')
+        n += 1
+    return n
+
+
 def _si_write_items(c, record_id, items, source='submit'):
     """把前端送來的結構化 items 寫入 shift_items（同 key 只寫一次）。"""
     if not items:
@@ -1036,6 +1049,7 @@ def submit():
         _new_rid = c.fetchone()[0]
         _si_write_items(c, _new_rid, data.get('items'), 'submit')
         _si_write_done(c, _new_rid, data.get('done_keys'), session.get('user_name') or '')
+        _si_write_reopen(c, _new_rid, data.get('reopen_keys'))
         conn.commit()
         cache_clear('pending', 'pending_items')
         return jsonify({"message": "交更成功！", "status": "success", "record_id": _new_rid})
@@ -1088,6 +1102,7 @@ def overwrite_record():
         c.execute("DELETE FROM shift_items WHERE record_id = %s AND source <> 'resolve'", (old_id,))
         _si_write_items(c, old_id, data.get('items'), 'submit')
         _si_write_done(c, old_id, data.get('done_keys'), session.get('user_name') or '')
+        _si_write_reopen(c, old_id, data.get('reopen_keys'))
         conn.commit()
         cache_clear('pending', 'pending_items')
         log_action('修改紀錄', f"紀錄 ID {old_id}")
@@ -2085,9 +2100,16 @@ def mark_done():
         conn = get_db_connection()
         c = conn.cursor()
         who = session.get('user_name') or session.get('role') or ''
-        c.execute("SELECT id FROM records ORDER BY id DESC LIMIT 1")
-        last = c.fetchone()
-        rid = last[0] if last else None
+        # 修改某張紀錄時，resolve 事件要綁在該紀錄，才能正確還原勾選狀態
+        rid = data.get('record_id')
+        try:
+            rid = int(rid) if rid else None
+        except Exception:
+            rid = None
+        if not rid:
+            c.execute("SELECT id FROM records ORDER BY id DESC LIMIT 1")
+            last = c.fetchone()
+            rid = last[0] if last else None
         done_count = 0
         for key in keys:
             if _si_resolve(c, rid, key, who):
