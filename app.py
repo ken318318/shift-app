@@ -463,7 +463,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-11", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-12", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -865,6 +865,13 @@ def rename_config():
             if c.fetchone():
                 return jsonify({"status": "error", "message": "⚠️ 已存在同名類別，請用其他名稱。"})
             c.execute("UPDATE venue_configs SET category = %s WHERE category = %s", (new_cat, old_cat))
+            # 同步已存在的問題項（否則改名後同一問題會變兩項）
+            c.execute("""UPDATE shift_items
+                         SET item_key = replace(item_key, '|' || %s || ' - ', '|' || %s || ' - '),
+                             category = %s,
+                             display  = replace(display, %s || ' - ', %s || ' - ')
+                         WHERE type = '場面' AND category = %s""",
+                      (old_cat, new_cat, new_cat, old_cat, new_cat, old_cat))
 
         elif rtype == 'problem':
             category = (data.get('category') or '').strip()
@@ -877,6 +884,14 @@ def rename_config():
             c.execute("SELECT 1 FROM venue_configs WHERE category = %s AND problem = %s", (category, new_prob))
             if c.fetchone():
                 return jsonify({"status": "error", "message": "⚠️ 該類別已有同名問題，請用其他名稱。"})
+            # 同步已存在的問題項
+            c.execute("""UPDATE shift_items
+                         SET item_key = replace(item_key, '|' || %s || ' - ' || %s, '|' || %s || ' - ' || %s),
+                             problem  = %s,
+                             display  = replace(display, %s || ' - ' || %s, %s || ' - ' || %s)
+                         WHERE type = '場面' AND category = %s AND problem = %s""",
+                      (category, old_prob, category, new_prob, new_prob,
+                       category, old_prob, category, new_prob, category, old_prob))
             c.execute("UPDATE venue_configs SET problem = %s WHERE category = %s AND problem = %s",
                       (new_prob, category, old_prob))
 
