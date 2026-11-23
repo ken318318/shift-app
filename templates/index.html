@@ -2543,7 +2543,11 @@ function keyToDisplay(line) {
     const detail = p.slice(2).join('|').trim();
     const tail = code ? '（' + code + '）' : '';
     if (t === '場面') return (detail || '場面') + tail;
-    if (t === 'Lux' || t === 'NFC') return t + ' ' + detail + tail;
+    if (t === 'Lux' || t === 'NFC') {
+        let dd = detail;
+        if (!dd || dd === 'Box -' || dd === 'Box -') dd = '未選 Box';
+        return t + ' ' + dd + tail;
+    }
     return t + (detail ? ' ' + detail : '') + tail;
 }
 
