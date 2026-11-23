@@ -1688,7 +1688,16 @@ async function markSelectedDone() {
         data = await res.json();
     } catch (e) { console.error('pending_items 讀取失敗', e); }
 
-    const items = data.pending_items || [];
+    // 修改紀錄時：本張紀錄自己已報告的項目，不再於「待跟進」重複列出
+    let ownKeys = [];
+    if (editingRecordId) {
+        try {
+            const rr = await fetch('/api/record_items/' + editingRecordId, { credentials: 'same-origin' });
+            const rd = await rr.json();
+            ownKeys = (rd.items || []).map(x => x.key);
+        } catch (e) {}
+    }
+    const items = (data.pending_items || []).filter(it => ownKeys.indexOf(it.key) < 0);
     if (!items.length) {
         container.style.display = 'none';
         listDiv.innerHTML = '';
@@ -1735,17 +1744,6 @@ async function markSelectedDone() {
     if (homeT) homeT.innerHTML = '⚠️ 有 ' + items.length + ' 項早前已通知相關部門跟進(尚待解決)';
     if (homeL) homeL.innerHTML = html.replace(/<input[^>]*>/g, '');
 
-    // 修改紀錄時：把該筆已完成的項目還原為打勾
-    if (editingRecordId) {
-        try {
-            const rr = await fetch('/api/record_items/' + editingRecordId, { credentials: 'same-origin' });
-            const rd = await rr.json();
-            const doneKeys = (rd.items || []).filter(x => /已處理|已完成|已解決/.test(x.status || '')).map(x => x.key);
-            document.querySelectorAll('.pending-checkbox').forEach(cb => {
-                if (doneKeys.indexOf(cb.getAttribute('data-key')) >= 0) cb.checked = true;
-            });
-        } catch (e) {}
-    }
 }
 
     function formatIssueText(text, defaultPrefix, statusStr) {
@@ -2473,8 +2471,9 @@ async function markSelectedDone() {
             });
         }
         transformInputs();
-        loadPendingIssues();
         alert("📝 已載入原有資料。\n請於下方修改後重新提交。");
+        // alert 會阻塞主執行緒，必須在它之後才重載黃框，否則會殘留頁面載入時的舊清單
+        loadPendingIssues();
     }
 
     function deleteRecord(id) { 
