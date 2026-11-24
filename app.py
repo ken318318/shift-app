@@ -474,7 +474,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-23", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-24", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3452,16 +3452,26 @@ def api_table_codes():
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT table_code, COALESCE(status, '營運') FROM hall_tables")
-        codes, stopped = [], []
-        for code, st in c.fetchall():
+        c.execute("SELECT table_code, COALESCE(status, '營運'), COALESCE(hall, ''), COALESCE(pit, '') FROM hall_tables")
+        codes, stopped, stopped_detail = [], [], []
+        for code, st, hall, pit in c.fetchall():
             k = _up_norm(code)
             if not k:
                 continue
             codes.append(k)
             if st == '停運':
                 stopped.append(k)
-        resp = jsonify({'status': 'success', 'codes': codes, 'stopped': stopped, 'count': len(codes)})
+                h = re.sub(r'(?i)^hall\s*', '', str(hall or '')).strip()
+                stopped_detail.append({'code': k, 'hall': h, 'pit': str(pit or '')})
+        try:
+            stopped_detail.sort(key=lambda x: (int(x['hall']) if str(x['hall']).isdigit() else 99,
+                                               int(x['pit']) if str(x['pit']).isdigit() else 9999,
+                                               x['code']))
+        except Exception:
+            pass
+        resp = jsonify({'status': 'success', 'codes': codes, 'stopped': stopped,
+                        'stopped_detail': stopped_detail,
+                        'count': len(codes), 'stopped_count': len(stopped)})
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
         return resp
     except Exception as e:
@@ -4642,7 +4652,7 @@ def chair_map_import():
     _CHAIR_LAYOUT_CACHE = None
     codes = sum(1 for c in layout['cells'] if c.get('code'))
     try:
-        log_action('上傳橱況版面', '%s（%d 格、%d 台號）' % (f.filename, len(layout['cells']), codes))
+        log_action('上傳櫈況版面', '%s（%d 格、%d 台號）' % (f.filename, len(layout['cells']), codes))
     except Exception:
         pass
     return jsonify({'status': 'success', 'cells': len(layout['cells']), 'codes': codes,
