@@ -480,7 +480,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-28", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-29", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3532,11 +3532,12 @@ def api_monthly_checks():
         c = conn.cursor()
         c.execute("""
             SELECT
-              MAX(CASE WHEN COALESCE(soundbar, '') <> '' THEN d END) AS sb,
-              MAX(CASE WHEN COALESCE(firecheck15, '') <> '' OR COALESCE(firecheck, '') <> '' THEN d END) AS f15,
-              MAX(CASE WHEN COALESCE(firecheck30, '') <> '' THEN d END) AS f30,
-              MAX(CASE WHEN COALESCE(wifi1, '') <> '' THEN d END) AS w1,
-              MAX(CASE WHEN COALESCE(wifi15, '') <> '' THEN d END) AS w15
+              MAX(CASE WHEN COALESCE(soundbar, '') NOT IN ('', '未檢查', '未檢測') THEN d END) AS sb,
+              MAX(CASE WHEN (COALESCE(firecheck15, '') NOT IN ('', '未檢查', '未檢測')
+                             OR COALESCE(firecheck, '') NOT IN ('', '未檢查', '未檢測')) THEN d END) AS f15,
+              MAX(CASE WHEN COALESCE(firecheck30, '') NOT IN ('', '未檢查', '未檢測') THEN d END) AS f30,
+              MAX(CASE WHEN COALESCE(wifi1, '') NOT IN ('', '未檢查', '未檢測') THEN d END) AS w1,
+              MAX(CASE WHEN COALESCE(wifi15, '') NOT IN ('', '未檢查', '未檢測') THEN d END) AS w15
             FROM (
               SELECT (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date AS d,
                      COALESCE(soundbar, '') AS soundbar,
