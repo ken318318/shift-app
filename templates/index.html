@@ -1420,6 +1420,7 @@ function setSubmitting(on) {
             const p = await fetch('/api/pending_items', { cache: 'no-store' }).then(function (r) { return r.json(); });
             (p.pending_items || []).forEach(function (it) {
                 if (it.type !== '場面' || !it.code) return;
+                if (editingRecordId && String(it.record_id) === String(editingRecordId)) return;  // 本張自己嘅項目
                 const cat = it.category || '';
                 const code = String(it.code).toUpperCase();
                 if (cat.indexOf('客櫈') >= 0 || cat.indexOf('客椅') >= 0) SUNDAY_LOCK.g[code] = true;
@@ -2990,6 +2991,29 @@ async function loadPendingIssues() {
         SHIFT_DAY = (Number(r.shift_day) === 7) ? 7 : null;
         SUNDAY_BIND = {};
         if (SHIFT_DAY === 7) {
+            (function (rid) {
+                fetch('/api/record_items/' + rid, { cache: 'no-store' })
+                    .then(function (x) { return x.json(); })
+                    .then(function (d) {
+                        (d.items || []).forEach(function (it) {
+                            if (!it || it.type !== '場面' || !it.code) return;
+                            const cat = String(it.category || '');
+                            const code = String(it.code).toUpperCase();
+                            if (cat.indexOf('客櫈') >= 0 || cat.indexOf('客椅') >= 0) {
+                                SUNDAY_BIND[code] = SUNDAY_BIND[code] || {};
+                                SUNDAY_BIND[code].g = it.problem || '問題客櫈';
+                                SUNDAY_BIND[code].sg = it.status || '待處理';
+                            }
+                            if (cat.indexOf('DLR') >= 0 && (cat.indexOf('櫈') >= 0 || cat.indexOf('椅') >= 0)) {
+                                SUNDAY_BIND[code] = SUNDAY_BIND[code] || {};
+                                SUNDAY_BIND[code].d = it.problem || '問題DLR櫈';
+                                SUNDAY_BIND[code].sd = it.status || '待處理';
+                            }
+                        });
+                        try { renderSundayRows(); } catch (e) {}
+                    })
+                    .catch(function () {});
+            })(id);
             (r.items || []).forEach(function (it) {
                 if (!it || it.type !== '場面' || !it.code) return;
                 const cat = String(it.category || '');
