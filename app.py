@@ -59,6 +59,8 @@ def ensure_tables():
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS reviewed_by TEXT")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS items JSONB DEFAULT '[]'::jsonb")
+        c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS soundbar TEXT DEFAULT ''")
+        c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS firecheck TEXT DEFAULT ''")
         c.execute("""CREATE TABLE IF NOT EXISTS audit_logs (
                         id BIGSERIAL PRIMARY KEY,
                         actor TEXT,
@@ -474,7 +476,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-25", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-26", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1128,13 +1130,14 @@ def submit():
         now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
         _items = _record_items(data.get('note'), data.get('checklist'))
         c.execute("""INSERT INTO records 
-                     (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, created_at, items) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""", 
+                     (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, soundbar, firecheck, created_at, items) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                    data.get('checklist'), data.get('status'), data.get('follower'), data.get('on_duty'), data.get('note'),
                    data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
                    data.get('guest_feedback'), data.get('dlr_feedback'),
-                   data.get('layout_side'), now_macau, psycopg2.extras.Json(_items)))
+                   data.get('layout_side'), data.get('soundbar') or '', data.get('firecheck') or '',
+                   now_macau, psycopg2.extras.Json(_items)))
         _new_rid = c.fetchone()[0]
         _si_write_items(c, _new_rid, data.get('items'), 'submit')
         _si_write_done(c, _new_rid, data.get('done_keys'), session.get('user_name') or '')
@@ -1180,13 +1183,14 @@ def overwrite_record():
         c.execute("""UPDATE records SET
                      name=%s, shift=%s, lux=%s, temp=%s, bgm=%s, checklist=%s, status=%s,
                      follower=%s, on_duty=%s, note=%s, lux_issue=%s, temp_issue=%s, db_issue=%s,
-                     guest_feedback=%s, dlr_feedback=%s, layout_side=%s, items=%s
+                     guest_feedback=%s, dlr_feedback=%s, layout_side=%s, soundbar=%s, firecheck=%s, items=%s
                      WHERE id=%s""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                    data.get('checklist'), data.get('status'), data.get('follower'), data.get('on_duty'), data.get('note'),
                    data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
                    data.get('guest_feedback'), data.get('dlr_feedback'),
-                   data.get('layout_side'), psycopg2.extras.Json(_items), old_id))
+                   data.get('layout_side'), data.get('soundbar') or '', data.get('firecheck') or '',
+                   psycopg2.extras.Json(_items), old_id))
         # 該筆的問題項重寫（保留 mark_done 寫下的 resolve 記錄）
         c.execute("DELETE FROM shift_items WHERE record_id = %s AND source <> 'resolve'", (old_id,))
         _si_write_items(c, old_id, data.get('items'), 'submit')
@@ -1252,7 +1256,7 @@ def get_records_home():
                             COALESCE(reviewed, FALSE),
                             reviewed_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
                             COALESCE(reviewed_by, ''),
-                            items
+                            items, COALESCE(soundbar, ''), COALESCE(firecheck, '')
                      FROM records""" + sql_where + " ORDER BY id DESC LIMIT %s OFFSET %s",
                   params + [limit, offset])
         rows = c.fetchall()
@@ -1265,7 +1269,9 @@ def get_records_home():
             "reviewed": bool(r[18]),
             "reviewed_at": str(r[19]) if r[19] else '',
             "reviewed_by": r[20] or '',
-            "items": r[21] or []
+            "items": r[21] or [],
+            "soundbar": r[22] or '',
+            "firecheck": r[23] or ''
         } for r in rows]
         resp = jsonify({"records": records, "total": total, "limit": limit, "offset": offset})
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
@@ -1291,7 +1297,7 @@ def get_records():
                  COALESCE(reviewed, FALSE),
                  reviewed_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
                  COALESCE(reviewed_by, ''),
-                 items
+                 items, COALESCE(soundbar, ''), COALESCE(firecheck, '')
                  FROM records ORDER BY id DESC"""
     if _limit > 0:
         c.execute(_sql + " LIMIT %s OFFSET %s", (min(_limit, 1000), max(0, _offset)))
@@ -1310,7 +1316,9 @@ def get_records():
             "reviewed": bool(row[18]),
             "reviewed_at": str(row[19]) if row[19] else '',
             "reviewed_by": row[20] or '',
-            "items": row[21] or []
+            "items": row[21] or [],
+            "soundbar": row[22] or '',
+            "firecheck": row[23] or ''
         })
     return jsonify(records)
 
@@ -1827,7 +1835,7 @@ def build_update_report_xlsx(data_rows):
 # ---------- 完整備份 / 還原 ----------
 _BACKUP_COLUMNS = ['id', 'name', 'shift', 'lux', 'temp', 'bgm', 'checklist', 'status', 'follower',
                    'on_duty', 'note', 'lux_issue', 'temp_issue', 'db_issue', 'guest_feedback',
-                   'dlr_feedback', 'layout_side', 'reviewed', 'reviewed_at', 'reviewed_by', 'created_at']
+                   'dlr_feedback', 'layout_side', 'soundbar', 'firecheck', 'reviewed', 'reviewed_at', 'reviewed_by', 'created_at']
 
 
 def _rows_as_dicts(cur):
@@ -2027,6 +2035,7 @@ def export_records_file():
         c = conn.cursor()
         sql = """SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note,
                         lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback,
+                        COALESCE(soundbar, ''), COALESCE(firecheck, ''),
                         created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau'
                  FROM records WHERE 1=1"""
         params = []
@@ -2047,7 +2056,8 @@ def export_records_file():
             release_db_connection(conn)
 
     out = [['日期時間', '交更人', '更份', '全場Lux', '全場溫度', '全場分貝', '狀態', 'NFC檢測Hall',
-            'Checklist', '詳細事項', 'Lux異常', '溫度異常', '分貝異常', '客人意見', 'DLR意見']]
+            'Checklist', '詳細事項', 'Lux異常', '溫度異常', '分貝異常', '客人意見', 'DLR意見',
+            'Sound Bar 檢測', '消防檢查']]
     for r in rows:
         checklist = r[6] or ''
         hall = ''
@@ -2057,9 +2067,9 @@ def export_records_file():
                 hall = s.replace('NFC正常:', '').replace('NFC正常：', '').strip()
                 break
         out.append([
-            str(r[15]) if r[15] else '', r[1], r[2], r[3], _unit_temp_text(r[4]), _unit_bgm_text(r[5]), r[7], hall,
+            str(r[17]) if r[17] else '', r[1], r[2], r[3], _unit_temp_text(r[4]), _unit_bgm_text(r[5]), r[7], hall,
             checklist, r[9] or '', r[10] or '', r[11] or '', r[12] or '',
-            _feedback_text(r[13]), _feedback_text(r[14])
+            _feedback_text(r[13]), _feedback_text(r[14]), r[15] or '', r[16] or ''
         ])
     return _file_response(out, 'records', fmt)
 
