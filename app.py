@@ -428,6 +428,15 @@ def ensure_shift_items():
         c.execute("CREATE INDEX IF NOT EXISTS idx_si_event ON shift_items(event_at DESC, id DESC)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_si_status ON shift_items(type, status)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_records_created ON records(created_at DESC, id DESC)")
+        # 清理孤立行：record 已不存在（例如直接喺 Supabase 刪紀錄）→ 連 shift_items 一齊清
+        try:
+            c.execute("""DELETE FROM shift_items s
+                         WHERE s.record_id IS NOT NULL
+                           AND NOT EXISTS (SELECT 1 FROM records r WHERE r.id = s.record_id)""")
+            if c.rowcount:
+                print('清理孤立 shift_items:', c.rowcount, '筆')
+        except Exception as _e:
+            print('清理孤立 shift_items 失敗:', _e)
         conn.commit()
         # 一次性 seed：用 app_settings 記版本，重建也不會亂序
         if str(get_setting('shift_items_seed', '')) != 'v1':
@@ -481,7 +490,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-34", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-35", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -2266,11 +2275,44 @@ def delete_record():
     _rid = data.get('id')
     c.execute("DELETE FROM shift_items WHERE record_id = %s", (_rid,))
     c.execute("DELETE FROM records WHERE id = %s", (_rid,))
+    # 順手清走其他孤立行（若有）
+    try:
+        c.execute("""DELETE FROM shift_items s
+                     WHERE s.record_id IS NOT NULL
+                       AND NOT EXISTS (SELECT 1 FROM records r WHERE r.id = s.record_id)""")
+    except Exception as _e:
+        print('delete_record cleanup 失敗:', _e)
     conn.commit()
     release_db_connection(conn)
     cache_clear('pending', 'pending_items')
     log_action('刪除紀錄', f"紀錄 ID {_rid}")
     return jsonify({"status": "success", "message": "✅ 紀錄已成功刪除！"})
+
+@app.route('/api/cleanup_orphans', methods=['POST'])
+def cleanup_orphans():
+    """管理員：清走 record 已刪但 shift_items 仍在嘅孤立問題項。"""
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 權限不足'}), 403
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""DELETE FROM shift_items s
+                     WHERE s.record_id IS NOT NULL
+                       AND NOT EXISTS (SELECT 1 FROM records r WHERE r.id = s.record_id)""")
+        n = c.rowcount
+        conn.commit()
+        cache_clear('pending', 'pending_items')
+        return jsonify({'status': 'success', 'deleted': n,
+                        'message': '✅ 已清理 %d 筆孤立問題項' % n})
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({'status': 'error', 'message': str(e)})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
 
 @app.route('/api/record_review', methods=['POST'])
 def record_review():
