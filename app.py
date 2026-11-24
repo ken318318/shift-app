@@ -63,6 +63,8 @@ def ensure_tables():
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS firecheck TEXT DEFAULT ''")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS firecheck15 TEXT DEFAULT ''")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS firecheck30 TEXT DEFAULT ''")
+        c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS wifi1 TEXT DEFAULT ''")
+        c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS wifi15 TEXT DEFAULT ''")
         c.execute("""CREATE TABLE IF NOT EXISTS audit_logs (
                         id BIGSERIAL PRIMARY KEY,
                         actor TEXT,
@@ -478,7 +480,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-27", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-28", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1132,14 +1134,15 @@ def submit():
         now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
         _items = _record_items(data.get('note'), data.get('checklist'))
         c.execute("""INSERT INTO records 
-                     (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, soundbar, firecheck, firecheck15, firecheck30, created_at, items) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""", 
+                     (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, soundbar, firecheck, firecheck15, firecheck30, wifi1, wifi15, created_at, items) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                    data.get('checklist'), data.get('status'), data.get('follower'), data.get('on_duty'), data.get('note'),
                    data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
                    data.get('guest_feedback'), data.get('dlr_feedback'),
                    data.get('layout_side'), data.get('soundbar') or '', data.get('firecheck15') or data.get('firecheck') or '',
                    data.get('firecheck15') or '', data.get('firecheck30') or '',
+                   data.get('wifi1') or '', data.get('wifi15') or '',
                    now_macau, psycopg2.extras.Json(_items)))
         _new_rid = c.fetchone()[0]
         _si_write_items(c, _new_rid, data.get('items'), 'submit')
@@ -1187,7 +1190,7 @@ def overwrite_record():
                      name=%s, shift=%s, lux=%s, temp=%s, bgm=%s, checklist=%s, status=%s,
                      follower=%s, on_duty=%s, note=%s, lux_issue=%s, temp_issue=%s, db_issue=%s,
                      guest_feedback=%s, dlr_feedback=%s, layout_side=%s, soundbar=%s, firecheck=%s,
-                     firecheck15=%s, firecheck30=%s, items=%s
+                     firecheck15=%s, firecheck30=%s, wifi1=%s, wifi15=%s, items=%s
                      WHERE id=%s""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                    data.get('checklist'), data.get('status'), data.get('follower'), data.get('on_duty'), data.get('note'),
@@ -1195,6 +1198,7 @@ def overwrite_record():
                    data.get('guest_feedback'), data.get('dlr_feedback'),
                    data.get('layout_side'), data.get('soundbar') or '', data.get('firecheck15') or data.get('firecheck') or '',
                    data.get('firecheck15') or '', data.get('firecheck30') or '',
+                   data.get('wifi1') or '', data.get('wifi15') or '',
                    psycopg2.extras.Json(_items), old_id))
         # 該筆的問題項重寫（保留 mark_done 寫下的 resolve 記錄）
         c.execute("DELETE FROM shift_items WHERE record_id = %s AND source <> 'resolve'", (old_id,))
@@ -1262,7 +1266,8 @@ def get_records_home():
                             reviewed_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
                             COALESCE(reviewed_by, ''),
                             items, COALESCE(soundbar, ''), COALESCE(firecheck, ''),
-                            COALESCE(firecheck15, ''), COALESCE(firecheck30, '')
+                            COALESCE(firecheck15, ''), COALESCE(firecheck30, ''),
+                            COALESCE(wifi1, ''), COALESCE(wifi15, '')
                      FROM records""" + sql_where + " ORDER BY id DESC LIMIT %s OFFSET %s",
                   params + [limit, offset])
         rows = c.fetchall()
@@ -1279,7 +1284,9 @@ def get_records_home():
             "soundbar": r[22] or '',
             "firecheck": r[23] or '',
             "firecheck15": r[24] or '',
-            "firecheck30": r[25] or ''
+            "firecheck30": r[25] or '',
+            "wifi1": r[26] or '',
+            "wifi15": r[27] or ''
         } for r in rows]
         resp = jsonify({"records": records, "total": total, "limit": limit, "offset": offset})
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
@@ -1306,7 +1313,8 @@ def get_records():
                  reviewed_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
                  COALESCE(reviewed_by, ''),
                  items, COALESCE(soundbar, ''), COALESCE(firecheck, ''),
-                 COALESCE(firecheck15, ''), COALESCE(firecheck30, '')
+                 COALESCE(firecheck15, ''), COALESCE(firecheck30, ''),
+                 COALESCE(wifi1, ''), COALESCE(wifi15, '')
                  FROM records ORDER BY id DESC"""
     if _limit > 0:
         c.execute(_sql + " LIMIT %s OFFSET %s", (min(_limit, 1000), max(0, _offset)))
@@ -1329,7 +1337,9 @@ def get_records():
             "soundbar": row[22] or '',
             "firecheck": row[23] or '',
             "firecheck15": row[24] or '',
-            "firecheck30": row[25] or ''
+            "firecheck30": row[25] or '',
+            "wifi1": row[26] or '',
+            "wifi15": row[27] or ''
         })
     return jsonify(records)
 
@@ -1847,6 +1857,7 @@ def build_update_report_xlsx(data_rows):
 _BACKUP_COLUMNS = ['id', 'name', 'shift', 'lux', 'temp', 'bgm', 'checklist', 'status', 'follower',
                    'on_duty', 'note', 'lux_issue', 'temp_issue', 'db_issue', 'guest_feedback',
                    'dlr_feedback', 'layout_side', 'soundbar', 'firecheck', 'firecheck15', 'firecheck30',
+                   'wifi1', 'wifi15',
                    'reviewed', 'reviewed_at', 'reviewed_by', 'created_at']
 
 
@@ -2048,6 +2059,7 @@ def export_records_file():
         sql = """SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note,
                         lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback,
                         COALESCE(soundbar, ''), COALESCE(firecheck15, ''), COALESCE(firecheck30, ''),
+                        COALESCE(wifi1, ''), COALESCE(wifi15, ''),
                         created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau'
                  FROM records WHERE 1=1"""
         params = []
@@ -2069,7 +2081,7 @@ def export_records_file():
 
     out = [['日期時間', '交更人', '更份', '全場Lux', '全場溫度', '全場分貝', '狀態', 'NFC檢測Hall',
             'Checklist', '詳細事項', 'Lux異常', '溫度異常', '分貝異常', '客人意見', 'DLR意見',
-            'Sound Bar 檢測', '消防（15日）', '消防（30日）']]
+            'Sound Bar 檢測', '消防（15日）', '消防（30日）', 'WIFI（1日）', 'WIFI（15日）']]
     for r in rows:
         checklist = r[6] or ''
         hall = ''
@@ -2081,7 +2093,8 @@ def export_records_file():
         out.append([
             str(r[17]) if r[17] else '', r[1], r[2], r[3], _unit_temp_text(r[4]), _unit_bgm_text(r[5]), r[7], hall,
             checklist, r[9] or '', r[10] or '', r[11] or '', r[12] or '',
-            _feedback_text(r[13]), _feedback_text(r[14]), r[15] or '', r[16] or '', r[17] or ''
+            _feedback_text(r[13]), _feedback_text(r[14]), r[15] or '', r[16] or '', r[17] or '',
+            r[18] or '', r[19] or ''
         ])
     return _file_response(out, 'records', fmt)
 
@@ -3521,18 +3534,22 @@ def api_monthly_checks():
             SELECT
               MAX(CASE WHEN COALESCE(soundbar, '') <> '' THEN d END) AS sb,
               MAX(CASE WHEN COALESCE(firecheck15, '') <> '' OR COALESCE(firecheck, '') <> '' THEN d END) AS f15,
-              MAX(CASE WHEN COALESCE(firecheck30, '') <> '' THEN d END) AS f30
+              MAX(CASE WHEN COALESCE(firecheck30, '') <> '' THEN d END) AS f30,
+              MAX(CASE WHEN COALESCE(wifi1, '') <> '' THEN d END) AS w1,
+              MAX(CASE WHEN COALESCE(wifi15, '') <> '' THEN d END) AS w15
             FROM (
               SELECT (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date AS d,
                      COALESCE(soundbar, '') AS soundbar,
                      COALESCE(firecheck15, '') AS firecheck15,
                      COALESCE(firecheck30, '') AS firecheck30,
+                     COALESCE(wifi1, '') AS wifi1,
+                     COALESCE(wifi15, '') AS wifi15,
                      COALESCE(firecheck, '') AS firecheck
               FROM records
             ) x
             WHERE date_trunc('month', x.d) = date_trunc('month', (NOW() AT TIME ZONE 'Asia/Macau')::date)
         """)
-        sb, f15, f30 = c.fetchone()
+        sb, f15, f30, w1, w15 = c.fetchone()
         def pack(v):
             return {'done': bool(v), 'date': str(v) if v else ''}
         resp = jsonify({'status': 'success',
@@ -3540,7 +3557,9 @@ def api_monthly_checks():
                         'today': _up_today(),
                         'soundbar': pack(sb),
                         'fire15': pack(f15),
-                        'fire30': pack(f30)})
+                        'fire30': pack(f30),
+                        'wifi1': pack(w1),
+                        'wifi15': pack(w15)})
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
         return resp
     except Exception as e:
@@ -3548,7 +3567,9 @@ def api_monthly_checks():
         return jsonify({'status': 'error', 'message': str(e),
                         'soundbar': {'done': False, 'date': ''},
                         'fire15': {'done': False, 'date': ''},
-                        'fire30': {'done': False, 'date': ''}})
+                        'fire30': {'done': False, 'date': ''},
+                        'wifi1': {'done': False, 'date': ''},
+                        'wifi15': {'done': False, 'date': ''}})
     finally:
         if conn:
             try:
