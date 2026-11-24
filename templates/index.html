@@ -495,6 +495,19 @@
             </label>
         </div>
 
+        <!-- 4d. WIFI 檢測（獨立，預設收起） -->
+        <div class="fold-head" style="margin-top: 12px;" onclick="toggleFold('wifi-body','wifi-arrow')">
+            <span>📶 WIFI 檢測（每月 1 日／15 日）<span id="head-wifi" style="font-size: 11px; font-weight: normal; color: #00695c; margin-left: 6px;"></span></span><span id="wifi-arrow" class="fold-arrow">▼ 展開</span>
+        </div>
+        <div id="wifi-body" class="issue-group" style="display: none; background: #e0f2f1; border-color: #80cbc4; margin-top: 6px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: normal; padding: 5px 0; cursor: pointer;">
+                <input type="checkbox" id="chk-wifi1" onchange="refreshEquipLabels()" style="width: 18px; height: 18px;"> WIFI 檢測（每月 1 日）<span id="lbl-wifi1" style="font-size: 11px; color: #2e7d32; font-weight: bold;"></span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: normal; padding: 5px 0; cursor: pointer;">
+                <input type="checkbox" id="chk-wifi15" onchange="refreshEquipLabels()" style="width: 18px; height: 18px;"> WIFI 檢測（每月 15 日）<span id="lbl-wifi15" style="font-size: 11px; color: #2e7d32; font-weight: bold;"></span>
+            </label>
+        </div>
+
         <!-- 5. 場面問題 -->
         <label style="margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
             <span>場面問題項目輸入 (如不需要請留空)：</span>
@@ -1014,6 +1027,8 @@ function setSubmitting(on) {
             d.soundbar = !!((document.getElementById('chk-soundbar') || {}).checked);
             d.fire15 = !!((document.getElementById('chk-fire15') || {}).checked);
             d.fire30 = !!((document.getElementById('chk-fire30') || {}).checked);
+            d.wifi1 = !!((document.getElementById('chk-wifi1') || {}).checked);
+            d.wifi15 = !!((document.getElementById('chk-wifi15') || {}).checked);
             localStorage.setItem(draftKey(), JSON.stringify(d));
         } catch(e) {
             console.error("Save draft failed", e);
@@ -1173,6 +1188,8 @@ function setSubmitting(on) {
             const _cbSb = document.getElementById('chk-soundbar'); if (_cbSb) _cbSb.checked = !!d.soundbar;
             const _cbF15 = document.getElementById('chk-fire15'); if (_cbF15) _cbF15.checked = !!d.fire15;
             const _cbF30 = document.getElementById('chk-fire30'); if (_cbF30) _cbF30.checked = !!d.fire30;
+            const _cbW1 = document.getElementById('chk-wifi1'); if (_cbW1) _cbW1.checked = !!d.wifi1;
+            const _cbW15 = document.getElementById('chk-wifi15'); if (_cbW15) _cbW15.checked = !!d.wifi15;
             transformInputs();
             const _keep = confirm("🔄 發現未提交的交更草稿。\n\n按「確定」＝還原草稿\n按「取消」＝不還原（清除草稿，由空白開始）");
             if (!_keep) {
@@ -1628,7 +1645,8 @@ function setSubmitting(on) {
     }
 
     // ===== 設備檢查：Sound Bar（每月一次）、消防（每月 15／30 日）=====
-    let MONTHLY = { soundbar: { done: false, date: '' }, fire15: { done: false, date: '' }, fire30: { done: false, date: '' } };
+    let MONTHLY = { soundbar: { done: false, date: '' }, fire15: { done: false, date: '' }, fire30: { done: false, date: '' },
+                    wifi1: { done: false, date: '' }, wifi15: { done: false, date: '' } };
     let MONTHLY_LOADED = false;
 
     async function loadMonthlyChecks(force) {
@@ -1638,7 +1656,9 @@ function setSubmitting(on) {
             MONTHLY = {
                 soundbar: d.soundbar || { done: false, date: '' },
                 fire15: d.fire15 || { done: false, date: '' },
-                fire30: d.fire30 || { done: false, date: '' }
+                fire30: d.fire30 || { done: false, date: '' },
+                wifi1: d.wifi1 || { done: false, date: '' },
+                wifi15: d.wifi15 || { done: false, date: '' }
             };
             MONTHLY_LOADED = true;
         } catch (e) {}
@@ -1654,7 +1674,9 @@ function setSubmitting(on) {
         const map = [
             ['chk-soundbar', 'lbl-soundbar', 'soundbar', '本月已檢測'],
             ['chk-fire15', 'lbl-fire15', 'fire15', '本月 15 日已檢查'],
-            ['chk-fire30', 'lbl-fire30', 'fire30', '本月 30 日已檢查']
+            ['chk-fire30', 'lbl-fire30', 'fire30', '本月 30 日已檢查'],
+            ['chk-wifi1', 'lbl-wifi1', 'wifi1', '本月 1 日已檢測'],
+            ['chk-wifi15', 'lbl-wifi15', 'wifi15', '本月 15 日已檢測']
         ];
         map.forEach(function (x) {
             const cb = document.getElementById(x[0]);
@@ -1682,12 +1704,20 @@ function setSubmitting(on) {
             const b = (m.fire30 && m.fire30.done) ? '30日✅' : '30日—';
             fh.textContent = a + '　' + b;
         }
+        const wh = document.getElementById('head-wifi');
+        if (wh) {
+            const c = (m.wifi1 && m.wifi1.done) ? '1日✅' : '1日—';
+            const d2 = (m.wifi15 && m.wifi15.done) ? '15日✅' : '15日—';
+            wh.textContent = c + '　' + d2;
+        }
     }
 
     function refreshEquipLabels() {
         const map = [['chk-soundbar', 'lbl-soundbar', 'soundbar', '本月已檢測'],
                      ['chk-fire15', 'lbl-fire15', 'fire15', '本月 15 日已檢查'],
-                     ['chk-fire30', 'lbl-fire30', 'fire30', '本月 30 日已檢查']];
+                     ['chk-fire30', 'lbl-fire30', 'fire30', '本月 30 日已檢查'],
+                     ['chk-wifi1', 'lbl-wifi1', 'wifi1', '本月 1 日已檢測'],
+                     ['chk-wifi15', 'lbl-wifi15', 'wifi15', '本月 15 日已檢測']];
         map.forEach(function (x) {
             const cb = document.getElementById(x[0]);
             const lb = document.getElementById(x[1]);
@@ -2105,13 +2135,13 @@ function setSubmitting(on) {
         document.querySelectorAll('.onduty-item').forEach(cb => cb.checked = false);
         updateOnDutyUI();
         ['lux', 'temp', 'bgm', 'nfc'].forEach(type => setDet(type, true));
-        ['soundbar', 'fire'].forEach(function (x) {
+        ['soundbar', 'fire', 'wifi'].forEach(function (x) {
             const b = document.getElementById(x + '-body');
             const a = document.getElementById(x + '-arrow');
             if (b) b.style.display = 'none';
             if (a) a.textContent = '▼ 展開';
         });
-        [['chk-soundbar', ''], ['chk-fire15', ''], ['chk-fire30', '']].forEach(function (x) {
+        [['chk-soundbar', ''], ['chk-fire15', ''], ['chk-fire30', ''], ['chk-wifi1', ''], ['chk-wifi15', '']].forEach(function (x) {
             const cb = document.getElementById(x[0]);
             if (cb) { cb.checked = false; cb.disabled = false; }
         });
@@ -2684,6 +2714,10 @@ async function loadPendingIssues() {
                             + _smallChip(_m.fire15, '消防 15日已檢查', '消防 15日未檢查')
                             + _smallChip(_m.fire30, '消防 30日已檢查', '消防 30日未檢查')
                             + '</div>');
+                        rows.push('<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:4px; padding-left:2px;">'
+                            + _smallChip(_m.wifi1, 'WIFI 1日已檢測', 'WIFI 1日未檢測')
+                            + _smallChip(_m.wifi15, 'WIFI 15日已檢測', 'WIFI 15日未檢測')
+                            + '</div>');
                     }
                     if (rows.length) {
                         let hasMeterIssue = !!(r.lux_issue || r.temp_issue || r.db_issue);
@@ -3058,6 +3092,8 @@ async function loadPendingIssues() {
         const _ebSb = document.getElementById('chk-soundbar'); if (_ebSb) _ebSb.checked = !!r.soundbar;
         const _ebF15 = document.getElementById('chk-fire15'); if (_ebF15) _ebF15.checked = !!(r.firecheck15 || r.firecheck);
         const _ebF30 = document.getElementById('chk-fire30'); if (_ebF30) _ebF30.checked = !!r.firecheck30;
+        const _ebW1 = document.getElementById('chk-wifi1'); if (_ebW1) _ebW1.checked = !!r.wifi1;
+        const _ebW15 = document.getElementById('chk-wifi15'); if (_ebW15) _ebW15.checked = !!r.wifi15;
         applyMonthlyLocks();
         
         if (parsedNote.venue) {
@@ -3687,6 +3723,8 @@ checklist: detOn('nfc') ? checklistString : "",
             soundbar: equipValue('chk-soundbar', '已檢測'),
             firecheck15: equipValue('chk-fire15', '已檢查'),
             firecheck30: equipValue('chk-fire30', '已檢查'),
+            wifi1: equipValue('chk-wifi1', '已檢測'),
+            wifi15: equipValue('chk-wifi15', '已檢測'),
 status: overallStatus, 
             follower: Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無',
             on_duty: Array.from(document.querySelectorAll('.onduty-item:checked')).map(cb => cb.value).join(', '), 
@@ -3727,7 +3765,8 @@ items: collectItems(),
         let rawNote = document.getElementById('notes').value.trim(); 
         if (!editingRecordId && rawNote === '' && venueIssues.length === 0 && luxIssue === '' && tempIssue === '' && dbIssue === '' && nfcDetails.length === 0 && doneOldItems.length === 0 && !hasSundayChecks()
             && !document.getElementById('chk-soundbar').checked && !document.getElementById('chk-fire15').checked
-            && !document.getElementById('chk-fire30').checked) { 
+            && !document.getElementById('chk-fire30').checked
+            && !document.getElementById('chk-wifi1').checked && !document.getElementById('chk-wifi15').checked) { 
             if (hasEmptyVenue) {
                 if (!confirm("⚠️ 已選擇場面問題，但未填寫「位置」。\n\n系統會忽略該項，確定要繼續提交嗎？")) return;
             } else {
@@ -3786,7 +3825,9 @@ items: collectItems(),
             ['設備檢查',
                 'Sound Bar ' + (data.soundbar || ((MONTHLY.soundbar || {}).done ? '本月已檢測' : '未檢測')) +
                 '｜消防15日 ' + (data.firecheck15 || ((MONTHLY.fire15 || {}).done ? '本月已檢查' : '未檢查')) +
-                '｜消防30日 ' + (data.firecheck30 || ((MONTHLY.fire30 || {}).done ? '本月已檢查' : '未檢查'))],
+                '｜消防30日 ' + (data.firecheck30 || ((MONTHLY.fire30 || {}).done ? '本月已檢查' : '未檢查')) +
+                '｜WIFI 1日 ' + (data.wifi1 || ((MONTHLY.wifi1 || {}).done ? '本月已檢測' : '未檢測')) +
+                '｜WIFI 15日 ' + (data.wifi15 || ((MONTHLY.wifi15 || {}).done ? '本月已檢測' : '未檢測'))],
             ['場面問題', venueLines.length ? (venueLines.length + ' 項') : '無'],
             ['當更同事', data.on_duty || '—'],
             ['負責跟進人', data.follower || '—'],
