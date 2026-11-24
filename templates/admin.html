@@ -78,6 +78,8 @@
         #bs-loading .bs-spinner { width: 46px; height: 46px; border: 5px solid #dbeafe; border-top-color: #1a73e8; border-radius: 50%; animation: bs-spin .8s linear infinite; }
         #bs-loading .bs-loading-text { font-size: 14px; color: #1565c0; font-weight: bold; background: #fff; padding: 6px 16px; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
         @keyframes bs-spin { to { transform: rotate(360deg); } }
+        /* 錯誤提示 */
+        #bs-toast { display: none; position: fixed; left: 50%; top: 14px; transform: translateX(-50%); z-index: 10060; max-width: 92vw; background: #c62828; color: #fff; font-size: 13px; line-height: 1.45; padding: 10px 14px; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,.22); white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -85,6 +87,7 @@
         <div class="bs-spinner"></div>
         <div class="bs-loading-text">載入中…</div>
     </div>
+    <div id="bs-toast" role="alert"></div>
     <div class="card">
         <h2>⚙️ 系統設定</h2>
         <div class="tabs">
@@ -388,6 +391,42 @@
                     function (r) { done(); return r; },
                     function (e) { done(); throw e; }
                 );
+            };
+        })();
+
+        // ===== 全局錯誤提示：網絡錯誤／HTTP 4xx-5xx 一律顯示（唔會無聲失敗） =====
+        (function () {
+            const inner = window.fetch.bind(window);
+            let timer = null;
+            function toast(msg) {
+                const el = document.getElementById('bs-toast');
+                if (!el) return;
+                el.textContent = msg;
+                el.style.display = 'block';
+                clearTimeout(timer);
+                timer = setTimeout(function () { el.style.display = 'none'; }, 6000);
+            }
+            window.fetch = function (input, init) {
+                const url = (typeof input === 'string') ? input : ((input && input.url) || '');
+                const path = url.replace(/^https?:\/\/[^/]+/, '');
+                return inner(input, init).catch(function (e) {
+                    toast('⚠️ 網絡錯誤，請檢查連線後再試（' + path + '）');
+                    throw e;
+                }).then(function (res) {
+                    if (!res || res.ok || res.status === 401) return res;
+                    try {
+                        res.clone().text().then(function (txt) {
+                            let m = '';
+                            try { m = (JSON.parse(txt) || {}).message || ''; } catch (e) { m = ''; }
+                            toast('⚠️ 伺服器錯誤（HTTP ' + res.status + '）' + (m ? '：' + m : ''));
+                        }).catch(function () {
+                            toast('⚠️ 伺服器錯誤（HTTP ' + res.status + '）');
+                        });
+                    } catch (e) {
+                        toast('⚠️ 伺服器錯誤（HTTP ' + res.status + '）');
+                    }
+                    return res;
+                });
             };
         })();
         let configs = {};
