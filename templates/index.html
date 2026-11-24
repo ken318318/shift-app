@@ -3558,7 +3558,16 @@ function collectItems() {
         return true;
     }
 
-    function submitForm() {
+    // 提交一刻重新向伺服器攞「今日」（澳門時間），避免頁面開過夜用到舊日期
+    async function refreshServerToday() {
+        try {
+            const d = await fetch('/api/monthly_checks', { cache: 'no-store' }).then(function (r) { return r.json(); });
+            if (d && d.today) MONTHLY_TODAY = d.today;
+        } catch (e) {}
+    }
+
+    async function submitForm() {
+        await refreshServerToday();
         // 檢查日（1／15／30）未勾 → 提示；堅持確定就記錄為「本月尚未檢查」
         DUE_MISSED = [];
         const _missed = dueMissedToday();
