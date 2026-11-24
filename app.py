@@ -480,7 +480,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-29", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-30", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3537,7 +3537,12 @@ def api_monthly_checks():
                              OR COALESCE(firecheck, '') NOT IN ('', '未檢查', '未檢測')) THEN d END) AS f15,
               MAX(CASE WHEN COALESCE(firecheck30, '') NOT IN ('', '未檢查', '未檢測') THEN d END) AS f30,
               MAX(CASE WHEN COALESCE(wifi1, '') NOT IN ('', '未檢查', '未檢測') THEN d END) AS w1,
-              MAX(CASE WHEN COALESCE(wifi15, '') NOT IN ('', '未檢查', '未檢測') THEN d END) AS w15
+              MAX(CASE WHEN COALESCE(wifi15, '') NOT IN ('', '未檢查', '未檢測') THEN d END) AS w15,
+              MAX(CASE WHEN COALESCE(soundbar, '') IN ('未檢查', '未檢測') THEN d END) AS sb_m,
+              MAX(CASE WHEN COALESCE(firecheck15, '') IN ('未檢查', '未檢測') THEN d END) AS f15_m,
+              MAX(CASE WHEN COALESCE(firecheck30, '') IN ('未檢查', '未檢測') THEN d END) AS f30_m,
+              MAX(CASE WHEN COALESCE(wifi1, '') IN ('未檢查', '未檢測') THEN d END) AS w1_m,
+              MAX(CASE WHEN COALESCE(wifi15, '') IN ('未檢查', '未檢測') THEN d END) AS w15_m
             FROM (
               SELECT (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date AS d,
                      COALESCE(soundbar, '') AS soundbar,
@@ -3550,17 +3555,18 @@ def api_monthly_checks():
             ) x
             WHERE date_trunc('month', x.d) = date_trunc('month', (NOW() AT TIME ZONE 'Asia/Macau')::date)
         """)
-        sb, f15, f30, w1, w15 = c.fetchone()
-        def pack(v):
-            return {'done': bool(v), 'date': str(v) if v else ''}
+        sb, f15, f30, w1, w15, sb_m, f15_m, f30_m, w1_m, w15_m = c.fetchone()
+        def pack(v, miss=None):
+            return {'done': bool(v), 'date': str(v) if v else '',
+                    'missed': bool(miss), 'missed_date': str(miss) if miss else ''}
         resp = jsonify({'status': 'success',
                         'month': _up_today()[:7],
                         'today': _up_today(),
-                        'soundbar': pack(sb),
-                        'fire15': pack(f15),
-                        'fire30': pack(f30),
-                        'wifi1': pack(w1),
-                        'wifi15': pack(w15)})
+                        'soundbar': pack(sb, sb_m),
+                        'fire15': pack(f15, f15_m),
+                        'fire30': pack(f30, f30_m),
+                        'wifi1': pack(w1, w1_m),
+                        'wifi15': pack(w15, w15_m)})
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
         return resp
     except Exception as e:
