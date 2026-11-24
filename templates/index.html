@@ -1660,6 +1660,7 @@ function setSubmitting(on) {
                 wifi1: d.wifi1 || { done: false, date: '' },
                 wifi15: d.wifi15 || { done: false, date: '' }
             };
+            MONTHLY_TODAY = d.today || '';
             MONTHLY_LOADED = true;
         } catch (e) {}
         applyMonthlyLocks();
@@ -1669,70 +1670,73 @@ function setSubmitting(on) {
         }
     }
 
-    function applyMonthlyLocks() {
-        updateEquipHeads();
-        const map = [
-            ['chk-soundbar', 'lbl-soundbar', 'soundbar', '本月已檢測'],
-            ['chk-fire15', 'lbl-fire15', 'fire15', '本月 15 日已檢查'],
-            ['chk-fire30', 'lbl-fire30', 'fire30', '本月 30 日已檢查'],
-            ['chk-wifi1', 'lbl-wifi1', 'wifi1', '本月 1 日已檢測'],
-            ['chk-wifi15', 'lbl-wifi15', 'wifi15', '本月 15 日已檢測']
-        ];
-        map.forEach(function (x) {
+    // 五個檢查項目：[勾選格, 標籤, MONTHLY key, 已做文字, 未做文字, DB 欄位]
+    const MONTHLY_FIELDS = [
+        ['chk-soundbar', 'lbl-soundbar', 'soundbar', 'Sound Bar 本月已檢測', 'Sound Bar 本月尚未檢測', 'soundbar'],
+        ['chk-fire15', 'lbl-fire15', 'fire15', '本月15號已檢查', '本月15號尚未檢查', 'firecheck15'],
+        ['chk-fire30', 'lbl-fire30', 'fire30', '本月30號已檢查', '本月30號尚未檢查', 'firecheck30'],
+        ['chk-wifi1', 'lbl-wifi1', 'wifi1', '本月1號已檢測', '本月1號尚未檢測', 'wifi1'],
+        ['chk-wifi15', 'lbl-wifi15', 'wifi15', '本月15號已檢測', '本月15號尚未檢測', 'wifi15']
+    ];
+    // 檢查日：消防 15／30 號、WIFI 1／15 號（Sound Bar 無指定日）
+    const DUE_FIELDS = ['firecheck15', 'firecheck30', 'wifi1', 'wifi15'];
+    let MONTHLY_TODAY = '';
+    let DUE_MISSED = [];   // 今次提交喺檢查日但冇勾（經用戶確認）
+
+    function applyMonthlyLocks() {   // 名稱保留：新交更時自動預填（唔再鎖定）
+        MONTHLY_FIELDS.forEach(function (x) {
             const cb = document.getElementById(x[0]);
             if (!cb) return;
-            const info = MONTHLY[x[2]] || {};
-            const lb = document.getElementById(x[1]);
-            if (info.done) {
-                cb.checked = true;
-                cb.disabled = true;
-                if (lb) lb.textContent = '🔒 ' + x[3] + '（' + String(info.date || '').slice(5) + '）';
-            } else {
-                cb.disabled = false;
-                if (lb) lb.textContent = cb.checked ? '✅ 本次已勾' : '';
-            }
+            cb.disabled = false;                                     // 唔鎖定，可手動取消
+            cb.checked = !!(MONTHLY[x[2]] && MONTHLY[x[2]].done);     // 本月做過 → 自動打勾
         });
+        refreshEquipLabels();
+    }
+
+    function refreshEquipLabels() {
+        MONTHLY_FIELDS.forEach(function (x) {
+            const cb = document.getElementById(x[0]);
+            const lb = document.getElementById(x[1]);
+            if (cb) cb.disabled = false;
+            if (cb && lb) lb.textContent = (cb.checked ? '✅ ' + x[3] : '⚠️ ' + x[4]);
+        });
+        updateEquipHeads();
     }
 
     function updateEquipHeads() {
         const m = MONTHLY || {};
         const sb = document.getElementById('head-soundbar');
-        if (sb) sb.textContent = (m.soundbar && m.soundbar.done) ? ('🔒 本月已檢測（' + String(m.soundbar.date || '').slice(5) + '）') : '本月未檢測';
+        if (sb) sb.textContent = (m.soundbar && m.soundbar.done) ? '本月已檢測' : '本月尚未檢測';
         const fh = document.getElementById('head-fire');
-        if (fh) {
-            const a = (m.fire15 && m.fire15.done) ? '15日✅' : '15日—';
-            const b = (m.fire30 && m.fire30.done) ? '30日✅' : '30日—';
-            fh.textContent = a + '　' + b;
-        }
+        if (fh) fh.textContent = ((m.fire15 && m.fire15.done) ? '15號✅' : '15號—') + '　' + ((m.fire30 && m.fire30.done) ? '30號✅' : '30號—');
         const wh = document.getElementById('head-wifi');
-        if (wh) {
-            const c = (m.wifi1 && m.wifi1.done) ? '1日✅' : '1日—';
-            const d2 = (m.wifi15 && m.wifi15.done) ? '15日✅' : '15日—';
-            wh.textContent = c + '　' + d2;
-        }
+        if (wh) wh.textContent = ((m.wifi1 && m.wifi1.done) ? '1號✅' : '1號—') + '　' + ((m.wifi15 && m.wifi15.done) ? '15號✅' : '15號—');
     }
 
-    function refreshEquipLabels() {
-        const map = [['chk-soundbar', 'lbl-soundbar', 'soundbar', '本月已檢測'],
-                     ['chk-fire15', 'lbl-fire15', 'fire15', '本月 15 日已檢查'],
-                     ['chk-fire30', 'lbl-fire30', 'fire30', '本月 30 日已檢查'],
-                     ['chk-wifi1', 'lbl-wifi1', 'wifi1', '本月 1 日已檢測'],
-                     ['chk-wifi15', 'lbl-wifi15', 'wifi15', '本月 15 日已檢測']];
-        map.forEach(function (x) {
-            const cb = document.getElementById(x[0]);
-            const lb = document.getElementById(x[1]);
-            if (!cb || !lb) return;
-            const info = MONTHLY[x[2]] || {};
-            if (info.done) { lb.textContent = '🔒 ' + x[3] + '（' + String(info.date || '').slice(5) + '）'; return; }
-            lb.textContent = cb.checked ? '✅ 本次已勾' : '';
-        });
-    }
-
-    function equipValue(id, val) {
+    // 只保留日期（例：11-24），用於卡片
+    function equipValue(id, val, field) {
         const cb = document.getElementById(id);
-        if (!cb || !cb.checked) return '';
-        if (cb.disabled && !editingRecordId) return '';   // 本月已做過 → 唔重複寫
-        return val;
+        if (!cb) return '';
+        if (cb.checked) return val;
+        if (field && DUE_MISSED.indexOf(field) >= 0) {
+            return (val === '已檢查') ? '未檢查' : '未檢測';
+        }
+        return '';
+    }
+
+    // 今日係檢查日但未勾嘅項目
+    function dueMissedToday() {
+        const day = MONTHLY_TODAY ? parseInt(String(MONTHLY_TODAY).slice(8, 10), 10) : 0;
+        if (!day) return [];
+        const out = [];
+        const todayMap = { 1: ['wifi1'], 15: ['firecheck15', 'wifi15'], 30: ['firecheck30'] };
+        const fields = todayMap[day] || [];
+        MONTHLY_FIELDS.forEach(function (x) {
+            if (fields.indexOf(x[5]) < 0) return;
+            const cb = document.getElementById(x[0]);
+            if (cb && !cb.checked) out.push({ field: x[5], label: x[4].replace('本月', '') });
+        });
+        return out;
     }
 
 
@@ -2695,29 +2699,30 @@ async function loadPendingIssues() {
                     if (hallName) {
                         rows.push(`<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-bottom:8px;"><span style="font-weight:bold; white-space:nowrap;">🛰️ 本更 NFC 檢測：</span><span style="font-weight:bold; white-space:nowrap;">${hallName}</span><span style="background:#1a73e8; color:#fff; padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap;">✅ 已完成</span></div>`);
                     }
-                    // 本月檢查（NFC 下面；Sound Bar 同標題同一行，消防放第二行）
+                    // 本月檢查（Sound Bar 一直顯示；消防／WIFI 只有打勾或檢查日未做才顯示）
                     {
                         const _m = MONTHLY || {};
-                        const _smallChip = function (info, okText, noText) {
-                            const ok = !!(info && info.done);
-                            const txt = ok ? (okText + (info.date ? '（' + String(info.date).slice(5) + '）' : '')) : noText;
+                        const _chip = function (ok, txt) {
                             return '<span style="display:inline-block; padding:1px 6px; border-radius:9px; font-size:10.5px; white-space:nowrap; '
                                 + 'background:' + (ok ? '#e6f4ea' : '#fff4e5') + '; color:' + (ok ? '#137333' : '#b26a00') + '; '
                                 + 'border:1px solid ' + (ok ? '#b7e1cd' : '#ffd8a8') + ';">'
                                 + (ok ? '✅ ' : '⚠️ ') + txt + '</span>';
                         };
+                        const _sbOk = !!(_m.soundbar && _m.soundbar.done);
+                        const _sbDate = (_m.soundbar && _m.soundbar.date) ? '（' + String(_m.soundbar.date).slice(5) + '）' : '';
                         rows.push('<div style="display:flex; flex-wrap:nowrap; align-items:center; gap:5px; padding-top:6px; border-top:1px solid #dbe7f5; overflow:hidden;">'
                             + '<span style="font-weight:bold; white-space:nowrap; font-size:11.5px;">🛠️ 本月檢查：</span>'
-                            + _smallChip(_m.soundbar, 'Sound Bar 已檢測', 'Sound Bar 未檢測')
+                            + (_sbOk ? _chip(true, 'Sound Bar 本月已檢測' + _sbDate) : _chip(false, 'Sound Bar 本月尚未檢測'))
                             + '</div>');
-                        rows.push('<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:4px; padding-left:2px;">'
-                            + _smallChip(_m.fire15, '消防 15日已檢查', '消防 15日未檢查')
-                            + _smallChip(_m.fire30, '消防 30日已檢查', '消防 30日未檢查')
-                            + '</div>');
-                        rows.push('<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:4px; padding-left:2px;">'
-                            + _smallChip(_m.wifi1, 'WIFI 1日已檢測', 'WIFI 1日未檢測')
-                            + _smallChip(_m.wifi15, 'WIFI 15日已檢測', 'WIFI 15日未檢測')
-                            + '</div>');
+                        const _slot = function (val, label, okWord, noWord) {
+                            if (!val) return '';
+                            const ok = (val.indexOf('未') !== 0);
+                            return _chip(ok, label + (ok ? okWord : noWord));
+                        };
+                        const _line2 = _slot(r.firecheck15, '本月15號', '已檢查', '尚未檢查') + _slot(r.firecheck30, '本月30號', '已檢查', '尚未檢查');
+                        if (_line2) rows.push('<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:4px; padding-left:2px;">' + _line2 + '</div>');
+                        const _line3 = _slot(r.wifi1, '本月1號', '已檢測', '尚未檢測') + _slot(r.wifi15, '本月15號', '已檢測', '尚未檢測');
+                        if (_line3) rows.push('<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:4px; padding-left:2px;">' + _line3 + '</div>');
                     }
                     if (rows.length) {
                         let hasMeterIssue = !!(r.lux_issue || r.temp_issue || r.db_issue);
@@ -3094,7 +3099,7 @@ async function loadPendingIssues() {
         const _ebF30 = document.getElementById('chk-fire30'); if (_ebF30) _ebF30.checked = !!r.firecheck30;
         const _ebW1 = document.getElementById('chk-wifi1'); if (_ebW1) _ebW1.checked = !!r.wifi1;
         const _ebW15 = document.getElementById('chk-wifi15'); if (_ebW15) _ebW15.checked = !!r.wifi15;
-        applyMonthlyLocks();
+        refreshEquipLabels();
         
         if (parsedNote.venue) {
             parsedNote.venue.split('\n').forEach((line, index) => {
@@ -3553,6 +3558,15 @@ function collectItems() {
     }
 
     function submitForm() {
+        // 檢查日（1／15／30）未勾 → 提示；堅持確定就記錄為「本月尚未檢查」
+        DUE_MISSED = [];
+        const _missed = dueMissedToday();
+        if (_missed.length) {
+            const names = _missed.map(function (x) { return '・' + x.label; }).join('\n');
+            const ok = confirm('⚠️ 今日係檢查日，但以下項目未勾：\n\n' + names + '\n\n按「確定」＝照提交，並記錄為「本月尚未檢查」\n按「取消」＝返回補勾');
+            if (!ok) return;
+            DUE_MISSED = _missed.map(function (x) { return x.field; });
+        }
         if (SHIFT_DAY === 7 && hasUnboundSundayTicks()) {
             alert('⚠️ 有已勾選但未套用問題嘅台號。\n\n請先揀問題，再按「✅ 確定（暫時鎖定）」。');
             const b = document.getElementById('sun-apply');
@@ -3721,10 +3735,10 @@ temp: detOn('temp') ? document.getElementById('temp').value : "",
 bgm: detOn('bgm') ? document.getElementById('bgm').value : "",
 checklist: detOn('nfc') ? checklistString : "",
             soundbar: equipValue('chk-soundbar', '已檢測'),
-            firecheck15: equipValue('chk-fire15', '已檢查'),
-            firecheck30: equipValue('chk-fire30', '已檢查'),
-            wifi1: equipValue('chk-wifi1', '已檢測'),
-            wifi15: equipValue('chk-wifi15', '已檢測'),
+            firecheck15: equipValue('chk-fire15', '已檢查', 'firecheck15'),
+            firecheck30: equipValue('chk-fire30', '已檢查', 'firecheck30'),
+            wifi1: equipValue('chk-wifi1', '已檢測', 'wifi1'),
+            wifi15: equipValue('chk-wifi15', '已檢測', 'wifi15'),
 status: overallStatus, 
             follower: Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無',
             on_duty: Array.from(document.querySelectorAll('.onduty-item:checked')).map(cb => cb.value).join(', '), 
