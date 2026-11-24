@@ -29,6 +29,8 @@
         #on-duty-box summary { outline: none; }
         #on-duty-box .checkbox-group { max-height: 260px; overflow-y: auto; }
         .issue-group { display: none; background: #fff3cd; padding: 10px; border-radius: 8px; border: 1px solid #ffeeba; margin-top: 5px; }
+        .field-flash { animation: fieldFlash 1.6s ease-out; outline: 3px solid #e74c3c; outline-offset: 2px; }
+        @keyframes fieldFlash { 0%, 55% { box-shadow: 0 0 0 4px rgba(231,76,60,.55); background-image: linear-gradient(rgba(231,76,60,.12), rgba(231,76,60,.12)); } 100% { box-shadow: none; background-image: none; } }
         .issue-title { font-size: 12px; color: #856404; margin-bottom: 5px; font-weight: bold; }
         .issue-item { border-bottom: 1px dashed #e0c97e; padding-bottom: 8px; margin-bottom: 8px; position: relative; }
         .issue-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
@@ -2695,6 +2697,60 @@ function collectItems() {
     // ===== 提交前防漏填檢查（含「有異常但冇填紀錄」） =====
     loadTableCodes();
 
+    // ===== 錯誤定位（v36）：解除隱藏 → 等排版 → 即時捲動 → 聚焦 → 紅框閃示 → 二次校正 =====
+    // 手機／微信 webview：元素啱啱由 display:none 變 block，同一 tick 計 scroll 位置會變 0，所以一定要等兩帧。
+    let __flashTimer = null;
+    function __revealField(el) {
+        if (!el || !el.closest) return;
+        const g = el.closest('.issue-group');
+        if (g) g.style.display = 'block';
+        let n = el.parentElement, depth = 0;
+        while (n && n !== document.body && depth < 8) {
+            if (n.style && n.style.display === 'none') n.style.display = 'block';
+            n = n.parentElement; depth++;
+        }
+    }
+    function __scrollToField(el) {
+        if (!el || !el.getBoundingClientRect) return false;
+        const r = el.getBoundingClientRect();
+        if (!r || (r.width === 0 && r.height === 0)) return false;
+        const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+        const alreadyOk = r.top >= 8 && r.bottom <= vh - 8;
+        if (!alreadyOk) {
+            const scrollH = document.documentElement.scrollHeight || document.body.scrollHeight || 0;
+            const target = Math.max(0, Math.min(window.pageYOffset + r.top - Math.round((vh - r.height) / 2), scrollH - vh));
+            try { window.scrollTo({ top: target, behavior: 'auto' }); } catch (e) { window.scrollTo(0, target); }
+            try { el.scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (e) {}
+        }
+        return true;
+    }
+    function __flashField(el) {
+        if (!el || !el.classList) return;
+        el.classList.remove('field-flash');
+        void el.offsetWidth;
+        el.classList.add('field-flash');
+        clearTimeout(__flashTimer);
+        __flashTimer = setTimeout(function () { try { el.classList.remove('field-flash'); } catch (e) {} }, 1700);
+    }
+    function jumpToField(el) {
+        if (!el) return;
+        __revealField(el);
+        requestAnimationFrame(function () {
+            requestAnimationFrame(function () {
+                __scrollToField(el);
+                try { el.focus({ preventScroll: true }); } catch (e) { try { el.focus(); } catch (e2) {} }
+                try { if (el.tagName === 'SELECT' && typeof el.showPicker === 'function') el.showPicker(); } catch (e) {}
+                __flashField(el);
+                setTimeout(function () {
+                    const r2 = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+                    if (!r2) return;
+                    const vh2 = window.innerHeight || document.documentElement.clientHeight || 0;
+                    if (r2.top < 0 || r2.bottom > vh2) { __scrollToField(el); __flashField(el); }
+                }, 450);
+            });
+        });
+    }
+
     function validateFillAll() {
         const errs = [];
         const add = function (msg, el) { errs.push({ msg: msg, el: el || null }); };
@@ -2702,10 +2758,19 @@ function collectItems() {
         const openGroup = function (el) { const g = el && el.closest ? el.closest('.issue-group') : null; if (g) g.style.display = 'block'; };
 
         // ---------- 台號存在性（只檢查 NB 字頭；MGH01 等不受影響） ----------
+        // 「無需檢測」或 NFC 無異常時，該區唔會提交，唔應該報錯（否則會跳去隱藏欄位）
+        const skipOf = { '.lux-table': 'skip-lux', '.temp-table': 'skip-temp', '.bgm-table': 'skip-bgm', '.nfc-table': 'skip-nfc' };
+        const areaSkipped = function (sel) {
+            const sid = skipOf[sel];
+            if (sid) { const cb = document.getElementById(sid); if (cb && cb.checked) return true; }
+            if (sel === '.nfc-table') { const ns = document.getElementById('nfc-status'); if (ns && ns.value !== '有異常') return true; }
+            return false;
+        };
         if (TABLE_CODES && TABLE_CODES.size) {
             [['.venue-location', '場面問題'], ['.lux-table', 'Lux 異常'],
              ['.temp-table', '溫度異常'], ['.bgm-table', '分貝異常'],
              ['.nfc-table', 'NFC 異常']].forEach(function (pair) {
+                if (areaSkipped(pair[0])) return;
                 document.querySelectorAll(pair[0]).forEach(function (el) {
                     const v = String((el && el.value) || '').trim().toUpperCase();
                     if (!v) return;
@@ -2862,13 +2927,7 @@ function collectItems() {
             const first = errs[0].el;
             if (first) {
                 openGroup(first);
-                try { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { first.scrollIntoView(); }
-                setTimeout(function () {
-                    try {
-                        first.focus({ preventScroll: true });
-                        if (typeof first.showPicker === 'function') first.showPicker();
-                    } catch (e) {}
-                }, 350);
+                jumpToField(first);
             }
             return false;
         }
