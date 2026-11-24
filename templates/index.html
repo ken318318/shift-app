@@ -2670,7 +2670,7 @@ async function loadPendingIssues() {
                         const _m = MONTHLY || {};
                         const _smallChip = function (info, okText, noText) {
                             const ok = !!(info && info.done);
-                            const txt = ok ? (okText + (info.date ? ' ' + String(info.date).slice(5) : '')) : noText;
+                            const txt = ok ? (okText + (info.date ? '（' + String(info.date).slice(5) + '）' : '')) : noText;
                             return '<span style="display:inline-block; padding:1px 6px; border-radius:9px; font-size:10.5px; white-space:nowrap; '
                                 + 'background:' + (ok ? '#e6f4ea' : '#fff4e5') + '; color:' + (ok ? '#137333' : '#b26a00') + '; '
                                 + 'border:1px solid ' + (ok ? '#b7e1cd' : '#ffd8a8') + ';">'
