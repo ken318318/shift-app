@@ -403,6 +403,15 @@
                         <select id="sun-problem-dlr" style="width: 100%; padding: 9px; border-radius: 8px; border: 1px solid #80cbc4; font-size: 13px;"></select>
                     </div>
                 </div>
+                <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 11px; color: #4a148c; font-weight: bold; white-space: nowrap;">跟進狀態</span>
+                    <select id="sun-status" style="flex: 1; padding: 9px; border-radius: 8px; border: 1px solid #ce93d8; font-size: 13px;">
+                        <option value="待處理" selected>待處理</option>
+                        <option value="已 Send mail">已 Send mail</option>
+                        <option value="已通知相關部門跟進">已通知相關部門跟進</option>
+                        <option value="已處理">已處理</option>
+                    </select>
+                </div>
                 <div style="display: flex; gap: 6px; margin-bottom: 8px;">
                     <button type="button" id="sun-apply" onclick="applySundayBinds()" style="flex: 1; padding: 11px; border: none; border-radius: 8px; background: #7b1fa2; color: #fff; font-size: 13px; font-weight: bold;">✅ 確定（暫時鎖定）</button>
                     <button type="button" onclick="clearSundayTicks()" style="flex: 1; padding: 11px; border: none; border-radius: 8px; background: #eceff1; color: #455a64; font-size: 13px; font-weight: bold;">↺ 清除未確定勾選</button>
@@ -893,7 +902,8 @@ function setSubmitting(on) {
             d.onDuty = Array.from(document.querySelectorAll('.onduty-item:checked')).map(c => c.value);
             d.shiftDay = SHIFT_DAY;
             d.sunday = Object.keys(SUNDAY_BIND).map(function (c) {
-                return { code: c, g: SUNDAY_BIND[c].g || '', d: SUNDAY_BIND[c].d || '' };
+                return { code: c, g: SUNDAY_BIND[c].g || '', d: SUNDAY_BIND[c].d || '',
+                         sg: SUNDAY_BIND[c].sg || '待處理', sd: SUNDAY_BIND[c].sd || '待處理' };
             });
             
             d.skipLux = document.getElementById('skip-lux').checked;
@@ -1031,7 +1041,8 @@ function setSubmitting(on) {
                 PENDING_DAY = null;   // 草稿嘅星期優先：還原要去返相應版面
                 SUNDAY_BIND = {};
                 (Array.isArray(d.sunday) ? d.sunday : []).forEach(function (x) {
-                    if (x && x.code) SUNDAY_BIND[String(x.code).toUpperCase()] = { g: x.g || '', d: x.d || '' };
+                    if (x && x.code) SUNDAY_BIND[String(x.code).toUpperCase()] = { g: x.g || '', d: x.d || '',
+                        sg: x.sg || '待處理', sd: x.sd || '待處理' };
                 });
             }
             document.getElementById('skip-lux').checked = d.skipLux;
@@ -1384,8 +1395,10 @@ function setSubmitting(on) {
             const bindD = sunBind(code, 'd');
             const lockG = serverG || !!bindG;
             const lockD = serverD || !!bindD;
-            const gTxt = serverG ? '客櫈×5' : (bindG ? ('客櫈：' + bindG) : '客櫈×5');
-            const dTxt = serverD ? 'DLR×1' : (bindD ? ('DLR：' + bindD) : 'DLR×1');
+            const sg = (SUNDAY_BIND[code] || {}).sg || '待處理';
+            const sd = (SUNDAY_BIND[code] || {}).sd || '待處理';
+            const gTxt = serverG ? '客櫈×5' : (bindG ? ('客櫈：' + bindG + '・' + sg) : '客櫈×5');
+            const dTxt = serverD ? 'DLR×1' : (bindD ? ('DLR：' + bindD + '・' + sd) : 'DLR×1');
             const unlockBtn = function (type) {
                 return '<button type="button" onclick="unlockSunday(\'' + code + '\',\'' + type + '\')" style="border:none;background:none;color:#c62828;font-size:16px;padding:2px 4px;cursor:pointer;" title="解鎖">🔓</button>';
             };
@@ -1409,6 +1422,7 @@ function setSubmitting(on) {
     function applySundayBinds() {
         const pg = ((document.getElementById('sun-problem-guest') || {}).value || '').trim();
         const pd = ((document.getElementById('sun-problem-dlr') || {}).value || '').trim();
+        const st = ((document.getElementById('sun-status') || {}).value || '待處理');
         let binds = 0, needG = false, needD = false;
         document.querySelectorAll('#sunday-list .sunday-row').forEach(function (row) {
             const code = (row.getAttribute('data-code') || '').toUpperCase();
@@ -1419,12 +1433,14 @@ function setSubmitting(on) {
                 if (!pg) { needG = true; return; }
                 SUNDAY_BIND[code] = SUNDAY_BIND[code] || {};
                 SUNDAY_BIND[code].g = pg;
+                SUNDAY_BIND[code].sg = st;
                 binds++;
             }
             if (cd && cd.checked && !cd.disabled) {
                 if (!pd) { needD = true; return; }
                 SUNDAY_BIND[code] = SUNDAY_BIND[code] || {};
                 SUNDAY_BIND[code].d = pd;
+                SUNDAY_BIND[code].sd = st;
                 binds++;
             }
         });
@@ -2962,9 +2978,9 @@ function collectItems() {
         Object.keys(SUNDAY_BIND).forEach(function (code) {
             const b = SUNDAY_BIND[code] || {};
             if (b.g) out.push({ type: '場面', code: code, category: '櫈 - 客櫈', problem: b.g,
-                                detail: '', side: '', status: '待處理', note: '' });
+                                detail: '', side: '', status: (b.sg || '待處理'), note: '' });
             if (b.d) out.push({ type: '場面', code: code, category: '櫈 - DLR櫈', problem: b.d,
-                                detail: '', side: '', status: '待處理', note: '' });
+                                detail: '', side: '', status: (b.sd || '待處理'), note: '' });
         });
     }
     // Lux（每個 Box 各自一項）
@@ -3392,8 +3408,8 @@ function collectItems() {
         if (SHIFT_DAY === 7) {
             Object.keys(SUNDAY_BIND).forEach(function (code) {
                 const b = SUNDAY_BIND[code] || {};
-                if (b.g) venueIssues.push('[櫈 - 客櫈 - ' + b.g + '] 位置: ' + code + ' [狀態:待處理]');
-                if (b.d) venueIssues.push('[櫈 - DLR櫈 - ' + b.d + '] 位置: ' + code + ' [狀態:待處理]');
+                if (b.g) venueIssues.push('[櫈 - 客櫈 - ' + b.g + '] 位置: ' + code + ' [狀態:' + (b.sg || '待處理') + ']');
+                if (b.d) venueIssues.push('[櫈 - DLR櫈 - ' + b.d + '] 位置: ' + code + ' [狀態:' + (b.sd || '待處理') + ']');
             });
         }
 
@@ -3430,7 +3446,19 @@ function collectItems() {
             }); 
         }
         
-        if (overallStatus === "已處理" && hasSundayChecks()) overallStatus = "待處理";
+        if (overallStatus === '已處理' && hasSundayChecks()) {
+            const sts = [];
+            Object.keys(SUNDAY_BIND).forEach(function (c) {
+                const b = SUNDAY_BIND[c] || {};
+                if (b.g) sts.push(b.sg || '待處理');
+                if (b.d) sts.push(b.sd || '待處理');
+            });
+            if (sts.indexOf('待處理') >= 0) overallStatus = '待處理';
+            else if (sts.indexOf('觀察中') >= 0) overallStatus = '觀察中';
+            else if (sts.indexOf('已通知相關部門跟進') >= 0) overallStatus = '已通知相關部門跟進';
+            else if (sts.indexOf('已 Send mail') >= 0) overallStatus = '已 Send mail';
+            else overallStatus = '待處理';
+        }
 
         let data = { 
             name: document.getElementById('staffName').value, 
