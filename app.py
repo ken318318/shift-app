@@ -471,7 +471,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-18", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-19", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3469,6 +3469,35 @@ def delete_member():
 
 
 # ---------- 台號狀態管理 ----------
+@app.route('/api/table_codes', methods=['GET'])
+def api_table_codes():
+    """回傳台號總表（供前端檢查台號是否存在）。任何已登入同事可用。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT table_code, COALESCE(status, '營運') FROM hall_tables")
+        codes, stopped = [], []
+        for code, st in c.fetchall():
+            k = _up_norm(code)
+            if not k:
+                continue
+            codes.append(k)
+            if st == '停運':
+                stopped.append(k)
+        resp = jsonify({'status': 'success', 'codes': codes, 'stopped': stopped, 'count': len(codes)})
+        resp.headers['Cache-Control'] = 'no-store, max-age=0'
+        return resp
+    except Exception as e:
+        print('table_codes Error:', e)
+        return jsonify({'status': 'error', 'message': str(e), 'codes': [], 'stopped': []})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
 @app.route('/api/hall_tables', methods=['GET'])
 def list_hall_tables():
     if session.get('role') != 'admin':
