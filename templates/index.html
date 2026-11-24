@@ -1008,7 +1008,8 @@ function setSubmitting(on) {
             let hasData = d.staffName || d.notes || (d.follower && d.follower.length) || 
                           (d.luxIssue && d.luxIssue.length) || (d.tempIssue && d.tempIssue.length) || 
                           (d.bgmIssue && d.bgmIssue.length) || (d.nfcIssue && d.nfcIssue.length) || 
-                          (d.venue && d.venue.some(v => v.cat || v.locs.length));
+                          (d.venue && d.venue.some(v => v.cat || v.locs.length)) ||
+                          (Array.isArray(d.sunday) && d.sunday.length > 0);
             if (!hasData) return;
             
             if (d.staffName) document.getElementById('staffName').value = d.staffName;
