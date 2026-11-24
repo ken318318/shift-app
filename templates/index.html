@@ -1386,6 +1386,15 @@ function setSubmitting(on) {
         });
     }
 
+    function hasSundayChecks() {
+        if (SHIFT_DAY !== 7) return false;
+        return Array.from(document.querySelectorAll('#sunday-list .sunday-row')).some(function (row) {
+            const g = row.querySelector('.sun-guest');
+            const d = row.querySelector('.sun-dlr');
+            return (g && g.checked && !g.disabled) || (d && d.checked && !d.disabled);
+        });
+    }
+
     function toggleIssue(type) { 
         let selectEl = document.getElementById(type); 
         let groupEl = document.getElementById(type + '-issue-group'); 
@@ -3287,6 +3296,8 @@ function collectItems() {
             }); 
         }
         
+        if (overallStatus === "已處理" && hasSundayChecks()) overallStatus = "待處理";
+
         let data = { 
             name: document.getElementById('staffName').value, 
             shift: document.getElementById('shiftType').value, 
@@ -3332,7 +3343,7 @@ function collectItems() {
         }
         
         let rawNote = document.getElementById('notes').value.trim(); 
-        if (!editingRecordId && rawNote === '' && venueIssues.length === 0 && luxIssue === '' && tempIssue === '' && dbIssue === '' && nfcDetails.length === 0 && doneOldItems.length === 0) { 
+        if (!editingRecordId && rawNote === '' && venueIssues.length === 0 && luxIssue === '' && tempIssue === '' && dbIssue === '' && nfcDetails.length === 0 && doneOldItems.length === 0 && !hasSundayChecks()) { 
             if (hasEmptyVenue) {
                 if (!confirm("⚠️ 已選擇場面問題，但未填寫「位置」。\n\n系統會忽略該項，確定要繼續提交嗎？")) return;
             } else {
