@@ -1797,7 +1797,6 @@ function setSubmitting(on) {
 
     function resetForm(isNew = false) {
         SHIFT_DAY = null;
-        PENDING_DAY = null;
         const _sb = document.getElementById('sunday-block'); if (_sb) _sb.style.display = 'none';
         const _sl = document.getElementById('sunday-list'); if (_sl) _sl.innerHTML = '';
         const _sbadge = document.getElementById('shift-day-badge'); if (_sbadge) _sbadge.textContent = '';
