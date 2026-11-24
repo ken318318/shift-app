@@ -481,7 +481,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-31", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-32", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1098,7 +1098,7 @@ def _si_guess_cat_prob(it):
     return '', prob
 
 
-def _si_write_items(c, record_id, items, source='submit'):
+def _si_write_items(c, record_id, items, source='submit', event_map=None):
     """把前端送來的結構化 items 寫入 shift_items（同 key 只寫一次）。"""
     if not items:
         return 0
@@ -1120,7 +1120,8 @@ def _si_write_items(c, record_id, items, source='submit'):
         if not code:
             continue
         seen.add(key)
-        _si_insert(c, record_id, source, key, it2, it2.get('status') or '待處理', None, '')
+        _ea = (event_map or {}).get(key)
+        _si_insert(c, record_id, source, key, it2, it2.get('status') or '待處理', _ea, '')
         n += 1
     return n
 
@@ -1203,8 +1204,17 @@ def overwrite_record():
                    data.get('wifi1') or '', data.get('wifi15') or '', data.get('shift_day') or None,
                    psycopg2.extras.Json(_items), old_id))
         # 該筆的問題項重寫（保留 mark_done 寫下的 resolve 記錄）
+        # 重寫前記住每個 item_key 最早 event_at，避免「發生日期」變成修改日期
+        keep_ea = {}
+        try:
+            c.execute("SELECT item_key, MIN(event_at) FROM shift_items WHERE record_id = %s GROUP BY item_key", (old_id,))
+            for _k, _ea in c.fetchall():
+                if _k and _ea:
+                    keep_ea[_k] = _ea
+        except Exception as _e:
+            print('overwrite keep_ea failed:', _e)
         c.execute("DELETE FROM shift_items WHERE record_id = %s AND source <> 'resolve'", (old_id,))
-        _si_write_items(c, old_id, data.get('items'), 'submit')
+        _si_write_items(c, old_id, data.get('items'), 'submit', keep_ea)
         _si_write_done(c, old_id, data.get('done_keys'), session.get('user_name') or '')
         _si_write_reopen(c, old_id, data.get('reopen_keys'))
         conn.commit()
@@ -2184,13 +2194,13 @@ def api_pending_items():
                " d.problem, d.detail, d.side, d.status, d.note, d.display, d.source, d.created_at,"
                " (SELECT MIN(x.event_at) FROM shift_items x WHERE x.item_key = d.item_key) AS first_at"
                " FROM (SELECT DISTINCT ON (item_key) id, record_id, item_key, type, code, category,"
-               " problem, detail, side, status, note, display, source, created_at"
-               " FROM shift_items")
+               " problem, detail, side, status, note, display, source, created_at, event_at"
+               " FROM shift_items ORDER BY item_key, event_at DESC, id DESC) d")
         params = []
         if before_id:
-            sql += " WHERE (record_id IS NULL OR record_id < %s)"
+            sql += " WHERE (d.record_id IS NULL OR d.record_id < %s)"
             params.append(before_id)
-        sql += " ORDER BY item_key, event_at DESC, id DESC) d ORDER BY d.item_key"
+        sql += " ORDER BY d.item_key"
         c.execute(sql, params)
         rows = c.fetchall()
         release_db_connection(conn)
