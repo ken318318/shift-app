@@ -2675,12 +2675,45 @@ function collectItems() {
 }
 
 
+    // ===== 台號總表（用於提交前檢查 NB 台號是否存在） =====
+    let TABLE_CODES = null;
+    let TABLE_LOADING = null;
+    function loadTableCodes() {
+        if (TABLE_LOADING) return TABLE_LOADING;
+        TABLE_LOADING = fetch('/api/table_codes')
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                TABLE_CODES = new Set((d && d.codes) || []);
+                return TABLE_CODES;
+            })
+            .catch(function () { TABLE_CODES = new Set(); return TABLE_CODES; });
+        return TABLE_LOADING;
+    }
+
     // ===== 提交前防漏填檢查（含「有異常但冇填紀錄」） =====
+    loadTableCodes();
+
     function validateFillAll() {
         const errs = [];
         const add = function (msg, el) { errs.push({ msg: msg, el: el || null }); };
         const num = function (v) { const n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return isNaN(n) ? null : n; };
         const openGroup = function (el) { const g = el && el.closest ? el.closest('.issue-group') : null; if (g) g.style.display = 'block'; };
+
+        // ---------- 台號存在性（只檢查 NB 字頭；MGH01 等不受影響） ----------
+        if (TABLE_CODES && TABLE_CODES.size) {
+            [['.venue-location', '場面問題'], ['.lux-table', 'Lux 異常'],
+             ['.temp-table', '溫度異常'], ['.bgm-table', '分貝異常'],
+             ['.nfc-table', 'NFC 異常']].forEach(function (pair) {
+                document.querySelectorAll(pair[0]).forEach(function (el) {
+                    const v = String((el && el.value) || '').trim().toUpperCase();
+                    if (!v) return;
+                    if (v.indexOf('NB') !== 0) return;          // 非 NB 不理
+                    if (!TABLE_CODES.has(v)) {
+                        add(pair[1] + '：台號「' + v + '」不存在，請檢查', el);
+                    }
+                });
+            });
+        }
 
         // ---------- 場面問題 ----------
         document.querySelectorAll('.venue-item').forEach(function (item, idx) {
