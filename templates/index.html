@@ -4694,22 +4694,22 @@ function collectItems() {
             var item = el.closest('.lux-item, .temp-item, .bgm-item, .venue-item, .nfc-item');
 
             // Lux：台號(4) → Box1(3) → Box3(3) → Box6(3) → 狀態
-            if (el.classList.contains('lux-table') && /^\d{4}$/.test(v)) { var n1 = pick(item, 'lux-box1'); if (n1) n1.focus(); return; }
+            if (el.classList.contains('lux-table') && /^(?:[A-Za-z]{2})?\d{4}$/.test(v)) { var n1 = pick(item, 'lux-box1'); if (n1) n1.focus(); return; }
             if (el.classList.contains('lux-box1') && /^\d{3}$/.test(v)) { var n2 = pick(item, 'lux-box3'); if (n2) n2.focus(); return; }
             if (el.classList.contains('lux-box3') && /^\d{3}$/.test(v)) { var n3 = pick(item, 'lux-box6'); if (n3) n3.focus(); return; }
             if (el.classList.contains('lux-box6') && /^\d{3}$/.test(v)) { openSelect(pick(item, 'issue-status')); return; }
 
             // 溫度／分貝：台號(4) → 數值 → 狀態
-            if (el.classList.contains('temp-table') && /^\d{4}$/.test(v)) { var t1 = pick(item, 'temp-value'); if (t1) t1.focus(); return; }
-            if (el.classList.contains('bgm-table') && /^\d{4}$/.test(v)) { var b1 = pick(item, 'bgm-value'); if (b1) b1.focus(); return; }
+            if (el.classList.contains('temp-table') && /^(?:[A-Za-z]{2})?\d{4}$/.test(v)) { var t1 = pick(item, 'temp-value'); if (t1) t1.focus(); return; }
+            if (el.classList.contains('bgm-table') && /^(?:[A-Za-z]{2})?\d{4}$/.test(v)) { var b1 = pick(item, 'bgm-value'); if (b1) b1.focus(); return; }
             if (el.classList.contains('temp-value') && /^\d{2}\.\d$/.test(v)) { openSelect(pick(item, 'issue-status')); return; }
             if (el.classList.contains('bgm-value') && /^\d{2,3}\.\d$/.test(v)) { openSelect(pick(item, 'issue-status')); return; }
 
             // 場面：台號(4) → 狀態
-            if (el.classList.contains('venue-location') && /^\d{4}$/.test(v)) { openSelect(pick(item, 'issue-status')); return; }
+            if (el.classList.contains('venue-location') && /^(?:[A-Za-z]{2})?\d{4}$/.test(v)) { openSelect(pick(item, 'issue-status')); return; }
 
             // NFC：台號(4) → 狀態
-            if (el.classList.contains('nfc-table') && /^\d{4}$/.test(v)) { openSelect(pick(item, 'issue-status')); return; }
+            if (el.classList.contains('nfc-table') && /^(?:[A-Za-z]{2})?\d{4}$/.test(v)) { openSelect(pick(item, 'issue-status')); return; }
         });
 
         document.addEventListener('change', function (e) {
