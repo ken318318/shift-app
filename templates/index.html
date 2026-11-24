@@ -3263,6 +3263,22 @@ function collectItems() {
             if (locCount === 0) hasEmptyVenue = true;
         });
         
+        // 星期日櫈況勾選 → 同時寫入文字（與場面問題完全同一格式，預覽／紀錄／更新表一致）
+        if (SHIFT_DAY === 7) {
+            document.querySelectorAll('#sunday-list .sunday-row').forEach(function (row) {
+                const code = row.getAttribute('data-code') || '';
+                if (!code) return;
+                const g = row.querySelector('.sun-guest');
+                const d = row.querySelector('.sun-dlr');
+                if (g && g.checked && !g.disabled) {
+                    venueIssues.push('[櫈 - 客櫈 - 問題客櫈] 位置: ' + code + ' [狀態:待處理]');
+                }
+                if (d && d.checked && !d.disabled) {
+                    venueIssues.push('[櫈 - DLR櫈 - 問題DLR櫈] 位置: ' + code + ' [狀態:待處理]');
+                }
+            });
+        }
+
         if (venueIssues.length > 0) finalNote += `\n\n【場面問題】\n` + venueIssues.join('\n');
         
         let selectedHall = document.getElementById('nfc-hall-select').value; 
