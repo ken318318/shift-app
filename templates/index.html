@@ -2522,14 +2522,14 @@ async function loadPendingIssues() {
                         if (hallSeg) hallName = hallSeg.replace(/^NFC正常[:：]\s*/, '').trim();
                         hasNfcIssue = r.checklist.includes('NFC異常');
                     }
-                    let chip = (label, st) => `<span style="display:inline-block; padding:2px 6px; border-radius:10px; font-size:11px; white-space:nowrap; background:${st === 'ok' ? '#e6f4ea' : (st === 'warn' ? '#fff4e5' : '#f1f3f4')}; color:${st === 'ok' ? '#137333' : (st === 'warn' ? '#b26a00' : '#5f6368')}; border:1px solid ${st === 'ok' ? '#b7e1cd' : (st === 'warn' ? '#ffd8a8' : '#dadce0')};">${st === 'ok' ? '✅' : (st === 'warn' ? '⚠️' : '—')} ${label}</span>`;
+                    let chip = (label, st, noneText) => `<span style="display:inline-block; padding:2px 6px; border-radius:10px; font-size:11px; white-space:nowrap; background:${st === 'ok' ? '#e6f4ea' : (st === 'warn' ? '#fff4e5' : '#f1f3f4')}; color:${st === 'ok' ? '#137333' : (st === 'warn' ? '#b26a00' : '#5f6368')}; border:1px solid ${st === 'ok' ? '#b7e1cd' : (st === 'warn' ? '#ffd8a8' : '#dadce0')};">${st === 'ok' ? '✅ ' + label : (st === 'warn' ? '⚠️ ' + label : (noneText || label))}</span>`;
                     let meterState = (val, issue) => (!val ? 'none' : (issue ? 'warn' : 'ok'));
                     let rows = [];
                     if (r.soundbar || r.firecheck) {
                         rows.push(`<div style="display:flex; flex-wrap:nowrap; align-items:center; gap:4px; margin-bottom:6px;"><span style="font-weight:bold; white-space:nowrap; font-size:12px;">🛠️ 設備檢查：</span>${r.soundbar ? chip('Sound Bar ' + r.soundbar, 'ok') : chip('Sound Bar 未檢測', 'none')}${r.firecheck ? chip('消防 ' + r.firecheck, 'ok') : chip('消防 未檢查', 'none')}</div>`);
                     }
                     if (r.lux || r.temp || r.bgm) {
-                        rows.push(`<div style="display:flex; flex-wrap:nowrap; align-items:center; gap:4px; margin-bottom:6px;"><span style="font-weight:bold; white-space:nowrap; font-size:12px;">🏢 全場檢測：</span>${chip('Lux', meterState(r.lux, r.lux_issue))}${chip('溫度', meterState(r.temp, r.temp_issue))}${chip('分貝', meterState(r.bgm, r.db_issue))}</div>`);
+                        rows.push(`<div style="display:flex; flex-wrap:nowrap; align-items:center; gap:4px; margin-bottom:6px;"><span style="font-weight:bold; white-space:nowrap; font-size:12px;">🏢 全場檢測：</span>${chip('Lux', meterState(r.lux, r.lux_issue), 'Lux 無需檢測')}${chip('溫度', meterState(r.temp, r.temp_issue), '溫度 無需檢測')}${chip('分貝', meterState(r.bgm, r.db_issue), '分貝 無需檢測')}</div>`);
                     }
                     if (hallName) {
                         rows.push(`<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px;"><span style="font-weight:bold; white-space:nowrap;">🛰️ 本更 NFC 檢測：</span><span style="font-weight:bold; white-space:nowrap;">${hallName}</span><span style="background:#1a73e8; color:#fff; padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap;">✅ 已完成</span></div>`);
