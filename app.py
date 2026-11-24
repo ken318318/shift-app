@@ -471,7 +471,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-20", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-21", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -4250,9 +4250,9 @@ def _chair_issues():
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("""SELECT DISTINCT ON (item_key) item_key, code, category, status
+        c.execute("""SELECT DISTINCT ON (item_key) item_key, code, category, status, detail
                      FROM shift_items
-                     WHERE type = '場面'
+                     WHERE (type = '場面' OR item_key LIKE '場面|%')
                      ORDER BY item_key, event_at DESC, id DESC""")
         rows = c.fetchall()
     except Exception as e:
@@ -4265,10 +4265,11 @@ def _chair_issues():
             except Exception:
                 pass
 
-    for _k, code, cat, status in rows:
-        cat = cat or ''
-        is_dlr = ('DLR' in cat and ('櫈' in cat or '椅' in cat))
-        is_guest = ('客櫈' in cat or '客椅' in cat)
+    for _k, code, cat, status, detail in rows:
+        # category 有時會空白（舊資料／直接寫 API），所以一併用 detail 同 item_key 判斷
+        hay = ' '.join([str(cat or ''), str(detail or ''), str(_k or '')])
+        is_dlr = ('DLR' in hay.upper() and ('櫈' in hay or '椅' in hay))
+        is_guest = ('客櫈' in hay or '客椅' in hay)
         if not (is_dlr or is_guest):
             continue
         if not code:
@@ -4277,10 +4278,12 @@ def _chair_issues():
         rec = out.setdefault(key, {'dlr_bad': False, 'guest_bad': False})
         st_ = status or ''
         bad = not any(x in st_ for x in ('已處理', '已处理', '已完成', '已解決'))
-        if is_dlr:
-            rec['dlr_bad'] = bad
-        if is_guest:
-            rec['guest_bad'] = bad
+        # 一張台可能有多個櫈問題（例如客櫈-坐墊破損 未解決 + 客櫈-螺絲鬆動 已處理）：
+        # 必須用 OR 累加，唔可以後寫覆蓋前寫（以前會令未解決問題被蓋成正常）
+        if is_dlr and bad:
+            rec['dlr_bad'] = True
+        if is_guest and bad:
+            rec['guest_bad'] = True
 
     if not out:
         # 萬一 shift_items 未有資料，退回舊文字解析
@@ -4305,6 +4308,7 @@ def _chair_issues_text():
             try: release_db_connection(conn)
             except Exception: pass
 
+    tmp = {}
     for (note,) in rows:
         text = str(note or '')
         done_pos = -1
@@ -4322,16 +4326,20 @@ def _chair_issues_text():
                 if not (is_dlr or is_guest):
                     continue
                 key = _up_norm(it['code'])
-                rec = out.setdefault(key, {'dlr_bad': False, 'guest_bad': False})
                 st_ = it.get('status') or ''
                 if in_done:
                     bad = False
                 else:
                     bad = not (('已處理' in st_) or ('已处理' in st_) or ('已完成' in st_) or ('已解決' in st_))
-                if is_dlr:
-                    rec['dlr_bad'] = bad
-                if is_guest:
-                    rec['guest_bad'] = bad
+                # 按「台號＋類別＋問題」保存最新狀態，避免同一張台唔同問題互相覆蓋
+                tmp[(key, cat, it.get('problem') or it.get('detail') or '')] = (is_dlr, is_guest, bad)
+    out = {}
+    for (key, _cat, _p), (is_dlr, is_guest, bad) in tmp.items():
+        rec = out.setdefault(key, {'dlr_bad': False, 'guest_bad': False})
+        if is_dlr and bad:
+            rec['dlr_bad'] = True
+        if is_guest and bad:
+            rec['guest_bad'] = True
     return out
 
 
