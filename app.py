@@ -471,7 +471,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-19", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-20", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
