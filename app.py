@@ -481,7 +481,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-32", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-33", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1279,7 +1279,8 @@ def get_records_home():
                             COALESCE(reviewed_by, ''),
                             items, COALESCE(soundbar, ''), COALESCE(firecheck, ''),
                             COALESCE(firecheck15, ''), COALESCE(firecheck30, ''),
-                            COALESCE(wifi1, ''), COALESCE(wifi15, ''), COALESCE(shift_day, 0)
+                            COALESCE(wifi1, ''), COALESCE(wifi15, ''), COALESCE(shift_day, 0),
+                            EXTRACT(EPOCH FROM (NOW() - created_at))::int
                      FROM records""" + sql_where + " ORDER BY id DESC LIMIT %s OFFSET %s",
                   params + [limit, offset])
         rows = c.fetchall()
@@ -1299,7 +1300,8 @@ def get_records_home():
             "firecheck30": r[25] or '',
             "wifi1": r[26] or '',
             "wifi15": r[27] or '',
-            "shift_day": r[28] or 0
+            "shift_day": r[28] or 0,
+            "age_sec": r[29] if len(r) > 29 else None
         } for r in rows]
         resp = jsonify({"records": records, "total": total, "limit": limit, "offset": offset})
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
@@ -1327,7 +1329,8 @@ def get_records():
                  COALESCE(reviewed_by, ''),
                  items, COALESCE(soundbar, ''), COALESCE(firecheck, ''),
                  COALESCE(firecheck15, ''), COALESCE(firecheck30, ''),
-                 COALESCE(wifi1, ''), COALESCE(wifi15, ''), COALESCE(shift_day, 0)
+                 COALESCE(wifi1, ''), COALESCE(wifi15, ''), COALESCE(shift_day, 0),
+                 EXTRACT(EPOCH FROM (NOW() - created_at))::int
                  FROM records ORDER BY id DESC"""
     if _limit > 0:
         c.execute(_sql + " LIMIT %s OFFSET %s", (min(_limit, 1000), max(0, _offset)))
@@ -1353,7 +1356,8 @@ def get_records():
             "firecheck30": row[25] or '',
             "wifi1": row[26] or '',
             "wifi15": row[27] or '',
-            "shift_day": row[28] or 0
+            "shift_day": row[28] or 0,
+            "age_sec": row[29] if len(row) > 29 else None
         })
     return jsonify(records)
 
