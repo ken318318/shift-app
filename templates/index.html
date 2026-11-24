@@ -2675,16 +2675,20 @@ function collectItems() {
 }
 
 
-    // ===== 提交前防漏填檢查 =====
+    // ===== 提交前防漏填檢查（含「有異常但冇填紀錄」） =====
     function validateFillAll() {
         const errs = [];
+        const add = function (msg, el) { errs.push({ msg: msg, el: el || null }); };
         const num = function (v) { const n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return isNaN(n) ? null : n; };
+        const openGroup = function (el) { const g = el && el.closest ? el.closest('.issue-group') : null; if (g) g.style.display = 'block'; };
 
-        // ---- 場面問題 ----
+        // ---------- 場面問題 ----------
         document.querySelectorAll('.venue-item').forEach(function (item, idx) {
             const n = idx + 1;
-            const cat = ((item.querySelector('.venue-category') || {}).value || '').trim();
-            const prob = ((item.querySelector('.venue-problem') || {}).value || '').trim();
+            const catEl = item.querySelector('.venue-category');
+            const probEl = item.querySelector('.venue-problem');
+            const cat = ((catEl || {}).value || '').trim();
+            const prob = ((probEl || {}).value || '').trim();
             const locEls = Array.from(item.querySelectorAll('.venue-location'));
             const noteEls = Array.from(item.querySelectorAll('.venue-loc-note'));
             const locs = locEls.map(function (x) { return (x.value || '').trim(); });
@@ -2692,89 +2696,133 @@ function collectItems() {
             const hasAnyLoc = locs.some(Boolean);
             const used = cat || hasAnyLoc || notes.some(Boolean);
             if (!used) return;
-            if (!cat) { errs.push('場面問題 ' + n + '：未選擇「項目（類別）」'); return; }
-            if (!prob) errs.push('場面問題 ' + n + '：未選擇「問題」');
-            if (!hasAnyLoc) errs.push('場面問題 ' + n + '：未填台號');
-            if (hasAnyLoc && locs.some(function (v) { return !v; })) {
-                errs.push('場面問題 ' + n + '：有台號行未填（請填寫或按 X 刪除）');
+            if (!cat) { add('場面問題 ' + n + '：未選擇「項目（類別）」', catEl); return; }
+            if (!prob) add('場面問題 ' + n + '：未選擇「問題」', probEl);
+            if (!hasAnyLoc) {
+                add('場面問題 ' + n + '：未填台號', locEls[0]);
+            } else {
+                const badIdx = locs.findIndex(function (v) { return !v; });
+                if (badIdx >= 0) add('場面問題 ' + n + '：有台號行未填（請填寫或按 X 刪除）', locEls[badIdx]);
             }
         });
 
-        // ---- Lux ----
+        // ---------- Lux ----------
         if (!document.getElementById('skip-lux').checked) {
             const luxSel = document.getElementById('lux').value;
-            const limit = 450;
+            const luxAb = (luxSel === '< 450' || luxSel === '> 650');
+            let anyLux = false;
             document.querySelectorAll('.lux-item').forEach(function (item, idx) {
                 const n = idx + 1;
-                const table = ((item.querySelector('.lux-table') || {}).value || '').trim();
-                const boxes = ['lux-box1', 'lux-box3', 'lux-box6'].map(function (c) {
-                    const el = item.querySelector('.' + c);
-                    return el ? (el.value || '').trim() : '';
-                });
-                const anyBox = boxes.some(Boolean);
+                const tableEl = item.querySelector('.lux-table');
+                const table = ((tableEl || {}).value || '').trim();
+                const boxEls = ['lux-box1', 'lux-box3', 'lux-box6'].map(function (c) { return item.querySelector('.' + c); });
+                const boxVals = boxEls.map(function (e) { return e ? (e.value || '').trim() : ''; });
+                const anyBox = boxVals.some(Boolean);
                 if (!table && !anyBox) return;
-                if (!table) errs.push('Lux 異常 ' + n + '：未填台號');
-                if (!anyBox) errs.push('Lux 異常 ' + n + '：未填 Box 數值（至少一個）');
-                boxes.forEach(function (v, bi) {
+                anyLux = true;
+                if (!table) add('Lux 異常 ' + n + '：未填台號', tableEl);
+                if (!anyBox) add('Lux 異常 ' + n + '：未填 Box 數值（至少一個）', boxEls[0]);
+                boxVals.forEach(function (v, bi) {
                     if (!v) return;
                     const x = num(v);
-                    const boxName = ['Box 1', 'Box 3', 'Box 6'][bi];
-                    if (x === null) { errs.push('Lux 異常 ' + n + ' ' + boxName + '：數值不是數字'); return; }
-                    if (luxSel === '< 450' && !(x < limit)) errs.push('Lux 異常 ' + n + ' ' + boxName + '：' + x + ' 不符合「< 450」');
-                    if (luxSel === '> 650' && !(x > 650)) errs.push('Lux 異常 ' + n + ' ' + boxName + '：' + x + ' 不符合「> 650」');
+                    const bn = ['Box 1', 'Box 3', 'Box 6'][bi];
+                    if (x === null) { add('Lux 異常 ' + n + ' ' + bn + '：數值不是數字', boxEls[bi]); return; }
+                    if (luxSel === '< 450' && !(x < 450)) add('Lux 異常 ' + n + ' ' + bn + '：' + x + ' 不符合「< 450」', boxEls[bi]);
+                    if (luxSel === '> 650' && !(x > 650)) add('Lux 異常 ' + n + ' ' + bn + '：' + x + ' 不符合「> 650」', boxEls[bi]);
                 });
             });
+            if (luxAb && !anyLux) {
+                const el = document.querySelector('.lux-item .lux-table');
+                add('全場 Lux 已選「' + luxSel + '」，但未填任何異常紀錄（需台號＋Box 數值）', el);
+            }
         }
 
-        // ---- 溫度 ----
-        if (!document.getElementById('skip-temp').checked && document.getElementById('temp-issue-group').style.display === 'block') {
+        // ---------- 溫度 ----------
+        if (!document.getElementById('skip-temp').checked) {
             const tSel = document.getElementById('temp').value;
+            const tAb = (tSel.indexOf('偏低') >= 0 || tSel.indexOf('偏高') >= 0);
+            let anyT = false;
             document.querySelectorAll('.temp-item').forEach(function (item, idx) {
                 const n = idx + 1;
-                const table = ((item.querySelector('.temp-table') || {}).value || '').trim();
-                const val = ((item.querySelector('.temp-value') || {}).value || '').trim();
+                const tableEl = item.querySelector('.temp-table');
+                const valEl = item.querySelector('.temp-value');
+                const table = ((tableEl || {}).value || '').trim();
+                const val = ((valEl || {}).value || '').trim();
                 if (!table && !val) return;
-                if (!table) errs.push('溫度異常 ' + n + '：未填台號');
-                if (!val) { errs.push('溫度異常 ' + n + '：未填數值'); return; }
+                anyT = true;
+                if (!table) add('溫度異常 ' + n + '：未填台號', tableEl);
+                if (!val) { add('溫度異常 ' + n + '：未填數值', valEl); return; }
                 const x = num(val);
-                if (x === null) { errs.push('溫度異常 ' + n + '：數值不是數字'); return; }
-                if (tSel.indexOf('偏低') >= 0 && !(x < 22.5)) errs.push('溫度異常 ' + n + '：' + x + ' 不符合「偏低（< 22.5）」');
-                if (tSel.indexOf('偏高') >= 0 && !(x > 24.5)) errs.push('溫度異常 ' + n + '：' + x + ' 不符合「偏高（> 24.5）」');
+                if (x === null) { add('溫度異常 ' + n + '：數值不是數字', valEl); return; }
+                if (tSel.indexOf('偏低') >= 0 && !(x < 22.5)) add('溫度異常 ' + n + '：' + x + ' 不符合「偏低（< 22.5）」', valEl);
+                if (tSel.indexOf('偏高') >= 0 && !(x > 24.5)) add('溫度異常 ' + n + '：' + x + ' 不符合「偏高（> 24.5）」', valEl);
             });
+            if (tAb && !anyT) {
+                const el = document.querySelector('.temp-item .temp-table');
+                add('全場 溫度 已選「' + tSel + '」，但未填任何異常紀錄（需台號＋數值）', el);
+            }
         }
 
-        // ---- BGM 分貝 ----
-        if (!document.getElementById('skip-bgm').checked && document.getElementById('bgm-issue-group').style.display === 'block') {
+        // ---------- 分貝 ----------
+        if (!document.getElementById('skip-bgm').checked) {
             const bSel = document.getElementById('bgm').value;
+            const bAb = (bSel.indexOf('偏低') >= 0 || bSel.indexOf('偏高') >= 0);
+            let anyB = false;
             document.querySelectorAll('.bgm-item').forEach(function (item, idx) {
                 const n = idx + 1;
-                const table = ((item.querySelector('.bgm-table') || {}).value || '').trim();
-                const val = ((item.querySelector('.bgm-value') || {}).value || '').trim();
+                const tableEl = item.querySelector('.bgm-table');
+                const valEl = item.querySelector('.bgm-value');
+                const table = ((tableEl || {}).value || '').trim();
+                const val = ((valEl || {}).value || '').trim();
                 if (!table && !val) return;
-                if (!table) errs.push('分貝異常 ' + n + '：未填台號');
-                if (!val) { errs.push('分貝異常 ' + n + '：未填數值'); return; }
+                anyB = true;
+                if (!table) add('分貝異常 ' + n + '：未填台號', tableEl);
+                if (!val) { add('分貝異常 ' + n + '：未填數值', valEl); return; }
                 const x = num(val);
-                if (x === null) { errs.push('分貝異常 ' + n + '：數值不是數字'); return; }
-                if (bSel.indexOf('偏低') >= 0 && !(x < 65)) errs.push('分貝異常 ' + n + '：' + x + ' 不符合「偏低（< 65）」');
-                if (bSel.indexOf('偏高') >= 0 && !(x > 75)) errs.push('分貝異常 ' + n + '：' + x + ' 不符合「偏高（> 75）」');
+                if (x === null) { add('分貝異常 ' + n + '：數值不是數字', valEl); return; }
+                if (bSel.indexOf('偏低') >= 0 && !(x < 65)) add('分貝異常 ' + n + '：' + x + ' 不符合「偏低（< 65）」', valEl);
+                if (bSel.indexOf('偏高') >= 0 && !(x > 75)) add('分貝異常 ' + n + '：' + x + ' 不符合「偏高（> 75）」', valEl);
             });
+            if (bAb && !anyB) {
+                const el = document.querySelector('.bgm-item .bgm-table');
+                add('全場 BGM 已選「' + bSel + '」，但未填任何異常紀錄（需台號＋數值）', el);
+            }
         }
 
-        // ---- NFC ----
+        // ---------- NFC ----------
         if (!document.getElementById('skip-nfc').checked && document.getElementById('nfc-status').value === '有異常') {
+            let anyN = false;
             document.querySelectorAll('.nfc-item').forEach(function (item, idx) {
                 const n = idx + 1;
-                const table = ((item.querySelector('.nfc-table') || {}).value || '').trim();
+                const tableEl = item.querySelector('.nfc-table');
+                const table = ((tableEl || {}).value || '').trim();
                 const boxes = item.querySelectorAll('.nfc-box:checked').length;
                 if (!table && !boxes) return;
-                if (!table) errs.push('NFC 異常 ' + n + '：未填台號');
-                if (!boxes) errs.push('NFC 異常 ' + n + '：最少要選 1 個 Box');
+                anyN = true;
+                if (!table) add('NFC 異常 ' + n + '：未填台號', tableEl);
+                if (!boxes) add('NFC 異常 ' + n + '：最少要選 1 個 Box', item.querySelector('.nfc-box'));
             });
+            if (!anyN) {
+                const el = document.querySelector('.nfc-item .nfc-table');
+                add('NFC 已選「有異常」，但未填任何異常紀錄（需台號＋Box）', el);
+            }
         }
 
+        // ---------- 有錯：提示＋跳去第一個錯誤位 ----------
         if (errs.length) {
-            const show = errs.slice(0, 10).join('\n• ');
-            alert('⚠️ 有 ' + errs.length + ' 項未填好，未能提交：\n\n• ' + show + (errs.length > 10 ? '\n• …' : ''));
+            const list = errs.slice(0, 10).map(function (e) { return '• ' + e.msg; }).join('\n');
+            alert('⚠️ 有 ' + errs.length + ' 項未填好，未能提交：\n\n' + list + (errs.length > 10 ? '\n• …' : '') + '\n\n按「確定」會跳到第一個要修改嘅位置。');
+            const first = errs[0].el;
+            if (first) {
+                openGroup(first);
+                try { first.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { first.scrollIntoView(); }
+                setTimeout(function () {
+                    try {
+                        first.focus({ preventScroll: true });
+                        if (typeof first.showPicker === 'function') first.showPicker();
+                    } catch (e) {}
+                }, 350);
+            }
             return false;
         }
         return true;
