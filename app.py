@@ -481,7 +481,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-33", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-34", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -2195,8 +2195,10 @@ def api_pending_items():
         conn = get_db_connection()
         c = conn.cursor()
         sql = ("SELECT d.id, d.record_id, d.item_key, d.type, d.code, d.category,"
-               " d.problem, d.detail, d.side, d.status, d.note, d.display, d.source, d.created_at,"
-               " (SELECT MIN(x.event_at) FROM shift_items x WHERE x.item_key = d.item_key) AS first_at"
+               " d.problem, d.detail, d.side, d.status, d.note, d.display, d.source,"
+               " to_char(d.created_at AT TIME ZONE 'Asia/Macau', 'YYYY-MM-DD HH24:MI:SS') AS created_at,"
+               " (SELECT to_char(MIN(x.event_at) AT TIME ZONE 'Asia/Macau', 'YYYY-MM-DD')"
+               "    FROM shift_items x WHERE x.item_key = d.item_key) AS first_at"
                " FROM (SELECT DISTINCT ON (item_key) id, record_id, item_key, type, code, category,"
                " problem, detail, side, status, note, display, source, created_at, event_at"
                " FROM shift_items ORDER BY item_key, event_at DESC, id DESC) d")
