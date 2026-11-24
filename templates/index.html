@@ -2717,6 +2717,9 @@ async function loadPendingIssues() {
                     }
                     // 本月檢查（Sound Bar 一直顯示；消防／WIFI 只有打勾或檢查日未做才顯示）
                     {
+                        if (!MONTHLY_LOADED) {
+                            rows.push('<div style="display:flex; align-items:center; gap:5px; padding-top:6px; border-top:1px solid #dbe7f5;"><span style="font-weight:bold; white-space:nowrap; font-size:11.5px;">🛠️ 本月檢查：</span><span style="font-size:10.5px; color:#888;">載入中…</span></div>');
+                        } else {
                         const _m = MONTHLY || {};
                         const _chip = function (ok, txt) {
                             return '<span style="display:inline-block; padding:1px 6px; border-radius:9px; font-size:10.5px; white-space:nowrap; '
@@ -2750,6 +2753,7 @@ async function loadPendingIssues() {
                         const _line3 = _slot(r.wifi1, 'wifi1', '本月1號', '檢測', 'wifi1')
                                      + _slot(r.wifi15, 'wifi15', '本月15號', '檢測', 'wifi15');
                         if (_line3) rows.push('<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:4px; padding-left:2px;">' + _line3 + '</div>');
+                        }
                     }
                     if (rows.length) {
                         let hasMeterIssue = !!(r.lux_issue || r.temp_issue || r.db_issue);
