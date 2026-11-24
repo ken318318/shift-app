@@ -418,6 +418,9 @@ def ensure_shift_items():
         c.execute("UPDATE shift_items SET event_at = COALESCE(resolved_at, created_at) WHERE event_at IS NULL")
         c.execute("CREATE INDEX IF NOT EXISTS idx_si_key ON shift_items(item_key, event_at DESC, id DESC)")
         c.execute("CREATE INDEX IF NOT EXISTS idx_si_record ON shift_items(record_id)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_si_event ON shift_items(event_at DESC, id DESC)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_si_status ON shift_items(type, status)")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_records_created ON records(created_at DESC, id DESC)")
         conn.commit()
         # 一次性 seed：用 app_settings 記版本，重建也不會亂序
         if str(get_setting('shift_items_seed', '')) != 'v1':
@@ -471,7 +474,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-21", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-22", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1255,16 +1258,23 @@ def get_records_home():
 
 @app.route('/api/records', methods=['GET'])
 def get_records():
+    # limit／offset 可選：唔用就照舊回全部（前端需要全量做搜尋／篩選）
+    _limit = request.args.get('limit', type=int) or 0
+    _offset = request.args.get('offset', type=int) or 0
     conn = get_db_connection()
     c = conn.cursor()
-    c.execute("""SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue,
+    _sql = """SELECT id, name, shift, lux, temp, bgm, checklist, status, follower, note, lux_issue, temp_issue, db_issue,
                  guest_feedback, dlr_feedback, layout_side, on_duty,
                  created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
                  COALESCE(reviewed, FALSE),
                  reviewed_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
                  COALESCE(reviewed_by, ''),
                  items
-                 FROM records ORDER BY id DESC""")
+                 FROM records ORDER BY id DESC"""
+    if _limit > 0:
+        c.execute(_sql + " LIMIT %s OFFSET %s", (min(_limit, 1000), max(0, _offset)))
+    else:
+        c.execute(_sql)
     rows = c.fetchall()
     release_db_connection(conn)
     records = []
@@ -2054,99 +2064,6 @@ def export_configs_file():
     return _file_response(out, 'options', fmt)
 
 
-@app.route('/api/pending_issues', methods=['GET'])
-def get_pending_issues():
-    cached = cache_get('pending')
-    if cached is not None:
-        return jsonify(cached)
-
-    conn = get_db_connection()
-    c = conn.cursor()
-    before_id = request.args.get('before_id', type=int)
-    _done_sql = "SELECT note FROM records WHERE note LIKE '%【早前已處理】%'"
-    if before_id:
-        _done_sql += " AND id < %d" % before_id
-    c.execute(_done_sql)
-    done_rows = c.fetchall()
-    done_items = set()
-    for r in done_rows:
-        if r[0] and '【早前已處理】' in r[0]:
-            part = r[0].split('【早前已處理】')[1]
-            if '【早前未處理】' in part:
-                part = part.split('【早前未處理】')[0]
-            for line in part.split('\n'):
-                if line.strip(): 
-                    clean_line = re.sub(r'\[狀態:.*?\]', '', line).strip().upper()
-                    if '位置:' in clean_line and (',' in clean_line or '，' in clean_line):
-                        parts = clean_line.split('位置:')
-                        if len(parts) == 2:
-                            before = parts[0].strip()
-                            after = parts[1].strip()
-                            tables = re.split(r'[,，]', after)
-                            for t in tables:
-                                t = t.strip()
-                                if t: done_items.add(f"{before} 位置: {t}")
-                    else:
-                        done_items.add(clean_line)
-
-    _sql = ("SELECT id, name, lux_issue, temp_issue, db_issue, note, status, checklist,"
-            " created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau', items"
-            " FROM records"
-            " WHERE (status IS NULL OR status NOT IN ('已處理'))"
-            " AND (COALESCE(lux_issue,'') != '' OR COALESCE(temp_issue,'') != '' OR COALESCE(db_issue,'') != ''"
-            " OR note LIKE '%【場面問題】%' OR note LIKE '%【早前未處理】%'"
-            " OR note LIKE '%客櫈%' OR note LIKE '%DLR櫈%' OR note LIKE '%客椅%'"
-            " OR checklist LIKE '%NFC異常%')")
-    if before_id:
-        _sql += " AND id < %d" % before_id
-    _sql += " ORDER BY id DESC"
-    c.execute(_sql)
-    rows = c.fetchall()
-
-    # ★ 另外取【全部紀錄】計「最新狀態」：
-    #   已處理標記可能寫在 status='已處理' 的紀錄上，那些紀錄不入上面的 pending 查詢，
-    #   但必須參與最新狀態計算，否則標記會被舊紀錄的「已 Send mail」蓋.
-    _all_sql = ("SELECT id, name, note, checklist, items,"
-                " created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau' FROM records")
-    if before_id:
-        _all_sql += " WHERE id < %d" % before_id
-    _all_sql += " ORDER BY id ASC"
-    c.execute(_all_sql)
-    all_rows = c.fetchall()
-    release_db_connection(conn)
-
-    pending = []
-    for row in rows:
-        pending.append({
-            "id": row[0], "name": row[1], "lux_issue": row[2], "temp_issue": row[3], 
-            "db_issue": row[4], "note": row[5], "overall_status": row[6],
-            "checklist": row[7],
-            "created_at": str(row[8]) if row[8] else None
-        })
-    # 用全部紀錄的 items 計算每個問題項最新狀態（id 升序、後者覆蓋）
-    latest = {}
-    for rid, rname, rnote, rchecklist, ritems, rcreated in all_rows:
-        if not ritems:
-            try:
-                ritems = _record_items(rnote, rchecklist)
-            except Exception:
-                ritems = []
-        for it in ritems or []:
-            key = it.get('key') or ''
-            if not key:
-                continue
-            latest[key] = {'key': key, 'type': it.get('type') or '', 'code': it.get('code') or '',
-                           'detail': it.get('detail') or '', 'status': it.get('status') or '',
-                           'record_id': rid, 'name': rname,
-                           'created_at': str(rcreated) if rcreated else None}
-    _done = ('已處理', '已处理', '已完成', '已解決')
-    pending_items = [v for v in latest.values() if not any(d in (v.get('status') or '') for d in _done)]
-    payload = {"issues": pending, "done_items": list(done_items), "pending_items": pending_items}
-    cache_set('pending', payload, 45)
-    resp = jsonify(payload)
-    resp.headers['Cache-Control'] = 'no-store, max-age=0'
-    return resp
-
 @app.route('/api/mark_done', methods=['POST'])
 def mark_done():
     """勾選完成：插入一筆 source='resolve' 的 shift_items（append-only）。
@@ -2668,8 +2585,8 @@ def _up_parse_note(note):
 
 
 
-def _si_overlay_detect(out, date_str):
-    """用 shift_items 的最新狀態覆寫更新表結果（令「完成／復發」即時反映）。"""
+def _si_overlay_detect(out, date_str, done_at=None):
+    """用 shift_items 的最新狀態覆寫更新表結果；只有 items 而冇 note 文字的項目亦會補上。"""
     conn = None
     try:
         conn = get_db_connection()
@@ -2679,13 +2596,7 @@ def _si_overlay_detect(out, date_str):
                      FROM shift_items
                      WHERE (event_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date <= %s
                      ORDER BY event_at ASC, id ASC""", (date_str,))
-        latest = {}
-        for typ, code, cat, prob, status, _d in c.fetchall():
-            catname = {'NFC': 'NFC', 'Lux': 'Lux 異常',
-                       '溫度': '溫度 異常', '分貝': '分貝 異常'}.get(typ, cat or '')
-            if not catname or not code:
-                continue
-            latest[(catname, _up_norm(code))] = {'status': status or '', 'problem': prob or ''}
+        rows = c.fetchall()
     except Exception as e:
         print('更新表覆寫失敗:', e)
         return
@@ -2696,18 +2607,54 @@ def _si_overlay_detect(out, date_str):
             except Exception:
                 pass
 
+    latest = {}
+    first_seen = {}
+    for typ, code, cat, prob, status, _d in rows:
+        catname = {'NFC': 'NFC', 'Lux': 'Lux 異常',
+                   '溫度': '溫度 異常', '分貝': '分貝 異常'}.get(typ, cat or '')
+        if not catname or not code:
+            continue
+        k = (catname, _up_norm(code))
+        ds = _d.strftime('%Y-%m-%d') if hasattr(_d, 'strftime') else str(_d)[:10]
+        latest[k] = {'status': status or '', 'problem': prob or '', 'date': ds}
+        if k not in first_seen:
+            first_seen[k] = ds
+
+    # out 內的台號可能未 normalize，建索引避免重複項
+    idx = {}
+    for k in out:
+        idx[(k[0], _up_norm(k[1]))] = k
+    done_norm = set()
+    for k in (done_at or {}):
+        try:
+            done_norm.add((k[0], _up_norm(k[1])))
+        except Exception:
+            pass
+
     _DBG['overlay_latest'] = len(latest)
-    _DBG['overlay_keys'] = [list(k) + [v['status']] for k, v in list(latest.items())[:6]]
-    _DBG['out_keys_before_pop'] = [list(k) for k in list(out.keys())[:6]]
+    added = 0
     for k, v in latest.items():
+        real = idx.get(k)
         if any(x in v['status'] for x in ('已處理', '已处理', '已完成', '已解決')):
-            out.pop(k, None)
+            if real is not None:
+                out.pop(real, None)
+                idx.pop(k, None)
+            continue
+        if real is None:
+            # 文字解析唔到（例如只打 API 寫 items[]、冇 note）都要出現在更新表
+            if k in done_norm:
+                continue
+            out[k] = {'category': k[0], 'code': k[1], 'problem': v['problem'],
+                      'status': v['status'], 'note': '', 'side': '',
+                      'first_seen': first_seen.get(k, v['date']), 'last_seen': v['date']}
+            idx[k] = k
+            added += 1
         else:
-            rec = out.get(k)
-            if rec is not None:
-                rec['status'] = v['status']
-                if v['problem']:
-                    rec['problem'] = v['problem']
+            rec = out[real]
+            rec['status'] = v['status']
+            if v['problem']:
+                rec['problem'] = v['problem']
+    _DBG['overlay_added'] = added
 
 
 def _up_detect(date_str):
@@ -2841,8 +2788,8 @@ def _up_detect(date_str):
 
     _DBG['out_before_overlay'] = len(out)
     _DBG['done_at_size'] = len(done_at)
-    # 以 shift_items 的最新狀態為準（完成／復發即時反映）
-    _si_overlay_detect(out, date_str)
+    # 以 shift_items 的最新狀態為準（完成／復發即時反映；items 優先於 note 文字）
+    _si_overlay_detect(out, date_str, done_at)
     _DBG['out_after_overlay'] = len(out)
 
     return out, done_at, nfc_nocode
