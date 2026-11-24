@@ -238,6 +238,14 @@ def cache_set(key, val, ttl=60):
     _RESULT_CACHE[key] = (time.time() + ttl, val)
 
 
+def bust():
+    """任何寫入（交更／完成／刪除／櫈況）後，清走相關快取。"""
+    cache_clear('pending', 'pending_items', 'table_codes', 'monthly_checks', 'chair_map')
+    for _k in list(_RESULT_CACHE.keys()):
+        if _k.startswith('pending_items:'):
+            _RESULT_CACHE.pop(_k, None)
+
+
 def cache_clear(*keys):
     for k in keys:
         _RESULT_CACHE.pop(k, None)
@@ -488,9 +496,38 @@ def force_primary_domain():
     return redirect(target, code=301)
 
 
+@app.after_request
+def _gzip_response(response):
+    """文字／JSON 回應 gzip（手機網絡明顯快啲）。"""
+    try:
+        if response.direct_passthrough:
+            return response
+        if 'gzip' not in (request.headers.get('Accept-Encoding') or '').lower():
+            return response
+        if response.headers.get('Content-Encoding'):
+            return response
+        mt = (response.mimetype or '')
+        if not (mt.startswith('text/') or mt in ('application/json', 'application/javascript', 'image/svg+xml')):
+            return response
+        data = response.get_data()
+        if len(data) < 1200:
+            return response
+        import gzip as _gzip
+        comp = _gzip.compress(data, 6)
+        if len(comp) >= len(data):
+            return response
+        response.set_data(comp)
+        response.headers['Content-Encoding'] = 'gzip'
+        response.headers['Content-Length'] = str(len(comp))
+        response.headers['Vary'] = 'Accept-Encoding'
+    except Exception as _e:
+        print('gzip skip:', _e)
+    return response
+
+
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-35", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-36", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1161,7 +1198,7 @@ def submit():
         _si_write_done(c, _new_rid, data.get('done_keys'), session.get('user_name') or '')
         _si_write_reopen(c, _new_rid, data.get('reopen_keys'))
         conn.commit()
-        cache_clear('pending', 'pending_items')
+        bust()
         return jsonify({"message": "交更成功！", "status": "success", "record_id": _new_rid})
     except Exception as e:
         print("Submit Error:", e)
@@ -1227,7 +1264,7 @@ def overwrite_record():
         _si_write_done(c, old_id, data.get('done_keys'), session.get('user_name') or '')
         _si_write_reopen(c, old_id, data.get('reopen_keys'))
         conn.commit()
-        cache_clear('pending', 'pending_items')
+        bust()
         log_action('修改紀錄', f"紀錄 ID {old_id}")
         return jsonify({"status": "success", "message": "✅ 紀錄已成功修改並覆蓋！"})
     except Exception as e:
@@ -2180,7 +2217,7 @@ def mark_done():
             if _si_resolve(c, rid, key, who):
                 done_count += 1
         conn.commit()
-        cache_clear('pending', 'pending_items')
+        bust()
         if done_count:
             log_action('勾選完成', ','.join(keys)[:200])
         return jsonify({"status": "success", "done_count": done_count,
@@ -2199,6 +2236,10 @@ def mark_done():
 def api_pending_items():
     """黃框唯一資料來源：每個 item_key 取最新一筆，不用任何文字解析。"""
     before_id = request.args.get('before_id', type=int)
+    _ck = 'pending_items:%s' % (before_id or 0)
+    _cached = cache_get(_ck)
+    if _cached is not None:
+        return jsonify(_cached)
     conn = None
     try:
         conn = get_db_connection()
@@ -2232,7 +2273,9 @@ def api_pending_items():
                 done.append(rec)
             else:
                 pending.append(rec)
-        resp = jsonify({"pending_items": pending, "done_items": done, "count": len(pending)})
+        _payload = {"pending_items": pending, "done_items": done, "count": len(pending)}
+        cache_set(_ck, _payload, 20)
+        resp = jsonify(_payload)
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
         return resp
     except Exception as e:
@@ -2284,7 +2327,7 @@ def delete_record():
         print('delete_record cleanup 失敗:', _e)
     conn.commit()
     release_db_connection(conn)
-    cache_clear('pending', 'pending_items')
+    bust()
     log_action('刪除紀錄', f"紀錄 ID {_rid}")
     return jsonify({"status": "success", "message": "✅ 紀錄已成功刪除！"})
 
@@ -2302,7 +2345,7 @@ def cleanup_orphans():
                        AND NOT EXISTS (SELECT 1 FROM records r WHERE r.id = s.record_id)""")
         n = c.rowcount
         conn.commit()
-        cache_clear('pending', 'pending_items')
+        bust()
         return jsonify({'status': 'success', 'deleted': n,
                         'message': '✅ 已清理 %d 筆孤立問題項' % n})
     except Exception as e:
@@ -2400,7 +2443,7 @@ def update_record():
                 
         c.execute("UPDATE records SET note = %s, status = %s WHERE id = %s", (data.get('note'), data.get('status'), data.get('id')))
         conn.commit()
-        cache_clear('pending')
+        bust()
         return jsonify({"status": "success", "message": "✅ 紀錄已成功更新！"})
     except Exception as e:
         print("Update Error:", e)
@@ -3545,6 +3588,9 @@ def api_table_codes():
     """回傳台號總表（供前端檢查台號是否存在）。任何已登入同事可用。"""
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    _cached = cache_get('table_codes')
+    if _cached is not None:
+        return jsonify(_cached)
     conn = None
     try:
         conn = get_db_connection()
@@ -3570,9 +3616,11 @@ def api_table_codes():
         for x in stopped_detail:
             if x['code'] in event_codes:
                 x['event'] = True
-        resp = jsonify({'status': 'success', 'codes': codes, 'stopped': stopped,
-                        'stopped_detail': stopped_detail, 'event': event_codes,
-                        'count': len(codes), 'stopped_count': len(stopped)})
+        _payload = {'status': 'success', 'codes': codes, 'stopped': stopped,
+                    'stopped_detail': stopped_detail, 'event': event_codes,
+                    'count': len(codes), 'stopped_count': len(stopped)}
+        cache_set('table_codes', _payload, 60)
+        resp = jsonify(_payload)
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
         return resp
     except Exception as e:
@@ -3588,6 +3636,9 @@ def api_monthly_checks():
     """本月設備檢查狀態：Sound Bar（每月一次）、消防（每月 15／30 日）。"""
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    _cached = cache_get('monthly_checks')
+    if _cached is not None:
+        return jsonify(_cached)
     conn = None
     try:
         conn = get_db_connection()
@@ -3621,14 +3672,16 @@ def api_monthly_checks():
         def pack(v, miss=None):
             return {'done': bool(v), 'date': str(v) if v else '',
                     'missed': bool(miss), 'missed_date': str(miss) if miss else ''}
-        resp = jsonify({'status': 'success',
-                        'month': _up_today()[:7],
-                        'today': _up_today(),
+        _payload = {'status': 'success',
+                    'month': _up_today()[:7],
+                    'today': _up_today(),
                         'soundbar': pack(sb, sb_m),
                         'fire15': pack(f15, f15_m),
                         'fire30': pack(f30, f30_m),
-                        'wifi1': pack(w1, w1_m),
-                        'wifi15': pack(w15, w15_m)})
+                    'wifi1': pack(w1, w1_m),
+                    'wifi15': pack(w15, w15_m)}
+        cache_set('monthly_checks', _payload, 20)
+        resp = jsonify(_payload)
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
         return resp
     except Exception as e:
@@ -4498,6 +4551,9 @@ def chair_map_get():
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
 
+    _cached = cache_get('chair_map')
+    if _cached is not None:
+        return jsonify(_cached)
     layout = _chair_layout()
     hall_status = {}
     conn = None
@@ -4569,16 +4625,18 @@ def chair_map_get():
         if x.get('guest_bad'):
             cnt['guest_bad'] += 1
 
-    return jsonify({'status': 'success', 'maxR': layout.get('maxR'), 'maxC': layout.get('maxC'),
-                    'minR': layout.get('minR', 1), 'minC': layout.get('minC', 1),
-                    'maxRu': layout.get('maxRu', layout.get('maxR')),
-                    'maxCu': layout.get('maxCu', layout.get('maxC')),
-                    'cols': layout.get('cols', []), 'rows': layout.get('rows', []),
-                    'hlines': layout.get('hlines', []), 'vlines': layout.get('vlines', []),
-                    'today': _up_today(), 'counts': cnt,
-                    'pits': layout.get('pits', []), 'extras': layout.get('extras', []),
-                    'merges': layout.get('merges', []), 'cells': cells,
-                    'edits': _chair_edits()})
+    _payload = {'status': 'success', 'maxR': layout.get('maxR'), 'maxC': layout.get('maxC'),
+                'minR': layout.get('minR', 1), 'minC': layout.get('minC', 1),
+                'maxRu': layout.get('maxRu', layout.get('maxR')),
+                'maxCu': layout.get('maxCu', layout.get('maxC')),
+                'cols': layout.get('cols', []), 'rows': layout.get('rows', []),
+                'hlines': layout.get('hlines', []), 'vlines': layout.get('vlines', []),
+                'today': _up_today(), 'counts': cnt,
+                'pits': layout.get('pits', []), 'extras': layout.get('extras', []),
+                'merges': layout.get('merges', []), 'cells': cells,
+                'edits': _chair_edits()}
+    cache_set('chair_map', _payload, 8)
+    return jsonify(_payload)
 
 
 @app.route('/api/chair_map/bulk', methods=['POST'])
@@ -4655,7 +4713,8 @@ def chair_map_bulk():
                         'message': '✅ 已%s %d 台' % (label, n)})
     except Exception as e:
         print('chair_map_bulk Error:', e)
-        return jsonify({'status': 'error', 'message': '❌ 失敗：%s' % str(e)})
+        bust()
+    return jsonify({'status': 'error', 'message': '❌ 失敗：%s' % str(e)})
 
 
 @app.route('/api/chair_map/type', methods=['POST'])
@@ -4677,6 +4736,7 @@ def chair_map_set_type():
         types[code] = typ
     else:
         types.pop(code, None)
+    bust()
     return jsonify({'status': 'success'} if set_setting(_CHAIR_TYPE_KEY, json.dumps(types, ensure_ascii=False)) else
                    {'status': 'error', 'message': '儲存失敗'})
 
@@ -4750,6 +4810,7 @@ def chair_map_edit():
         log_action('修改櫈況圖', '手動編輯 %d 格、%d 個合併' % (len(clean['cells']), len(clean['merges'])))
     except Exception:
         pass
+    bust()
     return jsonify({'status': 'success', 'cells': len(clean['cells']), 'merges': len(clean['merges'])})
 
 
@@ -4780,6 +4841,7 @@ def chair_map_event():
         log_action('修改活動台', '%s %d 台' % ('加入' if on else '恢復', len(codes)))
     except Exception:
         pass
+    bust()
     return jsonify({'status': 'success', 'count': len(cur)})
 
 
@@ -4820,6 +4882,7 @@ def chair_map_import():
         log_action('上傳櫈況版面', '%s（%d 格、%d 台號）' % (f.filename, len(layout['cells']), codes))
     except Exception:
         pass
+    bust()
     return jsonify({'status': 'success', 'cells': len(layout['cells']), 'codes': codes,
                     'merges': len(layout['merges']), 'message': '✅ 已套用新版面'})
 
@@ -4835,6 +4898,7 @@ def chair_map_reset():
     if not set_setting(_CHAIR_LAYOUT_KEY, ''):
         return jsonify({'status': 'error', 'message': '❌ 還原失敗。'})
     _CHAIR_LAYOUT_CACHE = None
+    bust()
     return jsonify({'status': 'success', 'message': '✅ 已還原預設版面'})
 
 
