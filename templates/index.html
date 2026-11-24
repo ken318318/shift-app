@@ -1727,6 +1727,17 @@ function setSubmitting(on) {
         return '';
     }
 
+    // 預覽用文字
+    function equipPreview(field, dataVal, mKey, label, okWord) {
+        if (dataVal) return dataVal;                       // 已檢查／未檢查
+        const m = MONTHLY[mKey] || {};
+        if (m.done) return label + '已' + okWord;
+        const dd = DUE_DAY[field];
+        const day = MONTHLY_TODAY ? parseInt(String(MONTHLY_TODAY).slice(8, 10), 10) : 0;
+        if (dd && day >= dd) return label + '尚未' + okWord;
+        return '未到檢查日';
+    }
+
     // 今日係檢查日但未勾嘅項目
     function dueMissedToday() {
         const day = MONTHLY_TODAY ? parseInt(String(MONTHLY_TODAY).slice(8, 10), 10) : 0;
@@ -3852,10 +3863,10 @@ items: collectItems(),
             ['NFC 異常', nfcCount ? (nfcCount + ' 項') : '無'],
             ['設備檢查',
                 'Sound Bar ' + (data.soundbar || ((MONTHLY.soundbar || {}).done ? '本月已檢測' : '本月尚未檢測')) +
-                '｜消防15日 ' + (data.firecheck15 || ((MONTHLY.fire15 || {}).done ? '本月15號已檢查' : '本月15號尚未檢查')) +
-                '｜消防30日 ' + (data.firecheck30 || ((MONTHLY.fire30 || {}).done ? '本月30號已檢查' : '本月30號尚未檢查')) +
-                '｜WIFI 1日 ' + (data.wifi1 || ((MONTHLY.wifi1 || {}).done ? '本月1號已檢測' : '本月1號尚未檢測')) +
-                '｜WIFI 15日 ' + (data.wifi15 || ((MONTHLY.wifi15 || {}).done ? '本月15號已檢測' : '本月15號尚未檢測'))],
+                '｜消防15日 ' + equipPreview('firecheck15', data.firecheck15, 'fire15', '本月15號', '檢查') +
+                '｜消防30日 ' + equipPreview('firecheck30', data.firecheck30, 'fire30', '本月30號', '檢查') +
+                '｜WIFI 1日 ' + equipPreview('wifi1', data.wifi1, 'wifi1', '本月1號', '檢測') +
+                '｜WIFI 15日 ' + equipPreview('wifi15', data.wifi15, 'wifi15', '本月15號', '檢測')],
             ['場面問題', venueLines.length ? (venueLines.length + ' 項') : '無'],
             ['當更同事', data.on_duty || '—'],
             ['負責跟進人', data.follower || '—'],
