@@ -2747,11 +2747,11 @@ async function loadPendingIssues() {
                             const ok = (String(v).charAt(0) === '已');
                             return _chip(ok, label + (ok ? '已' : '尚未') + okWord);
                         };
-                        const _line2 = _slot(r.firecheck15, 'firecheck15', '本月15號', '檢查', 'fire15')
-                                     + _slot(r.firecheck30, 'firecheck30', '本月30號', '檢查', 'fire30');
+                        const _line2 = _slot(r.firecheck15, 'firecheck15', '消防 15號', '檢查', 'fire15')
+                                     + _slot(r.firecheck30, 'firecheck30', '消防 30號', '檢查', 'fire30');
                         if (_line2) rows.push('<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:4px; padding-left:2px;">' + _line2 + '</div>');
-                        const _line3 = _slot(r.wifi1, 'wifi1', '本月1號', '檢測', 'wifi1')
-                                     + _slot(r.wifi15, 'wifi15', '本月15號', '檢測', 'wifi15');
+                        const _line3 = _slot(r.wifi1, 'wifi1', 'WIFI 1號', '檢測', 'wifi1')
+                                     + _slot(r.wifi15, 'wifi15', 'WIFI 15號', '檢測', 'wifi15');
                         if (_line3) rows.push('<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:4px; padding-left:2px;">' + _line3 + '</div>');
                         }
                     }
