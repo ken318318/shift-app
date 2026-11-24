@@ -753,14 +753,23 @@
                 const done = function () {
                     pending = Math.max(0, pending - 1);
                     if (pending !== 0 || typeof bsLoading !== 'function') return;
-                    // 等畫面完成排版／繪製先收轉轉圈，避免「內容未出現但遮罩已消失」
-                    requestAnimationFrame(function () {
-                        requestAnimationFrame(function () {
-                            setTimeout(function () {
-                                if (pending === 0 && typeof bsLoading === 'function') bsLoading(false);
-                            }, 90);
-                        });
-                    });
+                    // 等畫面（列表／黃框等）完成排版繪製先收轉轉圈；最多等 1.5 秒
+                    const t0 = Date.now();
+                    const tryHide = function () {
+                        if (pending !== 0) return;
+                        const waited = Date.now() - t0;
+                        const busy = (window.__uiBusy || 0) > 0;
+                        if ((waited >= 380 && !busy) || waited >= 1500) {
+                            if (typeof bsLoading === 'function') bsLoading(false);
+                            return;
+                        }
+                        setTimeout(tryHide, 60);
+                    };
+                    if (typeof requestAnimationFrame === 'function') {
+                        requestAnimationFrame(function () { requestAnimationFrame(function () { setTimeout(tryHide, 40); }); });
+                    } else {
+                        setTimeout(tryHide, 80);
+                    }
                 };
                 let p;
                 try {
@@ -790,6 +799,19 @@
             if (b) b.style.display = 'none';
         }
     });
+
+    // UI 繪製中標記：轉轉圈會等呢個清零先收
+    window.__uiBusy = window.__uiBusy || 0;
+    function uiBusy(on) {
+        window.__uiBusy = Math.max(0, (window.__uiBusy || 0) + (on ? 1 : -1));
+    }
+    function uiBusyOffSoon() {
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(function () { requestAnimationFrame(function () { uiBusy(false); }); });
+        } else {
+            setTimeout(function () { uiBusy(false); }, 50);
+        }
+    }
 
     let venueCategories = {}; 
     let allRecords = []; 
@@ -2997,8 +3019,15 @@ async function loadPendingIssues() {
         // 普通帳號：超過 5 分鐘唔可以修改（只有管理員可以）
         if (!isAdmin) {
             try {
-                const _t = new Date(String(r.created_at || '').replace(' ', 'T'));
-                if (!isNaN(_t.getTime()) && (Date.now() - _t.getTime()) > 5 * 60 * 1000) {
+                // 以伺服器提供嘅 age_sec 計時（避免手機時區／時鐘偏差）
+                let _age = null;
+                if (r.age_sec !== undefined && r.age_sec !== null && r.age_sec !== '') {
+                    _age = Number(r.age_sec);
+                } else {
+                    const _t = new Date(String(r.created_at || '').replace(' ', 'T'));
+                    if (!isNaN(_t.getTime())) _age = (Date.now() - _t.getTime()) / 1000;
+                }
+                if (_age !== null && !isNaN(_age) && _age > 5 * 60) {
                     alert('⏰ 已超過 5 分鐘修改時限，無法修改！\n\n如需更正，請聯絡管理員。');
                     return;
                 }

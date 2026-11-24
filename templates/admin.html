@@ -381,7 +381,15 @@
                 }
                 const done = function () {
                     pending = Math.max(0, pending - 1);
-                    if (pending === 0 && typeof bsLoading === 'function') bsLoading(false);
+                    if (pending !== 0 || typeof bsLoading !== 'function') return;
+                    // 等畫面完成排版／繪製先收轉轉圈，避免「內容未出現但遮罩已消失」
+                    requestAnimationFrame(function () {
+                        requestAnimationFrame(function () {
+                            setTimeout(function () {
+                                if (pending === 0 && typeof bsLoading === 'function') bsLoading(false);
+                            }, 420);
+                        });
+                    });
                 };
                 let p;
                 try {
