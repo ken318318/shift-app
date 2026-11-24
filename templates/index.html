@@ -184,11 +184,11 @@
     <div class="card" id="list-container">
         <div style="margin-bottom: 15px;">
             <h2 style="margin: 0 0 10px 0; font-size: 22px; text-align: center;">📋 BS歷史交更紀錄</h2>
-            <div style="display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 6px;">
-                <button onclick="openChairMap()" style="color:#6a1b9a; background:#f3e5f5; padding:7px 10px; border-radius:6px; border:none; cursor:pointer; font-size:13px; font-weight:bold;">🪑 櫈況圖</button>
-                <button onclick="openUpdateReport()" style="color:#1565c0; background:#e3f2fd; padding:7px 10px; border-radius:6px; border:none; cursor:pointer; font-size:13px; font-weight:bold;">📋 更新表</button>
-                <button id="btn-admin" onclick="window.location.href='/admin';" style="color: #1a73e8; background: #e3f2fd; padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer;">⚙️ 設定</button>
-                <button onclick="window.location.href='/logout';" style="color: #e74c3c; background: #ffebee; padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer;">🚪 登出</button>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <button onclick="openChairMap()" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#6a1b9a; background:#f3e5f5; padding:8px 4px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:bold;">🪑 櫈況圖</button>
+                <button onclick="openUpdateReport()" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#1565c0; background:#e3f2fd; padding:8px 4px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:bold;">📋 生成表格</button>
+                <button id="btn-admin" onclick="window.location.href='/admin';" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: #1a73e8; background: #e3f2fd; padding: 8px 4px; border-radius: 6px; border: none; cursor: pointer; font-size:12px; font-weight:bold;">⚙️ 設定</button>
+                <button onclick="window.location.href='/logout';" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: #e74c3c; background: #ffebee; padding: 8px 4px; border-radius: 6px; border: none; cursor: pointer; font-size:12px; font-weight:bold;">🚪 登出</button>
             </div>
         </div>
         <button class="submit-btn" onclick="showForm()" style="margin-top: 0; margin-bottom: 10px; background-color: #2ecc71;">📝 新增BS交更紀錄</button>
@@ -4007,10 +4007,10 @@ function collectItems() {
         if (legend) {
             if (cmMode === 'status') {
                 legend.innerHTML =
-                    '<div style="flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">' +
-                        '<span style="background:#e53935;color:#fff;border-radius:6px;padding:3px 8px;font-weight:bold">紅字＝壞 DLR</span>' +
-                        '<span style="background:#99CCFF;color:#01579b;border-radius:6px;padding:3px 8px;font-weight:bold">藍底＝壞客櫈</span>' +
-                        '<span style="background:#2e7d32;color:#fff;border-radius:6px;padding:3px 8px;font-weight:bold">綠字＝spare</span>' +
+                    '<div style="flex-basis:100%;display:flex;flex-wrap:nowrap;gap:5px;align-items:center;">' +
+                        '<span style="background:#e53935;color:#fff;border-radius:6px;padding:2px 6px;font-size:12px;white-space:nowrap;font-weight:bold">紅字＝壞 DLR</span>' +
+                        '<span style="background:#99CCFF;color:#01579b;border-radius:6px;padding:2px 6px;font-size:12px;white-space:nowrap;font-weight:bold">藍底＝壞客櫈</span>' +
+                        '<span style="background:#2e7d32;color:#fff;border-radius:6px;padding:2px 6px;font-size:12px;white-space:nowrap;font-weight:bold">綠字＝spare</span>' +
                     '</div>' +
                     '<div style="flex-basis:100%;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">' +
                         '<span><i class="cm-dot" style="background:#fff"></i>營運（好）</span>' +
@@ -4130,7 +4130,8 @@ function collectItems() {
                 if (!data || data.status !== 'success') return;
                 const sel = document.getElementById('ur-type');
                 const cur = sel.value;
-                let html = '<option value="layout">📐 Layout 更新表（三欄）' +
+                let html = '<option value="">請選擇生成項目</option>' +
+                    '<option value="layout">📐 Layout 生成表格（三欄）' +
                     (data.layout_mail ? '（' + data.layout_mail + '）' : '') + '</option>';
                 (data.cats || []).forEach(function (c) {
                     html += '<option value="cat:' + urAttr(c.cat) + '">' + urEscape(c.short) + '（' + c.mail + '）</option>';
@@ -4140,14 +4141,23 @@ function collectItems() {
                 for (let i = 0; i < sel.options.length; i++) {
                     if (sel.options[i].value === cur) ok = true;
                 }
-                sel.value = ok ? cur : 'layout';
+                sel.value = ok ? cur : '';
                 urCatsDate = d;
             });
     }
 
     function loadUpdateReport() {
         const d = document.getElementById('ur-date').value || urTodayStr();
-        const t = document.getElementById('ur-type').value || 'layout';
+        const t = document.getElementById('ur-type').value;
+        if (!t) {
+            urState = null;
+            const sheet0 = document.getElementById('lr-sheet');
+            if (sheet0) sheet0.innerHTML = '<div style="padding:30px;text-align:center;color:#999;font-size:13px;">請選擇上方生成項目</div>';
+            const pool0 = document.getElementById('ur-pool-box');
+            if (pool0) pool0.style.display = 'none';
+            urMsg('ℹ️ 請先選擇生成項目');
+            return;
+        }
         const mo = document.getElementById('ur-mail-only').checked ? '1' : '0';
         urMsg('⏳ 讀取中…');
         bsLoading(true, '正在抓取台號…', true);
