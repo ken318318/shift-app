@@ -1654,11 +1654,11 @@ function setSubmitting(on) {
         try {
             const d = await fetch('/api/monthly_checks', { cache: 'no-store' }).then(function (r) { return r.json(); });
             MONTHLY = {
-                soundbar: d.soundbar || { done: false, date: '' },
-                fire15: d.fire15 || { done: false, date: '' },
-                fire30: d.fire30 || { done: false, date: '' },
-                wifi1: d.wifi1 || { done: false, date: '' },
-                wifi15: d.wifi15 || { done: false, date: '' }
+                soundbar: d.soundbar || {},
+                fire15: d.fire15 || {},
+                fire30: d.fire30 || {},
+                wifi1: d.wifi1 || {},
+                wifi15: d.wifi15 || {}
             };
             MONTHLY_TODAY = d.today || '';
             MONTHLY_LOADED = true;
@@ -1708,19 +1708,22 @@ function setSubmitting(on) {
         const sb = document.getElementById('head-soundbar');
         if (sb) sb.textContent = (m.soundbar && m.soundbar.done) ? '本月已檢測' : '本月尚未檢測';
         const fh = document.getElementById('head-fire');
-        if (fh) fh.textContent = ((m.fire15 && m.fire15.done) ? '15號✅' : '15號—') + '　' + ((m.fire30 && m.fire30.done) ? '30號✅' : '30號—');
+        if (fh) fh.textContent = ((m.fire15 && m.fire15.done) ? '15✅' : '15—') + ' ' + ((m.fire30 && m.fire30.done) ? '30✅' : '30—');
         const wh = document.getElementById('head-wifi');
-        if (wh) wh.textContent = ((m.wifi1 && m.wifi1.done) ? '1號✅' : '1號—') + '　' + ((m.wifi15 && m.wifi15.done) ? '15號✅' : '15號—');
+        if (wh) wh.textContent = ((m.wifi1 && m.wifi1.done) ? '1✅' : '1—') + ' ' + ((m.wifi15 && m.wifi15.done) ? '15✅' : '15—');
     }
 
     // 只保留日期（例：11-24），用於卡片
+    const DUE_DAY = { firecheck15: 15, firecheck30: 30, wifi1: 1, wifi15: 15 };
+
     function equipValue(id, val, field) {
         const cb = document.getElementById(id);
         if (!cb) return '';
         if (cb.checked) return val;
-        if (field && DUE_MISSED.indexOf(field) >= 0) {
-            return (val === '已檢查') ? '未檢查' : '未檢測';
-        }
+        if (!field) return '';
+        const dd = DUE_DAY[field];
+        const day = MONTHLY_TODAY ? parseInt(String(MONTHLY_TODAY).slice(8, 10), 10) : 0;
+        if (dd && day >= dd) return (val === '已檢查') ? '未檢查' : '未檢測';   // 檢查日已到／已過
         return '';
     }
 
@@ -1729,13 +1732,14 @@ function setSubmitting(on) {
         const day = MONTHLY_TODAY ? parseInt(String(MONTHLY_TODAY).slice(8, 10), 10) : 0;
         if (!day) return [];
         const out = [];
-        const todayMap = { 1: ['wifi1'], 15: ['firecheck15', 'wifi15'], 30: ['firecheck30'] };
         const nameMap = { firecheck15: '消防檢查（15 號）', firecheck30: '消防檢查（30 號）', wifi1: 'WIFI 檢測（1 號）', wifi15: 'WIFI 檢測（15 號）' };
-        const fields = todayMap[day] || [];
         MONTHLY_FIELDS.forEach(function (x) {
-            if (fields.indexOf(x[5]) < 0) return;
+            const dd = DUE_DAY[x[5]];
+            if (!dd || day < dd) return;                                  // 未到檢查日
             const cb = document.getElementById(x[0]);
-            if (cb && !cb.checked) out.push({ field: x[5], label: nameMap[x[5]] || x[4] });
+            if (!cb || cb.checked) return;                                 // 已勾
+            if (MONTHLY[x[2]] && MONTHLY[x[2]].missed) return;              // 本月已記錄過「尚未檢查」→ 唔再彈
+            out.push({ field: x[5], label: nameMap[x[5]] || x[4] });
         });
         return out;
     }
@@ -2713,7 +2717,7 @@ async function loadPendingIssues() {
                         const _sbDate = (_m.soundbar && _m.soundbar.date) ? '（' + String(_m.soundbar.date).slice(5) + '）' : '';
                         rows.push('<div style="display:flex; flex-wrap:nowrap; align-items:center; gap:5px; padding-top:6px; border-top:1px solid #dbe7f5; overflow:hidden;">'
                             + '<span style="font-weight:bold; white-space:nowrap; font-size:11.5px;">🛠️ 本月檢查：</span>'
-                            + (_sbOk ? _chip(true, 'Sound Bar 本月已檢測' + _sbDate) : _chip(false, 'Sound Bar 本月尚未檢測'))
+                            + (_sbOk ? _chip(true, 'Sound Bar 已檢測') : _chip(false, 'Sound Bar 尚未檢測'))
                             + '</div>');
                         const _slot = function (val, label, okWord, noWord) {
                             if (!val) return '';
