@@ -3570,7 +3570,8 @@ items: collectItems(),
         }
         
         let rawNote = document.getElementById('notes').value.trim(); 
-        if (!editingRecordId && rawNote === '' && venueIssues.length === 0 && luxIssue === '' && tempIssue === '' && dbIssue === '' && nfcDetails.length === 0 && doneOldItems.length === 0 && !hasSundayChecks()) { 
+        if (!editingRecordId && rawNote === '' && venueIssues.length === 0 && luxIssue === '' && tempIssue === '' && dbIssue === '' && nfcDetails.length === 0 && doneOldItems.length === 0 && !hasSundayChecks()
+            && !document.getElementById('chk-soundbar').checked && !document.getElementById('chk-firecheck').checked) { 
             if (hasEmptyVenue) {
                 if (!confirm("⚠️ 已選擇場面問題，但未填寫「位置」。\n\n系統會忽略該項，確定要繼續提交嗎？")) return;
             } else {
