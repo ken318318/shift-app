@@ -2206,6 +2206,42 @@ async function loadPendingIssues() {
         return `<div class="issue-data" style="background:${bgColor}; color:${textColor};"><span><strong>${displayPrefix}</strong> ${text}</span><span class="status-badge ${badgeClass}">${displayStatus}</span></div>`;
     }
 
+    // 由項目文字抽出「類別」：例 [櫈 - 客櫈 - 螺絲鬆動] → 櫈 - 客櫈
+    function issueCategoryOf(text, defaultPrefix) {
+        const m = String(text || '').match(/\[([^\]]+)\]/);
+        if (!m) return defaultPrefix || '其他';
+        const inner = m[1];
+        const i = inner.lastIndexOf(' - ');
+        return i > 0 ? inner.slice(0, i).trim() : inner.trim();
+    }
+
+    function issueGroupIcon(cat) {
+        const c = String(cat || '');
+        if (c.indexOf('Lux') >= 0) return '💡 ';
+        if (c.indexOf('溫度') >= 0) return '🌡️ ';
+        if (c.indexOf('分貝') >= 0) return '🔊 ';
+        if (c.indexOf('NFC') >= 0) return '📡 ';
+        if (c.indexOf('櫈') >= 0 || c.indexOf('椅') >= 0) return '🪑 ';
+        return '🛠️ ';
+    }
+
+    // 按類別分組顯示（原本一項接一項，睇落好亂）
+    function renderGroupedIssues(list) {
+        const groups = new Map();
+        (list || []).forEach(function (x) {
+            const cat = (x && x.cat) || '其他';
+            if (!groups.has(cat)) groups.set(cat, []);
+            groups.get(cat).push((x && x.html) || '');
+        });
+        let out = '';
+        groups.forEach(function (arr, cat) {
+            out += '<div style="font-size:12px; font-weight:bold; color:#37474f; margin:10px 0 5px; padding: 4px 6px; background:#f5f7fa; border-radius:5px; border-left:3px solid #90a4ae;">'
+                + issueGroupIcon(cat) + htmlEsc(cat) + '（' + arr.length + '）</div>'
+                + arr.join('');
+        });
+        return out;
+    }
+
     // 把一段 NFC異常 內容拆成逐個台號（同時兼容舊資料用 ", " 合併的寫法）
     function splitNfcDetails(str) {
         if (!str) return [];
@@ -2431,12 +2467,14 @@ async function loadPendingIssues() {
                     let status = match ? match[1] : '待處理'; 
                     let cleanText = text.replace(/\[狀態:.*?\]/g, '').trim(); 
                     cleanText = cleanText.replace(/\s*備註\s*[:：]\s*/g, '｜備註：');
+                    const _cat = issueCategoryOf(cleanText, (defaultPrefix || '').replace(/\s*-\s*$/, ''));
+                    const _rec = { cat: _cat, html: formatIssueText(cleanText, defaultPrefix, status) };
                     if (status === '已處理') { 
-                        doneIssuesList.push(formatIssueText(cleanText, defaultPrefix, status)); 
+                        doneIssuesList.push(_rec); 
                     } else if (status === '觀察中') { 
-                        watchIssuesList.push(formatIssueText(cleanText, defaultPrefix, status)); 
+                        watchIssuesList.push(_rec); 
                     } else { 
-                        pendingIssuesList.push(formatIssueText(cleanText, defaultPrefix, status)); 
+                        pendingIssuesList.push(_rec); 
                     } 
                 };
                 
@@ -2565,14 +2603,14 @@ async function loadPendingIssues() {
                 if (pendingIssuesList.length > 0) {
                     pendingBlock = `<details open style="margin-top:8px;">
                         <summary style="cursor:pointer; font-size:13px; font-weight:bold; color:#c62828; padding:7px 9px; background:#fff5f5; border:1px solid #ffd9d9; border-radius:6px;">⚠️ 未處理項目（${pendingIssuesList.length} 項）</summary>
-                        <div style="margin-top:6px;">${pendingIssuesList.join('')}</div>
+                        <div style="margin-top:6px;">${renderGroupedIssues(pendingIssuesList)}</div>
                     </details>`;
                 }
                 let watchBlock = '';
                 if (watchIssuesList.length > 0) {
                     watchBlock = `<details open style="margin-top:8px;">
                         <summary style="cursor:pointer; font-size:13px; font-weight:bold; color:#8a6d00; padding:7px 9px; background:#fffbea; border:1px solid #ffe6a3; border-radius:6px;">👀 觀察中項目（${watchIssuesList.length} 項）</summary>
-                        <div style="margin-top:6px;">${watchIssuesList.join('')}</div>
+                        <div style="margin-top:6px;">${renderGroupedIssues(watchIssuesList)}</div>
                     </details>`;
                 }
                 let oldPendingBlock = '';
@@ -2590,7 +2628,7 @@ async function loadPendingIssues() {
                 if (doneIssuesList.length > 0 || doneOldHtml) {
                     doneBlock = `<details style="margin-top:8px;">
                         <summary style="cursor:pointer; font-size:13px; font-weight:bold; color:#2e7d32; padding:7px 9px; background:#f1fbf4; border:1px solid #c8ecd5; border-radius:6px;">✅ 已處理項目（${doneIssuesList.length + doneOldCount} 項）</summary>
-                        <div style="margin-top:6px;">${doneIssuesList.join('')}${doneOldHtml}</div>
+                        <div style="margin-top:6px;">${renderGroupedIssues(doneIssuesList)}${doneOldHtml}</div>
                     </details>`;
                 }
 
