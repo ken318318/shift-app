@@ -998,6 +998,7 @@ function setSubmitting(on) {
     }
 
     function loadDraft() {
+        DRAFT_DAY = null;
         let data = localStorage.getItem(draftKey());
         if (!data && isPersonalUser()) {
             // 舊版本草稿：若屬於自己，自動轉移過來
@@ -1015,7 +1016,7 @@ function setSubmitting(on) {
         if (!data) return;
         try {
             let d = JSON.parse(data);
-            let hasData = d.staffName || d.notes || (d.follower && d.follower.length) || 
+            let hasData = (d.notes && String(d.notes).trim()) || (d.follower && d.follower.length) || 
                           (d.luxIssue && d.luxIssue.length) || (d.tempIssue && d.tempIssue.length) || 
                           (d.bgmIssue && d.bgmIssue.length) || (d.nfcIssue && d.nfcIssue.length) || 
                           (d.venue && d.venue.some(v => v.cat || v.locs.length)) ||
@@ -1036,9 +1037,8 @@ function setSubmitting(on) {
                 updateOnDutyUI();
             }
 
+            DRAFT_DAY = d.shiftDay || null;
             if (d.shiftDay) {
-                SHIFT_DAY = d.shiftDay;
-                PENDING_DAY = null;   // 草稿嘅星期優先：還原要去返相應版面
                 SUNDAY_BIND = {};
                 (Array.isArray(d.sunday) ? d.sunday : []).forEach(function (x) {
                     if (x && x.code) SUNDAY_BIND[String(x.code).toUpperCase()] = { g: x.g || '', d: x.d || '',
@@ -1149,10 +1149,15 @@ function setSubmitting(on) {
             const _keep = confirm("🔄 發現未提交的交更草稿。\n\n按「確定」＝還原草稿\n按「取消」＝不還原（清除草稿，由空白開始）");
             if (!_keep) {
                 try { localStorage.removeItem(draftKey()); } catch (e2) {}
-                resetForm(false);
+                DRAFT_DAY = null;
+                SUNDAY_BIND = {};
+                resetForm(false);       // 只清空表單，PENDING_DAY 保留 → 入返你揀嘅星期
                 alert("🧹 已清除草稿，由空白開始。");
                 return;
             }
+            // 還原：去返草稿所屬嘅星期（草稿冇記錄就用你啱啱揀嘅）
+            if (DRAFT_DAY) { SHIFT_DAY = DRAFT_DAY; PENDING_DAY = null; }
+            DRAFT_DAY = null;
             alert("✅ 已還原草稿。");
         } catch(e) {
             console.error("載入草稿失敗", e);
@@ -1256,6 +1261,7 @@ function setSubmitting(on) {
     const DAY_NAMES = ['', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
     let SHIFT_DAY = null;        // 1=Mon … 7=Sun
     let PENDING_DAY = null;      // 選完星期、未進表單前暫存
+    let DRAFT_DAY = null;        // 草稿記錄嘅星期（等用戶確認還原後才用）
     let SUNDAY_ALL = [];         // [{code, hall, pit}]
     let SUNDAY_LOCK = { g: {}, d: {} };   // 伺服器鎖：已有未處理項目
     let SUNDAY_BIND = {};                 // 本地暫存：{code: {g:'問題', d:'問題'}}（未提交前可解鎖）
@@ -2509,11 +2515,11 @@ async function loadPendingIssues() {
                 }
 
                 let timeStr = r.created_at ? `<div style="font-size: 12px; color: #888; font-weight: normal; margin-top: 4px;">🕒 ${fmtDateTime(r.created_at)}</div>` : "";
-                let luxStr = !r.lux ? 'Lux 未檢測'
+                let luxStr = !r.lux ? 'Lux 無需檢測'
                     : (r.lux === '450-650' ? 'Lux 450–650 lx' : `Lux ${r.lux} lx`);
-                let tempStr = !r.temp ? '溫度 未檢測'
+                let tempStr = !r.temp ? '溫度 無需檢測'
                     : ((r.temp === '正常 (22.5-24.5)' || r.temp === '正常') ? '溫度 22.5–24.5 °C' : `溫度 ${unitTempText(r.temp)}`);
-                let bgmStr = !r.bgm ? '分貝 未檢測'
+                let bgmStr = !r.bgm ? '分貝 無需檢測'
                     : ((r.bgm === '正常 (65-75)' || r.bgm === '正常') ? '分貝 65–75 dB' : `分貝 ${unitBgmText(r.bgm)}`);
                 let dataHtml = `<div class="record-data">📊 全場檢測：${luxStr} ｜ ${tempStr} ｜ ${bgmStr}</div>`;
                 
