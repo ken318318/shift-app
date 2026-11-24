@@ -184,14 +184,14 @@
     <div class="card" id="list-container">
         <div style="margin-bottom: 15px;">
             <h2 style="margin: 0 0 10px 0; font-size: 22px; text-align: center;">📋 BS歷史交更紀錄</h2>
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <div style="display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 6px;">
+                <button onclick="openChairMap()" style="color:#6a1b9a; background:#f3e5f5; padding:7px 10px; border-radius:6px; border:none; cursor:pointer; font-size:13px; font-weight:bold;">🪑 櫈況圖</button>
+                <button onclick="openUpdateReport()" style="color:#1565c0; background:#e3f2fd; padding:7px 10px; border-radius:6px; border:none; cursor:pointer; font-size:13px; font-weight:bold;">📋 更新表</button>
                 <button id="btn-admin" onclick="window.location.href='/admin';" style="color: #1a73e8; background: #e3f2fd; padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer;">⚙️ 設定</button>
                 <button onclick="window.location.href='/logout';" style="color: #e74c3c; background: #ffebee; padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer;">🚪 登出</button>
             </div>
         </div>
         <button class="submit-btn" onclick="showForm()" style="margin-top: 0; margin-bottom: 10px; background-color: #2ecc71;">📝 新增BS交更紀錄</button>
-        <button class="lr-btn2" onclick="openUpdateReport()">📋 一鍵生成更新表（Layout／各類別）</button>
-        <button class="lr-btn2" onclick="openChairMap()" style="border-color:#7b1fa2; color:#6a1b9a;">🪑 櫈況圖（好壞／新舊）</button>
         
         <div id="home-pending-container" style="display: none; background: #fff3cd; padding: 9px 12px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 14px;">
             <div onclick="toggleHomePending()" style="cursor: pointer;">
@@ -405,9 +405,9 @@
         </div>
 
         <div class="fold-head" style="margin-top: 14px;" onclick="toggleFold('dlr-body','dlr-arrow')">
-            <span>👥 DLR 意見收集（如不需要請留空）</span><span id="dlr-arrow" class="fold-arrow">▲ 收起</span>
+            <span>👥 DLR 意見收集（如不需要請留空）</span><span id="dlr-arrow" class="fold-arrow">▼ 展開</span>
         </div>
-        <div id="dlr-body" class="issue-group" style="background: #e0f2f1; border-color: #80cbc4; display: block; margin-top: 6px;">
+        <div id="dlr-body" class="issue-group" style="background: #e0f2f1; border-color: #80cbc4; display: none; margin-top: 6px;">
             <div class="issue-title" style="color: #00695c;">收集內容</div>
             <div class="checkbox-group" style="background: transparent; border: none; padding: 0; gap: 6px;">
                     <label style="width:30%;"><input type="checkbox" value="燈光" class="dlr-topic"> 燈光</label>
@@ -457,11 +457,11 @@
             </div>
         </div>
 
-        <details id="on-duty-box" style="margin-top: 15px;">
+        <details id="on-duty-box" open style="margin-top: 15px;">
             <summary style="cursor: pointer; font-weight: bold; font-size: 14px; color: #444; display: flex; align-items: center; gap: 8px; list-style: none;">
                 <span>當更同事（可多選）</span>
                 <span id="on-duty-count" style="font-weight: normal; font-size: 12px; color: #1a73e8;">（未選）</span>
-                <span id="on-duty-arrow" style="margin-left: auto; font-size: 12px; color: #888; white-space: nowrap;">▼ 展開</span>
+                <span id="on-duty-arrow" style="margin-left: auto; font-size: 12px; color: #888; white-space: nowrap;">▲ 收起</span>
             </summary>
             <div class="checkbox-group" style="display:block; margin-top: 8px;" id="on-duty-list">
                 <!-- 會自動用「交更人」名單填入 -->
@@ -807,6 +807,12 @@ function setSubmitting(on) {
 
     function applyFeedback(prefix, json) {
         resetFeedback(prefix);
+        if (prefix === 'dlr' && json) {
+            const b = document.getElementById('dlr-body');
+            const ar = document.getElementById('dlr-arrow');
+            if (b) b.style.display = 'block';
+            if (ar) ar.textContent = '▲ 收起';
+        }
         if (!json) return;
         let d;
         try { d = JSON.parse(json); } catch (e) { return; }
@@ -4000,14 +4006,21 @@ function collectItems() {
 
         if (legend) {
             if (cmMode === 'status') {
-                legend.innerHTML = '<span><i class="cm-dot" style="background:#fff"></i>營運（好）</span>' +
-                    '<span><i class="cm-dot" style="background:#cfd8dc"></i>停運</span>' +
-                    '<span style="background:#99CCFF;color:#01579b;border-radius:6px;padding:3px 8px;font-weight:bold">藍底＝壞客櫈</span>' +
-                    '<span style="background:#e53935;color:#fff;border-radius:6px;padding:3px 8px;font-weight:bold">紅字＝壞 DLR</span>' +
-                    '<span style="background:#2e7d32;color:#fff;border-radius:6px;padding:3px 8px;font-weight:bold">綠字＝spare</span>' +
-                    '<span>黑字＝好凳</span><span><i class="cm-dot" style="background:#c5cae9"></i>企位（DS/RL）</span><span>客櫈每台 5 張</span>' +
-                    '<span><i class="cm-dot" style="background:#FFFF00"></i>帳房</span>' +
-                    '<span><i class="cm-dot" style="background:#FF99CC"></i>活動區</span>';
+                legend.innerHTML =
+                    '<div style="flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">' +
+                        '<span style="background:#e53935;color:#fff;border-radius:6px;padding:3px 8px;font-weight:bold">紅字＝壞 DLR</span>' +
+                        '<span style="background:#99CCFF;color:#01579b;border-radius:6px;padding:3px 8px;font-weight:bold">藍底＝壞客櫈</span>' +
+                        '<span style="background:#2e7d32;color:#fff;border-radius:6px;padding:3px 8px;font-weight:bold">綠字＝spare</span>' +
+                    '</div>' +
+                    '<div style="flex-basis:100%;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">' +
+                        '<span><i class="cm-dot" style="background:#fff"></i>營運（好）</span>' +
+                        '<span><i class="cm-dot" style="background:#cfd8dc"></i>停運</span>' +
+                        '<span>黑字＝好凳</span>' +
+                        '<span><i class="cm-dot" style="background:#c5cae9"></i>企位（DS/RL）</span>' +
+                        '<span>客櫈每台 5 張</span>' +
+                        '<span><i class="cm-dot" style="background:#FFFF00"></i>帳房</span>' +
+                        '<span><i class="cm-dot" style="background:#FF99CC"></i>活動區</span>' +
+                    '</div>';
             } else {
                 legend.innerHTML = '<span style="color:#7b2fd0;font-weight:bold">紫字＝新櫈</span>' +
                     '<span style="color:#d95a00;font-weight:bold">橙字＝舊櫈</span>' +
