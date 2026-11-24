@@ -2677,6 +2677,7 @@ function collectItems() {
 
     // ===== 台號總表（用於提交前檢查 NB 台號是否存在） =====
     let TABLE_CODES = null;
+    let TABLE_STOPPED = null;
     let TABLE_LOADING = null;
     function loadTableCodes() {
         if (TABLE_LOADING) return TABLE_LOADING;
@@ -2684,9 +2685,10 @@ function collectItems() {
             .then(function (r) { return r.json(); })
             .then(function (d) {
                 TABLE_CODES = new Set((d && d.codes) || []);
+                TABLE_STOPPED = new Set((d && d.stopped) || []);
                 return TABLE_CODES;
             })
-            .catch(function () { TABLE_CODES = new Set(); return TABLE_CODES; });
+            .catch(function () { TABLE_CODES = new Set(); TABLE_STOPPED = new Set(); return TABLE_CODES; });
         return TABLE_LOADING;
     }
 
@@ -2736,6 +2738,18 @@ function collectItems() {
             } else {
                 const badIdx = locs.findIndex(function (v) { return !v; });
                 if (badIdx >= 0) add('場面問題 ' + n + '：有台號行未填（請填寫或按 X 刪除）', locEls[badIdx]);
+            }
+
+            // 客櫈／DLR櫈問題：只可以報「停運」台
+            if (/櫈|椅/.test(cat) && TABLE_STOPPED && TABLE_STOPPED.size) {
+                locs.forEach(function (v, li) {
+                    if (!v) return;
+                    const code = String(v).toUpperCase().replace(/\s+/g, '');
+                    if (TABLE_CODES && TABLE_CODES.size && !TABLE_CODES.has(code)) return; // 不存在由台號檢查處理
+                    if (!TABLE_STOPPED.has(code)) {
+                        add('櫈問題：台號「' + v + '」仍在營運，請先將該台設為停運才可報櫈問題', locEls[li]);
+                    }
+                });
             }
         });
 
