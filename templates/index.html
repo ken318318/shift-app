@@ -2735,20 +2735,28 @@ function collectItems() {
     function jumpToField(el) {
         if (!el) return;
         __revealField(el);
-        requestAnimationFrame(function () {
-            requestAnimationFrame(function () {
-                __scrollToField(el);
-                try { el.focus({ preventScroll: true }); } catch (e) { try { el.focus(); } catch (e2) {} }
-                try { if (el.tagName === 'SELECT' && typeof el.showPicker === 'function') el.showPicker(); } catch (e) {}
-                __flashField(el);
-                setTimeout(function () {
-                    const r2 = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
-                    if (!r2) return;
-                    const vh2 = window.innerHeight || document.documentElement.clientHeight || 0;
-                    if (r2.top < 0 || r2.bottom > vh2) { __scrollToField(el); __flashField(el); }
-                }, 450);
-            });
-        });
+        let done = false;
+        const run = function () {
+            if (done) return;
+            done = true;
+            __scrollToField(el);
+            try { el.focus({ preventScroll: true }); } catch (e) { try { el.focus(); } catch (e2) {} }
+            try { if (el.tagName === 'SELECT' && typeof el.showPicker === 'function') el.showPicker(); } catch (e) {}
+            __flashField(el);
+            setTimeout(function () {
+                const r2 = el.getBoundingClientRect ? el.getBoundingClientRect() : null;
+                if (!r2) return;
+                const vh2 = window.innerHeight || document.documentElement.clientHeight || 0;
+                if (r2.top < 0 || r2.bottom > vh2) { __scrollToField(el); __flashField(el); }
+            }, 450);
+        };
+        // 等兩帧讓剛顯示的元素完成排版；另加 setTimeout 保險（背景分頁 rAF 會被暫停）
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(function () { requestAnimationFrame(run); });
+            setTimeout(run, 130);
+        } else {
+            setTimeout(run, 60);
+        }
     }
 
     function validateFillAll() {
