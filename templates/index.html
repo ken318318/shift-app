@@ -47,7 +47,7 @@
         button.submit-btn { width: 100%; padding: 14px; margin-top: 25px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
         .record-card { background: #fff; border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 14px; gap: 10px; }
-        .record-data { font-size: 13px; color: #555; margin-bottom: 8px; background: #f4f6f8; padding: 8px; border-radius: 4px; }
+        .record-data { font-size: 13px; color: #555; margin-bottom: 10px; background: #f4f6f8; padding: 12px 10px; border-radius: 6px; line-height: 1.9; }
         .issue-data { font-size: 14px; margin-bottom: 8px; padding: 10px; border-radius: 4px; line-height: 1.5; display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 8px; }
         .issue-data span:first-child { min-width: 0; word-break: break-word; }
         .issue-data span:last-child { align-self: start; }
@@ -2659,6 +2659,13 @@ async function loadPendingIssues() {
                     let chip = (label, st, noneText) => `<span style="display:inline-block; padding:2px 6px; border-radius:10px; font-size:11px; white-space:nowrap; background:${st === 'ok' ? '#e6f4ea' : (st === 'warn' ? '#fff4e5' : '#f1f3f4')}; color:${st === 'ok' ? '#137333' : (st === 'warn' ? '#b26a00' : '#5f6368')}; border:1px solid ${st === 'ok' ? '#b7e1cd' : (st === 'warn' ? '#ffd8a8' : '#dadce0')};">${st === 'ok' ? '✅ ' + label : (st === 'warn' ? '⚠️ ' + label : (noneText || label))}</span>`;
                     let meterState = (val, issue) => (!val ? 'none' : (issue ? 'warn' : 'ok'));
                     let rows = [];
+                    if (r.lux || r.temp || r.bgm) {
+                        rows.push(`<div style="display:flex; flex-wrap:nowrap; align-items:center; gap:4px; margin-bottom:6px;"><span style="font-weight:bold; white-space:nowrap; font-size:12px;">🏢 全場檢測：</span>${chip('Lux', meterState(r.lux, r.lux_issue), 'Lux 無需檢測')}${chip('溫度', meterState(r.temp, r.temp_issue), '溫度 無需檢測')}${chip('分貝', meterState(r.bgm, r.db_issue), '分貝 無需檢測')}</div>`);
+                    }
+                    if (hallName) {
+                        rows.push(`<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-bottom:8px;"><span style="font-weight:bold; white-space:nowrap;">🛰️ 本更 NFC 檢測：</span><span style="font-weight:bold; white-space:nowrap;">${hallName}</span><span style="background:#1a73e8; color:#fff; padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap;">✅ 已完成</span></div>`);
+                    }
+                    // 本月檢查（放喺 NFC 下面，分兩行，加大間距）
                     {
                         const _m = MONTHLY || {};
                         const _mchip = function (info, okText, noText) {
@@ -2666,13 +2673,8 @@ async function loadPendingIssues() {
                                 ? chip(okText + (info.date ? '（' + String(info.date).slice(5) + '）' : ''), 'ok')
                                 : chip(noText, 'warn');
                         };
-                        rows.push(`<div style="display:flex; flex-wrap:wrap; align-items:center; gap:4px; margin-bottom:6px;"><span style="font-weight:bold; white-space:nowrap; font-size:12px;">🛠️ 本月檢查：</span>${_mchip(_m.soundbar, 'Sound Bar 已檢測', 'Sound Bar 未檢測')}${_mchip(_m.fire15, '消防 15日已檢查', '消防 15日未檢查')}${_mchip(_m.fire30, '消防 30日已檢查', '消防 30日未檢查')}</div>`);
-                    }
-                    if (r.lux || r.temp || r.bgm) {
-                        rows.push(`<div style="display:flex; flex-wrap:nowrap; align-items:center; gap:4px; margin-bottom:6px;"><span style="font-weight:bold; white-space:nowrap; font-size:12px;">🏢 全場檢測：</span>${chip('Lux', meterState(r.lux, r.lux_issue), 'Lux 無需檢測')}${chip('溫度', meterState(r.temp, r.temp_issue), '溫度 無需檢測')}${chip('分貝', meterState(r.bgm, r.db_issue), '分貝 無需檢測')}</div>`);
-                    }
-                    if (hallName) {
-                        rows.push(`<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px;"><span style="font-weight:bold; white-space:nowrap;">🛰️ 本更 NFC 檢測：</span><span style="font-weight:bold; white-space:nowrap;">${hallName}</span><span style="background:#1a73e8; color:#fff; padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap;">✅ 已完成</span></div>`);
+                        rows.push(`<div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:8px; border-top:1px dashed #c5d9f1;"><span style="font-weight:bold; white-space:nowrap; font-size:12px;">🛠️ 本月檢查：</span>${_mchip(_m.soundbar, 'Sound Bar 已檢測', 'Sound Bar 未檢測')}</div>`);
+                        rows.push(`<div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:6px;">${_mchip(_m.fire15, '消防 15日已檢查', '消防 15日未檢查')}${_mchip(_m.fire30, '消防 30日已檢查', '消防 30日未檢查')}</div>`);
                     }
                     if (rows.length) {
                         let hasMeterIssue = !!(r.lux_issue || r.temp_issue || r.db_issue);
