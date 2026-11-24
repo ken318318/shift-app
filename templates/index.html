@@ -250,7 +250,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; min-height: 24px; margin-bottom: 5px;">
                 <label style="margin: 0; white-space: nowrap;">全場 Lux：</label>
                 <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
-                    <input type="checkbox" id="skip-lux" onchange="toggleSkip('lux')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
+                    <input type="checkbox" id="det-lux" onchange="toggleDet('lux')" style="width: 16px; height: 16px; margin-right: 5px;"> 已檢測
                 </label>
             </div>
             <div id="lux-input-area" style="margin-top: 5px;">
@@ -284,7 +284,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; min-height: 24px; margin-bottom: 5px;">
                 <label style="margin: 0; white-space: nowrap;">全場 溫度 (°C)：</label>
                 <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
-                    <input type="checkbox" id="skip-temp" onchange="toggleSkip('temp')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
+                    <input type="checkbox" id="det-temp" onchange="toggleDet('temp')" style="width: 16px; height: 16px; margin-right: 5px;"> 已檢測
                 </label>
             </div>
             <div id="temp-input-area" style="margin-top: 5px;">
@@ -314,7 +314,7 @@
             <div style="display: flex; justify-content: space-between; align-items: center; min-height: 24px; margin-bottom: 5px;">
                 <label style="margin: 0; white-space: nowrap;">全場 BGM 分貝 (dB)：</label>
                 <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
-                    <input type="checkbox" id="skip-bgm" onchange="toggleSkip('bgm')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
+                    <input type="checkbox" id="det-bgm" onchange="toggleDet('bgm')" style="width: 16px; height: 16px; margin-right: 5px;"> 已檢測
                 </label>
             </div>
             <div id="bgm-input-area" style="margin-top: 5px;">
@@ -343,7 +343,7 @@
         <div id="nfc-head" style="display: flex; justify-content: space-between; align-items: center; min-height: 24px; margin-top: 15px;">
             <label style="margin: 0; white-space: nowrap;">NFC 檢測：</label>
             <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
-                <input type="checkbox" id="skip-nfc" onchange="toggleSkip('nfc')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
+                <input type="checkbox" id="det-nfc" onchange="toggleDet('nfc')" style="width: 16px; height: 16px; margin-right: 5px;"> 已檢測
             </label>
         </div>
         <div id="nfc-input-area" style="margin-top: 5px;">
@@ -467,6 +467,17 @@
                 <div class="box-item"><span>差評（位）</span><input type="number" min="0" step="1" class="dlr-bad" value="0"></div>
             </div>
             <textarea class="dlr-note" rows="2" placeholder="備註／事情描述（可留空）" style="width:100%; margin-top:8px; padding:8px; border:1px solid #80cbc4; border-radius:8px; font-size:13px; font-family:inherit; box-sizing:border-box;"></textarea>
+        </div>
+
+        <!-- 4b. 設備檢查（Sound Bar／消防） -->
+        <div style="margin-top: 14px; background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: 10px;">
+            <div style="font-size: 13px; font-weight: bold; color: #2e7d32; margin-bottom: 4px;">🛠️ 設備檢查（打勾＝已完成）</div>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: normal; padding: 7px 0; cursor: pointer;">
+                <input type="checkbox" id="chk-soundbar" style="width: 18px; height: 18px;"> Sound Bar 檢測（已檢測）
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: normal; padding: 7px 0; cursor: pointer;">
+                <input type="checkbox" id="chk-firecheck" style="width: 18px; height: 18px;"> 消防檢查（已檢查）
+            </label>
         </div>
 
         <!-- 5. 場面問題 -->
@@ -906,7 +917,7 @@ function setSubmitting(on) {
                          sg: SUNDAY_BIND[c].sg || '待處理', sd: SUNDAY_BIND[c].sd || '待處理' };
             });
             
-            d.skipLux = document.getElementById('skip-lux').checked;
+            d.skipLux = !detOn('lux');
             d.lux = document.getElementById('lux').value;
             d.luxIssue = [];
             if (document.getElementById('lux-issue-group').style.display === 'block') {
@@ -921,7 +932,7 @@ function setSubmitting(on) {
                 });
             }
 
-            d.skipTemp = document.getElementById('skip-temp').checked;
+            d.skipTemp = !detOn('temp');
             d.temp = document.getElementById('temp').value;
             d.tempIssue = [];
             if (document.getElementById('temp-issue-group').style.display === 'block') {
@@ -935,7 +946,7 @@ function setSubmitting(on) {
                 });
             }
 
-            d.skipBgm = document.getElementById('skip-bgm').checked;
+            d.skipBgm = !detOn('bgm');
             d.bgm = document.getElementById('bgm').value;
             d.bgmIssue = [];
             if (document.getElementById('bgm-issue-group').style.display === 'block') {
@@ -949,7 +960,7 @@ function setSubmitting(on) {
                 });
             }
 
-            d.skipNfc = document.getElementById('skip-nfc').checked;
+            d.skipNfc = !detOn('nfc');
             d.nfcHall = document.getElementById('nfc-hall-select').value;
             d.nfcStatus = document.getElementById('nfc-status').value;
             d.nfcIssue = [];
@@ -985,6 +996,8 @@ function setSubmitting(on) {
 
             d.guest = collectFeedback('guest');
             d.dlr = collectFeedback('dlr');
+            d.soundbar = !!((document.getElementById('chk-soundbar') || {}).checked);
+            d.firecheck = !!((document.getElementById('chk-firecheck') || {}).checked);
             localStorage.setItem(draftKey(), JSON.stringify(d));
         } catch(e) {
             console.error("Save draft failed", e);
@@ -1045,8 +1058,7 @@ function setSubmitting(on) {
                         sg: x.sg || '待處理', sd: x.sd || '待處理' };
                 });
             }
-            document.getElementById('skip-lux').checked = d.skipLux;
-            toggleSkip('lux');
+            setDet('lux', !d.skipLux);
             if (!d.skipLux) {
                 document.getElementById('lux').value = d.lux;
                 toggleIssue('lux');
@@ -1059,8 +1071,7 @@ function setSubmitting(on) {
                 }
             }
 
-            document.getElementById('skip-temp').checked = d.skipTemp;
-            toggleSkip('temp');
+            setDet('temp', !d.skipTemp);
             if (!d.skipTemp) {
                 document.getElementById('temp').value = d.temp;
                 toggleIssue('temp');
@@ -1073,8 +1084,7 @@ function setSubmitting(on) {
                 }
             }
 
-            document.getElementById('skip-bgm').checked = d.skipBgm;
-            toggleSkip('bgm');
+            setDet('bgm', !d.skipBgm);
             if (!d.skipBgm) {
                 document.getElementById('bgm').value = d.bgm;
                 toggleIssue('bgm');
@@ -1087,8 +1097,7 @@ function setSubmitting(on) {
                 }
             }
 
-            document.getElementById('skip-nfc').checked = d.skipNfc;
-            toggleSkip('nfc');
+            setDet('nfc', !d.skipNfc);
             if (!d.skipNfc) {
                 document.getElementById('nfc-hall-select').value = d.nfcHall;
                 document.getElementById('nfc-status').value = d.nfcStatus;
@@ -1145,6 +1154,8 @@ function setSubmitting(on) {
 
             applyFeedback('guest', d.guest);
             applyFeedback('dlr', d.dlr);
+            const _cbSb = document.getElementById('chk-soundbar'); if (_cbSb) _cbSb.checked = !!d.soundbar;
+            const _cbFc = document.getElementById('chk-firecheck'); if (_cbFc) _cbFc.checked = !!d.firecheck;
             transformInputs();
             const _keep = confirm("🔄 發現未提交的交更草稿。\n\n按「確定」＝還原草稿\n按「取消」＝不還原（清除草稿，由空白開始）");
             if (!_keep) {
@@ -1311,11 +1322,10 @@ function setSubmitting(on) {
         const isSun = SHIFT_DAY === 7;
         ['lux', 'temp', 'bgm'].forEach(function (t) {
             const blk = document.getElementById(t + '-block');
-            const skip = document.getElementById('skip-' + t);
             const area = document.getElementById(t + '-input-area');
             if (isSun) {
                 if (blk) blk.style.display = 'none';
-                if (skip) skip.checked = true;
+                setDet(t, false);
                 if (area) area.style.display = 'none';
             } else if (blk) {
                 blk.style.display = '';
@@ -1323,15 +1333,14 @@ function setSubmitting(on) {
         });
         const nfcHead = document.getElementById('nfc-head');
         const nfcArea = document.getElementById('nfc-input-area');
-        const nfcSkip = document.getElementById('skip-nfc');
         if (isSun) {
             if (nfcHead) nfcHead.style.display = 'none';
-            if (nfcSkip) nfcSkip.checked = true;
+            setDet('nfc', false);
             if (nfcArea) nfcArea.style.display = 'none';
             const g = document.getElementById('nfc-issue-group'); if (g) g.style.display = 'none';
         } else {
-            if (nfcHead) nfcHead.style.display = '';
-            if (nfcSkip && nfcArea) nfcArea.style.display = nfcSkip.checked ? 'none' : 'block';
+            if (nfcHead) nfcHead.style.display = 'flex';
+            if (nfcArea) nfcArea.style.display = detOn('nfc') ? 'block' : 'none';
             const sel = document.getElementById('nfc-hall-select');
             if (sel && SHIFT_DAY >= 1 && SHIFT_DAY <= 6) sel.value = 'Hall ' + SHIFT_DAY;
         }
@@ -1552,9 +1561,23 @@ function setSubmitting(on) {
         document.getElementById('nfc-issue-group').style.display = (document.getElementById('nfc-status').value === '有異常') ? 'block' : 'none'; 
     }
 
-    function toggleSkip(type) { 
-        let isSkipped = document.getElementById('skip-' + type).checked; 
-        document.getElementById(type + '-input-area').style.display = isSkipped ? 'none' : 'block'; 
+    // 打勾＝有做檢測（內部邏輯仍然用「跳過」概念，只係介面意思調轉）
+    function detOn(type) {
+        const cb = document.getElementById('det-' + type);
+        return !!(cb && cb.checked);
+    }
+    function toggleDet(type) {
+        const on = detOn(type);
+        const area = document.getElementById(type + '-input-area');
+        if (area) area.style.display = on ? 'block' : 'none';
+        const g = document.getElementById(type + '-issue-group');
+        if (!on) { if (g) g.style.display = 'none'; }
+        else if (type !== 'nfc') { toggleIssue(type); }
+    }
+    function setDet(type, on) {
+        const cb = document.getElementById('det-' + type);
+        if (cb) cb.checked = !!on;
+        toggleDet(type);
     }
 
 
@@ -1956,10 +1979,9 @@ function setSubmitting(on) {
         document.querySelectorAll('.follower-item').forEach(cb => cb.checked = false);
         document.querySelectorAll('.onduty-item').forEach(cb => cb.checked = false);
         updateOnDutyUI();
-        ['lux', 'temp', 'bgm', 'nfc'].forEach(type => { 
-            document.getElementById('skip-' + type).checked = false; 
-            document.getElementById(type + '-input-area').style.display = 'block'; 
-        });
+        ['lux', 'temp', 'bgm', 'nfc'].forEach(type => setDet(type, true));
+        const _sbChk = document.getElementById('chk-soundbar'); if (_sbChk) _sbChk.checked = false;
+        const _fcChk = document.getElementById('chk-firecheck'); if (_fcChk) _fcChk.checked = false;
         const _lxSel = document.getElementById('lux'); if (_lxSel) _lxSel.value = '450-650';
         const _tpSel = document.getElementById('temp'); if (_tpSel) _tpSel.value = '正常 (22.5-24.5)';
         const _bgSel = document.getElementById('bgm'); if (_bgSel) _bgSel.value = '正常 (65-75)';
@@ -2503,6 +2525,9 @@ async function loadPendingIssues() {
                     let chip = (label, st) => `<span style="display:inline-block; padding:2px 6px; border-radius:10px; font-size:11px; white-space:nowrap; background:${st === 'ok' ? '#e6f4ea' : (st === 'warn' ? '#fff4e5' : '#f1f3f4')}; color:${st === 'ok' ? '#137333' : (st === 'warn' ? '#b26a00' : '#5f6368')}; border:1px solid ${st === 'ok' ? '#b7e1cd' : (st === 'warn' ? '#ffd8a8' : '#dadce0')};">${st === 'ok' ? '✅' : (st === 'warn' ? '⚠️' : '—')} ${label}</span>`;
                     let meterState = (val, issue) => (!val ? 'none' : (issue ? 'warn' : 'ok'));
                     let rows = [];
+                    if (r.soundbar || r.firecheck) {
+                        rows.push(`<div style="display:flex; flex-wrap:nowrap; align-items:center; gap:4px; margin-bottom:6px;"><span style="font-weight:bold; white-space:nowrap; font-size:12px;">🛠️ 設備檢查：</span>${r.soundbar ? chip('Sound Bar ' + r.soundbar, 'ok') : chip('Sound Bar 未檢測', 'none')}${r.firecheck ? chip('消防 ' + r.firecheck, 'ok') : chip('消防 未檢查', 'none')}</div>`);
+                    }
                     if (r.lux || r.temp || r.bgm) {
                         rows.push(`<div style="display:flex; flex-wrap:nowrap; align-items:center; gap:4px; margin-bottom:6px;"><span style="font-weight:bold; white-space:nowrap; font-size:12px;">🏢 全場檢測：</span>${chip('Lux', meterState(r.lux, r.lux_issue))}${chip('溫度', meterState(r.temp, r.temp_issue))}${chip('分貝', meterState(r.bgm, r.db_issue))}</div>`);
                     }
@@ -2746,11 +2771,9 @@ async function loadPendingIssues() {
         }
 
         if (!r.lux) {
-            document.getElementById('skip-lux').checked = true;
-            document.getElementById('lux-input-area').style.display = 'none';
+            setDet('lux', false);
         } else {
-            document.getElementById('skip-lux').checked = false;
-            document.getElementById('lux-input-area').style.display = 'block';
+            setDet('lux', true);
             document.getElementById('lux').value = r.lux;
             if (r.lux === '< 450' || r.lux === '> 650') {
                 document.getElementById('lux-issue-group').style.display = 'block';
@@ -2784,11 +2807,9 @@ async function loadPendingIssues() {
         }
 
         if (!r.temp) {
-            document.getElementById('skip-temp').checked = true;
-            document.getElementById('temp-input-area').style.display = 'none';
+            setDet('temp', false);
         } else {
-            document.getElementById('skip-temp').checked = false;
-            document.getElementById('temp-input-area').style.display = 'block';
+            setDet('temp', true);
             document.getElementById('temp').value = r.temp;
             if (r.temp.includes('偏低') || r.temp.includes('偏高')) {
                 document.getElementById('temp-issue-group').style.display = 'block';
@@ -2814,11 +2835,9 @@ async function loadPendingIssues() {
         }
 
         if (!r.bgm) {
-            document.getElementById('skip-bgm').checked = true;
-            document.getElementById('bgm-input-area').style.display = 'none';
+            setDet('bgm', false);
         } else {
-            document.getElementById('skip-bgm').checked = false;
-            document.getElementById('bgm-input-area').style.display = 'block';
+            setDet('bgm', true);
             document.getElementById('bgm').value = r.bgm;
             if (r.bgm.includes('偏低') || r.bgm.includes('偏高')) {
                 document.getElementById('bgm-issue-group').style.display = 'block';
@@ -2844,11 +2863,9 @@ async function loadPendingIssues() {
         }
 
         if (!r.checklist) {
-            document.getElementById('skip-nfc').checked = true;
-            document.getElementById('nfc-input-area').style.display = 'none';
+            setDet('nfc', false);
         } else {
-            document.getElementById('skip-nfc').checked = false;
-            document.getElementById('nfc-input-area').style.display = 'block';
+            setDet('nfc', true);
             let parts = r.checklist.split(' | ');
             let hallStr = parts.find(p => p.includes('NFC正常:'));
             let issueStr = parts.find(p => p.includes('NFC異常:'));
@@ -2887,6 +2904,8 @@ async function loadPendingIssues() {
         document.getElementById('notes').value = parsedNote.main;
         applyFeedback('guest', r.guest_feedback);
         applyFeedback('dlr', r.dlr_feedback);
+        const _ebSb = document.getElementById('chk-soundbar'); if (_ebSb) _ebSb.checked = !!r.soundbar;
+        const _ebFc = document.getElementById('chk-firecheck'); if (_ebFc) _ebFc.checked = !!r.firecheck;
         
         if (parsedNote.venue) {
             parsedNote.venue.split('\n').forEach((line, index) => {
@@ -3028,7 +3047,7 @@ function collectItems() {
         });
     }
     // Lux（每個 Box 各自一項）
-    if (!document.getElementById('skip-lux').checked) {
+    if (detOn('lux')) {
         document.querySelectorAll('.lux-item').forEach(item => {
             const table = (item.querySelector('.lux-table') || {}).value || '';
             const st = (item.querySelector('.issue-status') || {}).value || '待處理';
@@ -3042,7 +3061,7 @@ function collectItems() {
         });
     }
     // 溫度
-    if (!document.getElementById('skip-temp').checked) {
+    if (detOn('temp')) {
         document.querySelectorAll('.temp-item').forEach(item => {
             const table = (item.querySelector('.temp-table') || {}).value || '';
             const val = (item.querySelector('.temp-value') || {}).value || '';
@@ -3053,7 +3072,7 @@ function collectItems() {
         });
     }
     // 分貝
-    if (!document.getElementById('skip-bgm').checked) {
+    if (detOn('bgm')) {
         document.querySelectorAll('.bgm-item').forEach(item => {
             const table = (item.querySelector('.bgm-table') || {}).value || '';
             const val = (item.querySelector('.bgm-value') || {}).value || '';
@@ -3064,7 +3083,7 @@ function collectItems() {
         });
     }
     // NFC（每個 Box 各自一項）
-    if (!document.getElementById('skip-nfc').checked && document.getElementById('nfc-status').value === '有異常') {
+    if (detOn('nfc') && document.getElementById('nfc-status').value === '有異常') {
         document.querySelectorAll('.nfc-item').forEach(item => {
             const table = (item.querySelector('.nfc-table') || {}).value || '';
             const st = (item.querySelector('.issue-status') || {}).value || '待處理';
@@ -3168,10 +3187,10 @@ function collectItems() {
 
         // ---------- 台號存在性（只檢查 NB 字頭；MGH01 等不受影響） ----------
         // 「無需檢測」或 NFC 無異常時，該區唔會提交，唔應該報錯（否則會跳去隱藏欄位）
-        const skipOf = { '.lux-table': 'skip-lux', '.temp-table': 'skip-temp', '.bgm-table': 'skip-bgm', '.nfc-table': 'skip-nfc' };
+        const detOf = { '.lux-table': 'lux', '.temp-table': 'temp', '.bgm-table': 'bgm', '.nfc-table': 'nfc' };
         const areaSkipped = function (sel) {
-            const sid = skipOf[sel];
-            if (sid) { const cb = document.getElementById(sid); if (cb && cb.checked) return true; }
+            const tid = detOf[sel];
+            if (tid && !detOn(tid)) return true;
             if (sel === '.nfc-table') { const ns = document.getElementById('nfc-status'); if (ns && ns.value !== '有異常') return true; }
             return false;
         };
@@ -3228,7 +3247,7 @@ function collectItems() {
         });
 
         // ---------- Lux ----------
-        if (!document.getElementById('skip-lux').checked) {
+        if (detOn('lux')) {
             const luxSel = document.getElementById('lux').value;
             const luxAb = (luxSel === '< 450' || luxSel === '> 650');
             let anyLux = false;
@@ -3259,7 +3278,7 @@ function collectItems() {
         }
 
         // ---------- 溫度 ----------
-        if (!document.getElementById('skip-temp').checked) {
+        if (detOn('temp')) {
             const tSel = document.getElementById('temp').value;
             const tAb = (tSel.indexOf('偏低') >= 0 || tSel.indexOf('偏高') >= 0);
             let anyT = false;
@@ -3285,7 +3304,7 @@ function collectItems() {
         }
 
         // ---------- 分貝 ----------
-        if (!document.getElementById('skip-bgm').checked) {
+        if (detOn('bgm')) {
             const bSel = document.getElementById('bgm').value;
             const bAb = (bSel.indexOf('偏低') >= 0 || bSel.indexOf('偏高') >= 0);
             let anyB = false;
@@ -3311,7 +3330,7 @@ function collectItems() {
         }
 
         // ---------- NFC ----------
-        if (!document.getElementById('skip-nfc').checked && document.getElementById('nfc-status').value === '有異常') {
+        if (detOn('nfc') && document.getElementById('nfc-status').value === '有異常') {
             let anyN = false;
             document.querySelectorAll('.nfc-item').forEach(function (item, idx) {
                 const n = idx + 1;
@@ -3507,21 +3526,23 @@ function collectItems() {
         let data = { 
             name: document.getElementById('staffName').value, 
             shift: document.getElementById('shiftType').value, 
-            lux: document.getElementById('skip-lux').checked ? "" : document.getElementById('lux').value, 
-            temp: document.getElementById('skip-temp').checked ? "" : document.getElementById('temp').value, 
-            bgm: document.getElementById('skip-bgm').checked ? "" : document.getElementById('bgm').value, 
-            checklist: document.getElementById('skip-nfc').checked ? "" : checklistString, 
-            status: overallStatus, 
+            lux: detOn('lux') ? document.getElementById('lux').value : "",
+temp: detOn('temp') ? document.getElementById('temp').value : "",
+bgm: detOn('bgm') ? document.getElementById('bgm').value : "",
+checklist: detOn('nfc') ? checklistString : "",
+            soundbar: document.getElementById('chk-soundbar').checked ? '已檢測' : '',
+            firecheck: document.getElementById('chk-firecheck').checked ? '已檢查' : '',
+status: overallStatus, 
             follower: Array.from(document.querySelectorAll('.follower-item:checked')).map(cb => cb.value).join(', ') || '無',
             on_duty: Array.from(document.querySelectorAll('.onduty-item:checked')).map(cb => cb.value).join(', '), 
             note: finalNote, 
             guest_feedback: collectFeedback('guest'),
             dlr_feedback: collectFeedback('dlr'),
             layout_side: Object.keys(layoutSide).length ? JSON.stringify(layoutSide) : '',
-            lux_issue: document.getElementById('skip-lux').checked ? "" : luxIssue, 
-            temp_issue: document.getElementById('skip-temp').checked ? "" : tempIssue, 
-            db_issue: document.getElementById('skip-bgm').checked ? "" : dbIssue,
-            items: collectItems(),
+            lux_issue: detOn('lux') ? luxIssue : "",
+temp_issue: detOn('temp') ? tempIssue : "",
+db_issue: detOn('bgm') ? dbIssue : "",
+items: collectItems(),
             done_keys: doneOldItems.map(x => String(x).split(' [狀態:')[0].trim()).filter(x => x.indexOf('|') >= 0),
             reopen_keys: reopenKeys
         };
@@ -3605,6 +3626,7 @@ function collectItems() {
             ['全場 分貝', data.bgm ? data.bgm : '無需檢測'],
             ['NFC 檢測 Hall', nfcHall ? nfcHall : '無需檢測'],
             ['NFC 異常', nfcCount ? (nfcCount + ' 項') : '無'],
+            ['設備檢查', (data.soundbar ? 'Sound Bar ' + data.soundbar : 'Sound Bar 未檢測') + '｜' + (data.firecheck ? '消防 ' + data.firecheck : '消防 未檢查')],
             ['場面問題', venueLines.length ? (venueLines.length + ' 項') : '無'],
             ['當更同事', data.on_duty || '—'],
             ['負責跟進人', data.follower || '—'],
