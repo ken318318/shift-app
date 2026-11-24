@@ -1730,11 +1730,12 @@ function setSubmitting(on) {
         if (!day) return [];
         const out = [];
         const todayMap = { 1: ['wifi1'], 15: ['firecheck15', 'wifi15'], 30: ['firecheck30'] };
+        const nameMap = { firecheck15: '消防檢查（15 號）', firecheck30: '消防檢查（30 號）', wifi1: 'WIFI 檢測（1 號）', wifi15: 'WIFI 檢測（15 號）' };
         const fields = todayMap[day] || [];
         MONTHLY_FIELDS.forEach(function (x) {
             if (fields.indexOf(x[5]) < 0) return;
             const cb = document.getElementById(x[0]);
-            if (cb && !cb.checked) out.push({ field: x[5], label: x[4].replace('本月', '') });
+            if (cb && !cb.checked) out.push({ field: x[5], label: nameMap[x[5]] || x[4] });
         });
         return out;
     }
@@ -3837,11 +3838,11 @@ items: collectItems(),
             ['NFC 檢測 Hall', nfcHall ? nfcHall : '無需檢測'],
             ['NFC 異常', nfcCount ? (nfcCount + ' 項') : '無'],
             ['設備檢查',
-                'Sound Bar ' + (data.soundbar || ((MONTHLY.soundbar || {}).done ? '本月已檢測' : '未檢測')) +
-                '｜消防15日 ' + (data.firecheck15 || ((MONTHLY.fire15 || {}).done ? '本月已檢查' : '未檢查')) +
-                '｜消防30日 ' + (data.firecheck30 || ((MONTHLY.fire30 || {}).done ? '本月已檢查' : '未檢查')) +
-                '｜WIFI 1日 ' + (data.wifi1 || ((MONTHLY.wifi1 || {}).done ? '本月已檢測' : '未檢測')) +
-                '｜WIFI 15日 ' + (data.wifi15 || ((MONTHLY.wifi15 || {}).done ? '本月已檢測' : '未檢測'))],
+                'Sound Bar ' + (data.soundbar || ((MONTHLY.soundbar || {}).done ? '本月已檢測' : '本月尚未檢測')) +
+                '｜消防15日 ' + (data.firecheck15 || ((MONTHLY.fire15 || {}).done ? '本月15號已檢查' : '本月15號尚未檢查')) +
+                '｜消防30日 ' + (data.firecheck30 || ((MONTHLY.fire30 || {}).done ? '本月30號已檢查' : '本月30號尚未檢查')) +
+                '｜WIFI 1日 ' + (data.wifi1 || ((MONTHLY.wifi1 || {}).done ? '本月1號已檢測' : '本月1號尚未檢測')) +
+                '｜WIFI 15日 ' + (data.wifi15 || ((MONTHLY.wifi15 || {}).done ? '本月15號已檢測' : '本月15號尚未檢測'))],
             ['場面問題', venueLines.length ? (venueLines.length + ' 項') : '無'],
             ['當更同事', data.on_duty || '—'],
             ['負責跟進人', data.follower || '—'],
