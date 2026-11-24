@@ -474,7 +474,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-22", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-23", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1075,6 +1075,22 @@ def _si_write_reopen(c, record_id, keys):
     return n
 
 
+def _si_guess_cat_prob(it):
+    """category／problem 空白時，由 detail 推導（以最後一個 ' - ' 分割）。
+    例：'櫈 - 客櫈 - 坐墊破損' → ('櫈 - 客櫈', '坐墊破損')；'地墊 - 污漬' → ('地墊', '污漬')"""
+    cat = (it.get('category') or '').strip()
+    prob = (it.get('problem') or '').strip()
+    if cat:
+        return cat, prob
+    detail = (it.get('detail') or '').strip()
+    if not detail:
+        return '', prob
+    if ' - ' in detail:
+        left, right = detail.rsplit(' - ', 1)
+        return left.strip(), (prob or right.strip())
+    return '', prob
+
+
 def _si_write_items(c, record_id, items, source='submit'):
     """把前端送來的結構化 items 寫入 shift_items（同 key 只寫一次）。"""
     if not items:
@@ -1084,14 +1100,20 @@ def _si_write_items(c, record_id, items, source='submit'):
     for it in items:
         if not isinstance(it, dict):
             continue
-        key = _item_key(it)
+        _cat, _prob = _si_guess_cat_prob(it)
+        it2 = dict(it)
+        if _cat and not (it2.get('category') or '').strip():
+            it2['category'] = _cat
+        if _prob and not (it2.get('problem') or '').strip():
+            it2['problem'] = _prob
+        key = _item_key(it2)
         if not key or key in seen:
             continue
-        code = (it.get('code') or '').strip()
+        code = (it2.get('code') or '').strip()
         if not code:
             continue
         seen.add(key)
-        _si_insert(c, record_id, source, key, it, it.get('status') or '待處理', None, '')
+        _si_insert(c, record_id, source, key, it2, it2.get('status') or '待處理', None, '')
         n += 1
     return n
 
@@ -2591,7 +2613,7 @@ def _si_overlay_detect(out, date_str, done_at=None):
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("""SELECT type, code, category, problem, status,
+        c.execute("""SELECT type, code, category, problem, status, COALESCE(detail, ''),
                             (event_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date
                      FROM shift_items
                      WHERE (event_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau')::date <= %s
@@ -2609,9 +2631,14 @@ def _si_overlay_detect(out, date_str, done_at=None):
 
     latest = {}
     first_seen = {}
-    for typ, code, cat, prob, status, _d in rows:
+    for typ, code, cat, prob, status, detail, _d in rows:
         catname = {'NFC': 'NFC', 'Lux': 'Lux 異常',
                    '溫度': '溫度 異常', '分貝': '分貝 異常'}.get(typ, cat or '')
+        if not catname:
+            # 舊行 category 空白（例如直接打 API 寫 items）→ 由 detail 推導
+            catname, _p = _si_guess_cat_prob({'category': cat, 'problem': prob, 'detail': detail})
+            if not prob:
+                prob = _p
         if not catname or not code:
             continue
         k = (catname, _up_norm(code))
