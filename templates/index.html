@@ -193,7 +193,7 @@
                 <button onclick="window.location.href='/logout';" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: #e74c3c; background: #ffebee; padding: 8px 4px; border-radius: 6px; border: none; cursor: pointer; font-size:12px; font-weight:bold;">🚪 登出</button>
             </div>
         </div>
-        <button class="submit-btn" onclick="showForm()" style="margin-top: 0; margin-bottom: 10px; background-color: #2ecc71;">📝 新增BS交更紀錄</button>
+        <button class="submit-btn" onclick="openDayPicker()" style="margin-top: 0; margin-bottom: 10px; background-color: #2ecc71;">📝 新增BS交更紀錄</button>
         
         <div id="home-pending-container" style="display: none; background: #fff3cd; padding: 9px 12px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 14px;">
             <div onclick="toggleHomePending()" style="cursor: pointer;">
@@ -216,6 +216,7 @@
     <div class="card" id="form-container" style="display: none;">
         <h2>📝 BS交更內容</h2>
         <button type="button" class="btn-add" style="background-color: #e67c73; width: 100%; margin-bottom: 15px; padding: 10px;" onclick="showList()">❌ 取消並返回紀錄</button>
+        <div id="shift-day-badge" style="display: block; text-align: center; font-size: 12px; font-weight: bold; color: #1565c0; background: #e3f2fd; border-radius: 8px; padding: 6px; margin-bottom: 10px;"></div>
         
         <div class="row">
             <div>
@@ -245,7 +246,7 @@
         </div>
 
         <!-- 1. LUX 獨立一行 -->
-        <div style="margin-top: 15px;">
+        <div id="lux-block" style="margin-top: 15px;">
             <div style="display: flex; justify-content: space-between; align-items: center; min-height: 24px; margin-bottom: 5px;">
                 <label style="margin: 0; white-space: nowrap;">全場 Lux：</label>
                 <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
@@ -279,7 +280,7 @@
         </div>
 
         <!-- 2. 溫度 獨立一行 -->
-        <div style="margin-top: 15px;">
+        <div id="temp-block" style="margin-top: 15px;">
             <div style="display: flex; justify-content: space-between; align-items: center; min-height: 24px; margin-bottom: 5px;">
                 <label style="margin: 0; white-space: nowrap;">全場 溫度 (°C)：</label>
                 <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
@@ -309,7 +310,7 @@
         </div>
 
         <!-- 3. BGM 分貝 獨立一行 -->
-        <div style="margin-top: 15px;">
+        <div id="bgm-block" style="margin-top: 15px;">
             <div style="display: flex; justify-content: space-between; align-items: center; min-height: 24px; margin-bottom: 5px;">
                 <label style="margin: 0; white-space: nowrap;">全場 BGM 分貝 (dB)：</label>
                 <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
@@ -339,7 +340,7 @@
         </div>
 
         <!-- 4. NFC -->
-        <div style="display: flex; justify-content: space-between; align-items: center; min-height: 24px; margin-top: 15px;">
+        <div id="nfc-head" style="display: flex; justify-content: space-between; align-items: center; min-height: 24px; margin-top: 15px;">
             <label style="margin: 0; white-space: nowrap;">NFC 檢測：</label>
             <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
                 <input type="checkbox" id="skip-nfc" onchange="toggleSkip('nfc')" style="width: 16px; height: 16px; margin-right: 5px;"> 無需檢測
@@ -385,6 +386,25 @@
             </div>
         </div>
         
+        <!-- 星期日：停運台櫈況檢查 -->
+        <div id="sunday-block" style="display: none; margin-top: 18px;">
+            <div class="fold-head" style="margin-top: 0;" onclick="toggleFold('sunday-body','sunday-arrow')">
+                <span>🪑 停運台櫈況檢查（星期日）</span><span id="sunday-arrow" class="fold-arrow">▲ 收起</span>
+            </div>
+            <div id="sunday-body" class="issue-group" style="display: block; background: #f3e5f5; border-color: #ce93d8; margin-top: 6px;">
+                <div class="issue-title" style="color: #6a1b9a;">停運台櫈況（勾選＝該台有問題櫈）</div>
+                <div style="font-size: 11px; color: #6a1b9a; line-height: 1.5; margin-bottom: 8px;">
+                    客櫈 ＝ 5 張問題客櫈放在該台；DLR 櫈 ＝ 1 張問題 DLR 櫈放在該台。<br>
+                    🔒 代表該台已有未處理項目，一律鎖定；要取消請去「待跟進（黃框）」處理。
+                </div>
+                <div id="sunday-summary" style="font-size: 12px; color: #4a148c; font-weight: bold; margin-bottom: 6px;"></div>
+                <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+                    <input type="text" id="sunday-search" oninput="filterSundayRows()" placeholder="🔍 搜尋台號…" style="flex: 1; padding: 8px; border: 1px solid #ce93d8; border-radius: 8px; font-size: 13px;">
+                </div>
+                <div id="sunday-list" onchange="updateSundaySummary()" style="max-height: 60vh; overflow-y: auto; -webkit-overflow-scrolling: touch;"></div>
+            </div>
+        </div>
+
         <div class="fold-head" style="margin-top: 20px;" onclick="toggleFold('guest-body','guest-arrow')">
             <span>👥 客人意見收集（如不需要請留空）</span><span id="guest-arrow" class="fold-arrow">▲ 收起</span>
         </div>
@@ -858,6 +878,15 @@ function setSubmitting(on) {
             d.notes = document.getElementById('notes').value;
             d.follower = Array.from(document.querySelectorAll('.follower-item:checked')).map(c => c.value);
             d.onDuty = Array.from(document.querySelectorAll('.onduty-item:checked')).map(c => c.value);
+            d.shiftDay = SHIFT_DAY;
+            d.sunday = [];
+            document.querySelectorAll('#sunday-list .sunday-row').forEach(function (row) {
+                const cg = row.querySelector('.sun-guest');
+                const cd = row.querySelector('.sun-dlr');
+                if ((cg && cg.checked && !cg.disabled) || (cd && cd.checked && !cd.disabled)) {
+                    d.sunday.push({ code: row.getAttribute('data-code'), g: !!(cg && cg.checked), d: !!(cd && cd.checked) });
+                }
+            });
             
             d.skipLux = document.getElementById('skip-lux').checked;
             d.lux = document.getElementById('lux').value;
@@ -988,6 +1017,10 @@ function setSubmitting(on) {
                 updateOnDutyUI();
             }
 
+            if (d.shiftDay) {
+                SHIFT_DAY = d.shiftDay;
+                SUNDAY_RESTORE = (SHIFT_DAY === 7 && Array.isArray(d.sunday)) ? d.sunday : null;
+            }
             document.getElementById('skip-lux').checked = d.skipLux;
             toggleSkip('lux');
             if (!d.skipLux) {
@@ -1153,6 +1186,8 @@ function setSubmitting(on) {
         document.getElementById('form-container').style.display = 'block'; 
         loadPendingIssues(); 
         transformInputs(); 
+        if (PENDING_DAY != null) { SHIFT_DAY = PENDING_DAY; PENDING_DAY = null; }
+        applyDayMode();
         window.scrollTo(0, 0); 
     }
 
@@ -1188,6 +1223,167 @@ function setSubmitting(on) {
             list.style.display = 'none'; 
             arrow.innerHTML = '▼ 展開'; 
         } 
+    }
+
+    // ===== 星期分流（v39）：星期一至六一般交更（NFC 自動 Hall），星期日停運台櫈況檢查 =====
+    const DAY_NAMES = ['', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
+    let SHIFT_DAY = null;        // 1=Mon … 7=Sun
+    let PENDING_DAY = null;      // 選完星期、尚未進表單前的暫存
+    let SUNDAY_ALL = [];         // [{code, hall, pit}]
+    let SUNDAY_LOCK = { g: {}, d: {} };
+    let SUNDAY_RESTORE = null;   // 草稿還原 [{code, g, d}]
+
+    function openDayPicker() {
+        const grid = document.getElementById('day-picker-grid');
+        if (grid) {
+            grid.innerHTML = [1, 2, 3, 4, 5, 6, 7].map(function (n) {
+                const sun = n === 7;
+                const bg = sun ? '#f3e5f5' : '#e3f2fd';
+                const col = sun ? '#6a1b9a' : '#1565c0';
+                const sub = sun ? '停運台櫈況' : ('Hall ' + n);
+                return '<button type="button" onclick="pickDay(' + n + ')" style="padding:12px 4px;border:none;border-radius:10px;background:' + bg + ';color:' + col + ';font-size:14px;font-weight:bold;">'
+                    + DAY_NAMES[n] + '<div style="font-size:10px;font-weight:normal;margin-top:2px;color:' + col + ';">' + sub + '</div></button>';
+            }).join('');
+        }
+        const m = document.getElementById('day-picker');
+        if (m) m.style.display = 'flex';
+    }
+
+    function closeDayPicker() {
+        const m = document.getElementById('day-picker');
+        if (m) m.style.display = 'none';
+    }
+
+    function pickDay(n) {
+        closeDayPicker();
+        PENDING_DAY = n;
+        showForm(true);
+    }
+
+    function applyDayMode() {
+        const isSun = SHIFT_DAY === 7;
+        ['lux', 'temp', 'bgm'].forEach(function (t) {
+            const blk = document.getElementById(t + '-block');
+            const skip = document.getElementById('skip-' + t);
+            const area = document.getElementById(t + '-input-area');
+            if (isSun) {
+                if (blk) blk.style.display = 'none';
+                if (skip) skip.checked = true;
+                if (area) area.style.display = 'none';
+            } else if (blk) {
+                blk.style.display = '';
+            }
+        });
+        const nfcHead = document.getElementById('nfc-head');
+        const nfcArea = document.getElementById('nfc-input-area');
+        const nfcSkip = document.getElementById('skip-nfc');
+        if (isSun) {
+            if (nfcHead) nfcHead.style.display = 'none';
+            if (nfcSkip) nfcSkip.checked = true;
+            if (nfcArea) nfcArea.style.display = 'none';
+            const g = document.getElementById('nfc-issue-group'); if (g) g.style.display = 'none';
+        } else {
+            if (nfcHead) nfcHead.style.display = '';
+            if (nfcSkip && nfcArea) nfcArea.style.display = nfcSkip.checked ? 'none' : 'block';
+            const sel = document.getElementById('nfc-hall-select');
+            if (sel && SHIFT_DAY >= 1 && SHIFT_DAY <= 6) sel.value = 'Hall ' + SHIFT_DAY;
+        }
+        const sb = document.getElementById('sunday-block');
+        if (sb) sb.style.display = isSun ? 'block' : 'none';
+        const badge = document.getElementById('shift-day-badge');
+        if (badge) {
+            badge.textContent = SHIFT_DAY
+                ? ('📅 ' + DAY_NAMES[SHIFT_DAY] + (isSun ? '｜停運台櫈況檢查' : '｜NFC 自動 Hall ' + SHIFT_DAY))
+                : '';
+        }
+        if (isSun) {
+            loadSundayTables();
+        } else {
+            const l = document.getElementById('sunday-list');
+            if (l) l.innerHTML = '';
+        }
+    }
+
+    async function loadSundayTables() {
+        const list = document.getElementById('sunday-list');
+        if (!list) return;
+        if (!SUNDAY_ALL.length) {
+            list.innerHTML = '<div style="padding:10px;color:#888;font-size:12px;">載入停運台…</div>';
+            try {
+                const d = await fetch('/api/table_codes', { cache: 'no-store' }).then(function (r) { return r.json(); });
+                SUNDAY_ALL = (d.stopped_detail || []).slice();
+                if (!SUNDAY_ALL.length && d.stopped) {
+                    SUNDAY_ALL = d.stopped.map(function (c) { return { code: c, hall: '', pit: '' }; });
+                }
+            } catch (e) { SUNDAY_ALL = []; }
+        }
+        SUNDAY_LOCK = { g: {}, d: {} };
+        try {
+            const p = await fetch('/api/pending_items', { cache: 'no-store' }).then(function (r) { return r.json(); });
+            (p.pending_items || []).forEach(function (it) {
+                if (it.type !== '場面' || !it.code) return;
+                const cat = it.category || '';
+                const code = String(it.code).toUpperCase();
+                if (cat.indexOf('客櫈') >= 0 || cat.indexOf('客椅') >= 0) SUNDAY_LOCK.g[code] = true;
+                if (cat.indexOf('DLR') >= 0 && (cat.indexOf('櫈') >= 0 || cat.indexOf('椅') >= 0)) SUNDAY_LOCK.d[code] = true;
+            });
+        } catch (e) {}
+        renderSundayRows();
+    }
+
+    function renderSundayRows() {
+        const list = document.getElementById('sunday-list');
+        if (!list) return;
+        if (!SUNDAY_ALL.length) {
+            list.innerHTML = '<div style="padding:10px;color:#888;font-size:12px;">没有停運台。</div>';
+            updateSundaySummary();
+            return;
+        }
+        const restore = {};
+        (SUNDAY_RESTORE || []).forEach(function (x) { restore[x.code] = x; });
+        let html = '';
+        SUNDAY_ALL.forEach(function (t) {
+            const code = t.code;
+            const lg = !!SUNDAY_LOCK.g[code];
+            const ld = !!SUNDAY_LOCK.d[code];
+            const rs = restore[code] || {};
+            const cg = lg || !!rs.g;
+            const cd = ld || !!rs.d;
+            html += '<div class="sunday-row" data-code="' + code + '" style="display:flex;align-items:center;gap:6px;padding:7px 4px;border-bottom:1px dashed #e1bee7;">'
+                 + '<span style="flex:1;min-width:64px;font-size:13px;font-weight:bold;color:#4a148c;">' + ((lg || ld) ? '🔒' : '') + code
+                 + '<span style="display:block;font-size:10px;color:#9e9e9e;font-weight:normal;">' + (t.hall ? ('Hall ' + t.hall + (t.pit ? ' / Pit ' + t.pit : '')) : '') + '</span></span>'
+                 + '<label style="font-size:12px;display:flex;align-items:center;gap:4px;background:' + (lg ? '#e8f5e9' : '#fff') + ';border:1px solid #ce93d8;border-radius:8px;padding:6px 8px;white-space:nowrap;' + (lg ? 'opacity:.8;' : '') + '">'
+                 + '<input type="checkbox" class="sun-guest"' + (cg ? ' checked' : '') + (lg ? ' disabled' : '') + ' style="width:18px;height:18px;"> 客櫈×5</label>'
+                 + '<label style="font-size:12px;display:flex;align-items:center;gap:4px;background:' + (ld ? '#e8f5e9' : '#fff') + ';border:1px solid #80cbc4;border-radius:8px;padding:6px 8px;white-space:nowrap;' + (ld ? 'opacity:.8;' : '') + '">'
+                 + '<input type="checkbox" class="sun-dlr"' + (cd ? ' checked' : '') + (ld ? ' disabled' : '') + ' style="width:18px;height:18px;"> DLR×1</label>'
+                 + '</div>';
+        });
+        list.innerHTML = html;
+        SUNDAY_RESTORE = null;
+        updateSundaySummary();
+    }
+
+    function updateSundaySummary() {
+        const s = document.getElementById('sunday-summary');
+        if (!s) return;
+        let g = 0, d = 0, locked = 0;
+        document.querySelectorAll('#sunday-list .sunday-row').forEach(function (row) {
+            const cg = row.querySelector('.sun-guest');
+            const cd = row.querySelector('.sun-dlr');
+            if (cg && cg.checked) g++;
+            if (cd && cd.checked) d++;
+            if ((cg && cg.disabled) || (cd && cd.disabled)) locked++;
+        });
+        s.innerHTML = '共 ' + SUNDAY_ALL.length + ' 張停運台｜客櫈 ' + g + ' 台（＝' + (g * 5) + ' 張）｜DLR 櫈 ' + d + ' 台（＝' + d + ' 張）'
+            + (locked ? '｜🔒 已有未處理 ' + locked + ' 台' : '');
+    }
+
+    function filterSundayRows() {
+        const q = ((document.getElementById('sunday-search') || {}).value || '').trim().toUpperCase();
+        document.querySelectorAll('#sunday-list .sunday-row').forEach(function (row) {
+            const code = row.getAttribute('data-code') || '';
+            row.style.display = (!q || code.indexOf(q) >= 0) ? 'flex' : 'none';
+        });
     }
 
     function toggleIssue(type) { 
@@ -1600,6 +1796,11 @@ function setSubmitting(on) {
     }
 
     function resetForm(isNew = false) {
+        SHIFT_DAY = null;
+        PENDING_DAY = null;
+        const _sb = document.getElementById('sunday-block'); if (_sb) _sb.style.display = 'none';
+        const _sl = document.getElementById('sunday-list'); if (_sl) _sl.innerHTML = '';
+        const _sbadge = document.getElementById('shift-day-badge'); if (_sbadge) _sbadge.textContent = '';
         document.getElementById('staffName').value = '';
         document.getElementById('notes').value = '';
         document.querySelectorAll('.follower-item').forEach(cb => cb.checked = false);
@@ -2628,6 +2829,23 @@ function collectItems() {
             });
         });
     });
+    // 星期日：停運台櫈況（勾選＝上報；已鎖定＝已有項目，不重複寫）
+    if (SHIFT_DAY === 7) {
+        document.querySelectorAll('#sunday-list .sunday-row').forEach(function (row) {
+            const code = row.getAttribute('data-code') || '';
+            if (!code) return;
+            const cg = row.querySelector('.sun-guest');
+            const cd = row.querySelector('.sun-dlr');
+            if (cg && cg.checked && !cg.disabled) {
+                out.push({ type: '場面', code: code, category: '櫈 - 客櫈', problem: '問題客櫈',
+                           detail: '', side: '', status: '待處理', note: '' });
+            }
+            if (cd && cd.checked && !cd.disabled) {
+                out.push({ type: '場面', code: code, category: '櫈 - DLR櫈', problem: '問題DLR櫈',
+                           detail: '', side: '', status: '待處理', note: '' });
+            }
+        });
+    }
     // Lux（每個 Box 各自一項）
     if (!document.getElementById('skip-lux').checked) {
         document.querySelectorAll('.lux-item').forEach(item => {
@@ -5007,5 +5225,18 @@ function collectItems() {
         });
     })();
     </script>
+
+    <!-- ===== 選星期彈窗（v39） ===== -->
+    <div id="day-picker" style="display: none; position: fixed; inset: 0; z-index: 10040; background: rgba(0,0,0,.45); align-items: center; justify-content: center; padding: 16px;">
+        <div style="background: #fff; border-radius: 14px; padding: 16px; width: 100%; max-width: 420px; max-height: 88vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,.25);">
+            <h3 style="margin: 0 0 6px; font-size: 16px; text-align: center;">選擇交更日（星期）</h3>
+            <div style="font-size: 12px; color: #666; text-align: center; line-height: 1.5; margin-bottom: 12px;">
+                星期一至六：一般交更，NFC 自動對應 Hall 1–6<br>
+                星期日：停運台櫈況檢查（不計 Lux／溫度／BGM／NFC）
+            </div>
+            <div id="day-picker-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;"></div>
+            <button type="button" onclick="closeDayPicker()" style="width: 100%; margin-top: 14px; padding: 11px; border: none; border-radius: 8px; background: #eceff1; color: #455a64; font-size: 14px; font-weight: bold;">取消</button>
+        </div>
+    </div>
 </body>
 </html>
