@@ -2738,6 +2738,7 @@ async function loadPendingIssues() {
                             + (_sbOk ? _chip(true, 'Sound Bar 已檢測') : _chip(false, 'Sound Bar 尚未檢測'))
                             + '</div>');
                         // 冇紀錄值時：本月已完成 → 已做；檢查日已到／已過 → 尚未做；未到檢查日 → 唔顯示
+                        // 兩行顯示：第一行項目（例：消防 15 號），第二行狀態（已檢查／尚未檢查）
                         const _cell = function (val, field, label, okWord, mKey) {
                             let v = val || '';
                             if (!v) {
@@ -2749,19 +2750,22 @@ async function loadPendingIssues() {
                                 else v = 'na';
                             }
                             if (v === 'na') {
-                                return '<span style="display:block; text-align:center; padding:4px 6px; border-radius:9px; font-size:10.5px; white-space:nowrap; background:#f1f3f4; color:#80868b; border:1px solid #dadce0;">' + label + ' 未到檢查日</span>';
+                                return '<span style="display:block; text-align:center; padding:4px 4px; border-radius:9px; white-space:nowrap; background:#f1f3f4; color:#80868b; border:1px solid #dadce0;">'
+                                    + '<span style="display:block; font-size:11px; font-weight:bold;">' + label + '</span>'
+                                    + '<span style="display:block; font-size:10px;">未到檢查日</span></span>';
                             }
                             const ok = (String(v).charAt(0) === '已');
-                            return '<span style="display:block; text-align:center; padding:4px 6px; border-radius:9px; font-size:10.5px; white-space:nowrap; '
+                            return '<span style="display:block; text-align:center; padding:4px 4px; border-radius:9px; white-space:nowrap; '
                                 + 'background:' + (ok ? '#e6f4ea' : '#fff4e5') + '; color:' + (ok ? '#137333' : '#b26a00') + '; '
                                 + 'border:1px solid ' + (ok ? '#b7e1cd' : '#ffd8a8') + ';">'
-                                + (ok ? '✅ ' : '⚠️ ') + label + (ok ? '已' : '尚未') + okWord + '</span>';
+                                + '<span style="display:block; font-size:11px; font-weight:bold;">' + label + '</span>'
+                                + '<span style="display:block; font-size:10px;">' + (ok ? '已' : '尚未') + okWord + '</span></span>';
                         };
                         rows.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:5px;">'
-                            + _cell(r.firecheck15, 'firecheck15', '消防15', '檢查', 'fire15')
-                            + _cell(r.firecheck30, 'firecheck30', '消防30', '檢查', 'fire30')
-                            + _cell(r.wifi1, 'wifi1', 'WIFI1', '檢測', 'wifi1')
-                            + _cell(r.wifi15, 'wifi15', 'WIFI15', '檢測', 'wifi15')
+                            + _cell(r.firecheck15, 'firecheck15', '消防 15 號', '檢查', 'fire15')
+                            + _cell(r.firecheck30, 'firecheck30', '消防 30 號', '檢查', 'fire30')
+                            + _cell(r.wifi1, 'wifi1', 'WIFI 1 號', '檢測', 'wifi1')
+                            + _cell(r.wifi15, 'wifi15', 'WIFI 15 號', '檢測', 'wifi15')
                             + '</div>');
                         }
                     }
