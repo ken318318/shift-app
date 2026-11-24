@@ -1608,7 +1608,11 @@ function setSubmitting(on) {
 
     function toggleDet(type) {
         const on = detOn(type);
-        if (type === 'nfc' && on) NFC_FOLDED = false;   // 勾返 NFC 就自動展開
+        if (type === 'nfc' && on) {
+            NFC_FOLDED = false;   // 勾返 NFC 就自動展開
+            const _fb = document.getElementById('nfc-fold');
+            if (_fb) _fb.textContent = '▲ 收起';
+        }
         const area = document.getElementById(type + '-input-area');
         if (type === 'nfc') {
             if (area) area.style.display = (on && !NFC_FOLDED) ? 'block' : 'none';
@@ -2101,6 +2105,12 @@ function setSubmitting(on) {
         document.querySelectorAll('.onduty-item').forEach(cb => cb.checked = false);
         updateOnDutyUI();
         ['lux', 'temp', 'bgm', 'nfc'].forEach(type => setDet(type, true));
+        ['soundbar', 'fire'].forEach(function (x) {
+            const b = document.getElementById(x + '-body');
+            const a = document.getElementById(x + '-arrow');
+            if (b) b.style.display = 'none';
+            if (a) a.textContent = '▼ 展開';
+        });
         [['chk-soundbar', ''], ['chk-fire15', ''], ['chk-fire30', '']].forEach(function (x) {
             const cb = document.getElementById(x[0]);
             if (cb) { cb.checked = false; cb.disabled = false; }
