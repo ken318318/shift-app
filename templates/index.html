@@ -342,9 +342,12 @@
         <!-- 4. NFC -->
         <div id="nfc-head" style="display: flex; justify-content: space-between; align-items: center; min-height: 24px; margin-top: 15px;">
             <label style="margin: 0; white-space: nowrap;">NFC 檢測：</label>
-            <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
-                <input type="checkbox" id="det-nfc" onchange="toggleDet('nfc')" style="width: 16px; height: 16px; margin-right: 5px;"> 已檢測
-            </label>
+            <div style="display: flex; align-items: center; gap: 10px; white-space: nowrap;">
+                <label style="font-weight: normal; font-size: 13px; margin: 0; cursor: pointer; display: flex; align-items: center; white-space: nowrap;">
+                    <input type="checkbox" id="det-nfc" onchange="toggleDet('nfc')" style="width: 16px; height: 16px; margin-right: 5px;"> 已檢測
+                </label>
+                <button type="button" id="nfc-fold" onclick="toggleNfcFold()" style="border: none; background: #eceff1; color: #455a64; font-size: 11px; font-weight: bold; padding: 4px 8px; border-radius: 8px; cursor: pointer;">▲ 收起</button>
+            </div>
         </div>
         <div id="nfc-input-area" style="margin-top: 5px;">
             <div style="display: flex; gap: 10px; align-items: center; margin-top: 5px; flex-wrap: wrap;">
@@ -469,16 +472,25 @@
             <textarea class="dlr-note" rows="2" placeholder="備註／事情描述（可留空）" style="width:100%; margin-top:8px; padding:8px; border:1px solid #80cbc4; border-radius:8px; font-size:13px; font-family:inherit; box-sizing:border-box;"></textarea>
         </div>
 
-        <!-- 4b. 設備檢查（Sound Bar／消防） -->
-        <div style="margin-top: 14px; background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: 10px;">
-            <div style="font-size: 13px; font-weight: bold; color: #2e7d32; margin-bottom: 4px;">🛠️ 設備檢查（打勾＝已完成）</div>
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: normal; padding: 7px 0; cursor: pointer;">
-                <input type="checkbox" id="chk-soundbar" onchange="refreshEquipLabels()" style="width: 18px; height: 18px;"> Sound Bar 檢測（每月一次）<span id="lbl-soundbar" style="font-size: 11px; color: #2e7d32; font-weight: bold;"></span>
+        <!-- 4b. Sound Bar 檢測（獨立，預設收起） -->
+        <div class="fold-head" style="margin-top: 14px;" onclick="toggleFold('soundbar-body','soundbar-arrow')">
+            <span>🔊 Sound Bar 檢測（每月一次）<span id="head-soundbar" style="font-size: 11px; font-weight: normal; color: #1565c0; margin-left: 6px;"></span></span><span id="soundbar-arrow" class="fold-arrow">▼ 展開</span>
+        </div>
+        <div id="soundbar-body" class="issue-group" style="display: none; background: #e3f2fd; border-color: #90caf9; margin-top: 6px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: normal; padding: 4px 0; cursor: pointer;">
+                <input type="checkbox" id="chk-soundbar" onchange="refreshEquipLabels()" style="width: 18px; height: 18px;"> 已完成 Sound Bar 檢測<span id="lbl-soundbar" style="font-size: 11px; color: #2e7d32; font-weight: bold;"></span>
             </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: normal; padding: 7px 0; cursor: pointer;">
+        </div>
+
+        <!-- 4c. 消防檢查（獨立，預設收起） -->
+        <div class="fold-head" style="margin-top: 12px;" onclick="toggleFold('fire-body','fire-arrow')">
+            <span>🧯 消防檢查（每月 15 日／30 日）<span id="head-fire" style="font-size: 11px; font-weight: normal; color: #e65100; margin-left: 6px;"></span></span><span id="fire-arrow" class="fold-arrow">▼ 展開</span>
+        </div>
+        <div id="fire-body" class="issue-group" style="display: none; background: #fff3e0; border-color: #ffcc80; margin-top: 6px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: normal; padding: 5px 0; cursor: pointer;">
                 <input type="checkbox" id="chk-fire15" onchange="refreshEquipLabels()" style="width: 18px; height: 18px;"> 消防檢查（每月 15 日）<span id="lbl-fire15" style="font-size: 11px; color: #2e7d32; font-weight: bold;"></span>
             </label>
-            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: normal; padding: 7px 0; cursor: pointer;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: normal; padding: 5px 0; cursor: pointer;">
                 <input type="checkbox" id="chk-fire30" onchange="refreshEquipLabels()" style="width: 18px; height: 18px;"> 消防檢查（每月 30 日）<span id="lbl-fire30" style="font-size: 11px; color: #2e7d32; font-weight: bold;"></span>
             </label>
         </div>
@@ -1343,10 +1355,11 @@ function setSubmitting(on) {
         if (isSun) {
             if (nfcHead) nfcHead.style.display = 'flex';   // 星期日仍可做 NFC，預設唔勾（無需檢測）
             setDet('nfc', false);
-            if (nfcArea) nfcArea.style.display = 'none';
+            toggleNfcFold(true);                            // 星期日預設收起
             const g = document.getElementById('nfc-issue-group'); if (g) g.style.display = 'none';
         } else {
             if (nfcHead) nfcHead.style.display = 'flex';
+            toggleNfcFold(false);
             if (nfcArea) nfcArea.style.display = detOn('nfc') ? 'block' : 'none';
             const sel = document.getElementById('nfc-hall-select');
             if (sel && SHIFT_DAY >= 1 && SHIFT_DAY <= 6) sel.value = 'Hall ' + SHIFT_DAY;
@@ -1584,10 +1597,22 @@ function setSubmitting(on) {
         const cb = document.getElementById('det-' + type);
         return !!(cb && cb.checked);
     }
+    let NFC_FOLDED = false;
+    function toggleNfcFold(force) {
+        NFC_FOLDED = (typeof force === 'boolean') ? force : !NFC_FOLDED;
+        const area = document.getElementById('nfc-input-area');
+        if (area) area.style.display = (!NFC_FOLDED && detOn('nfc')) ? 'block' : 'none';
+        const btn = document.getElementById('nfc-fold');
+        if (btn) btn.textContent = NFC_FOLDED ? '▼ 展開' : '▲ 收起';
+    }
+
     function toggleDet(type) {
         const on = detOn(type);
+        if (type === 'nfc' && on) NFC_FOLDED = false;   // 勾返 NFC 就自動展開
         const area = document.getElementById(type + '-input-area');
-        if (area) area.style.display = on ? 'block' : 'none';
+        if (type === 'nfc') {
+            if (area) area.style.display = (on && !NFC_FOLDED) ? 'block' : 'none';
+        } else if (area) area.style.display = on ? 'block' : 'none';
         const g = document.getElementById(type + '-issue-group');
         if (!on) { if (g) g.style.display = 'none'; }
         else if (type !== 'nfc') { toggleIssue(type); }
@@ -1621,6 +1646,7 @@ function setSubmitting(on) {
     }
 
     function applyMonthlyLocks() {
+        updateEquipHeads();
         const map = [
             ['chk-soundbar', 'lbl-soundbar', 'soundbar', '本月已檢測'],
             ['chk-fire15', 'lbl-fire15', 'fire15', '本月 15 日已檢查'],
@@ -1640,6 +1666,18 @@ function setSubmitting(on) {
                 if (lb) lb.textContent = cb.checked ? '✅ 本次已勾' : '';
             }
         });
+    }
+
+    function updateEquipHeads() {
+        const m = MONTHLY || {};
+        const sb = document.getElementById('head-soundbar');
+        if (sb) sb.textContent = (m.soundbar && m.soundbar.done) ? ('🔒 本月已檢測（' + String(m.soundbar.date || '').slice(5) + '）') : '本月未檢測';
+        const fh = document.getElementById('head-fire');
+        if (fh) {
+            const a = (m.fire15 && m.fire15.done) ? '15日✅' : '15日—';
+            const b = (m.fire30 && m.fire30.done) ? '30日✅' : '30日—';
+            fh.textContent = a + '　' + b;
+        }
     }
 
     function refreshEquipLabels() {
