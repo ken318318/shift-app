@@ -1390,6 +1390,8 @@ function setSubmitting(on) {
                 : '';
         }
         if (isSun) {
+            const _st = document.getElementById('sun-status');
+            if (_st && !_st.value) _st.value = '已 Send mail';
             fillSundayProblemSelects();
             loadSundayTables();
         } else {
@@ -2155,6 +2157,7 @@ function setSubmitting(on) {
         document.querySelectorAll('.onduty-item').forEach(cb => cb.checked = false);
         updateOnDutyUI();
         ['lux', 'temp', 'bgm', 'nfc'].forEach(type => setDet(type, true));
+        const _sunSt = document.getElementById('sun-status'); if (_sunSt) _sunSt.value = '已 Send mail';
         ['soundbar', 'fire', 'wifi'].forEach(function (x) {
             const b = document.getElementById(x + '-body');
             const a = document.getElementById(x + '-arrow');
@@ -2734,7 +2737,7 @@ async function loadPendingIssues() {
                             + (_sbOk ? _chip(true, 'Sound Bar 已檢測') : _chip(false, 'Sound Bar 尚未檢測'))
                             + '</div>');
                         // 冇紀錄值時：本月已完成 → 已做；檢查日已到／已過 → 尚未做；未到檢查日 → 唔顯示
-                        const _slot = function (val, field, label, okWord, mKey) {
+                        const _cell = function (val, field, label, okWord, mKey) {
                             let v = val || '';
                             if (!v) {
                                 const m = MONTHLY[mKey] || {};
@@ -2742,17 +2745,23 @@ async function loadPendingIssues() {
                                 const day = MONTHLY_TODAY ? parseInt(String(MONTHLY_TODAY).slice(8, 10), 10) : 0;
                                 if (m.done) v = '已';
                                 else if (dd && day >= dd) v = '未';
-                                else return '';
+                                else v = 'na';
+                            }
+                            if (v === 'na') {
+                                return '<span style="display:block; text-align:center; padding:4px 6px; border-radius:9px; font-size:10.5px; white-space:nowrap; background:#f1f3f4; color:#80868b; border:1px solid #dadce0;">' + label + ' 未到檢查日</span>';
                             }
                             const ok = (String(v).charAt(0) === '已');
-                            return _chip(ok, label + (ok ? '已' : '尚未') + okWord);
+                            return '<span style="display:block; text-align:center; padding:4px 6px; border-radius:9px; font-size:10.5px; white-space:nowrap; '
+                                + 'background:' + (ok ? '#e6f4ea' : '#fff4e5') + '; color:' + (ok ? '#137333' : '#b26a00') + '; '
+                                + 'border:1px solid ' + (ok ? '#b7e1cd' : '#ffd8a8') + ';">'
+                                + (ok ? '✅ ' : '⚠️ ') + label + (ok ? '已' : '尚未') + okWord + '</span>';
                         };
-                        const _line2 = _slot(r.firecheck15, 'firecheck15', '消防 15號', '檢查', 'fire15')
-                                     + _slot(r.firecheck30, 'firecheck30', '消防 30號', '檢查', 'fire30');
-                        if (_line2) rows.push('<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:4px; padding-left:2px;">' + _line2 + '</div>');
-                        const _line3 = _slot(r.wifi1, 'wifi1', 'WIFI 1號', '檢測', 'wifi1')
-                                     + _slot(r.wifi15, 'wifi15', 'WIFI 15號', '檢測', 'wifi15');
-                        if (_line3) rows.push('<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:4px; padding-left:2px;">' + _line3 + '</div>');
+                        rows.push('<div style="display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-top:5px;">'
+                            + _cell(r.firecheck15, 'firecheck15', '消防15', '檢查', 'fire15')
+                            + _cell(r.firecheck30, 'firecheck30', '消防30', '檢查', 'fire30')
+                            + _cell(r.wifi1, 'wifi1', 'WIFI1', '檢測', 'wifi1')
+                            + _cell(r.wifi15, 'wifi15', 'WIFI15', '檢測', 'wifi15')
+                            + '</div>');
                         }
                     }
                     if (rows.length) {
@@ -2978,6 +2987,25 @@ async function loadPendingIssues() {
         document.getElementById('form-container').style.display = 'block'; 
         
         editingRecordId = id; 
+        SHIFT_DAY = (Number(r.shift_day) === 7) ? 7 : null;
+        SUNDAY_BIND = {};
+        if (SHIFT_DAY === 7) {
+            (r.items || []).forEach(function (it) {
+                if (!it || it.type !== '場面' || !it.code) return;
+                const cat = String(it.category || '');
+                const code = String(it.code).toUpperCase();
+                if (cat.indexOf('客櫈') >= 0 || cat.indexOf('客椅') >= 0) {
+                    SUNDAY_BIND[code] = SUNDAY_BIND[code] || {};
+                    SUNDAY_BIND[code].g = it.problem || '問題客櫈';
+                    SUNDAY_BIND[code].sg = it.status || '待處理';
+                }
+                if (cat.indexOf('DLR') >= 0 && (cat.indexOf('櫈') >= 0 || cat.indexOf('椅') >= 0)) {
+                    SUNDAY_BIND[code] = SUNDAY_BIND[code] || {};
+                    SUNDAY_BIND[code].d = it.problem || '問題DLR櫈';
+                    SUNDAY_BIND[code].sd = it.status || '待處理';
+                }
+            });
+        }
         
         document.getElementById('staffName').value = r.name;
         document.getElementById('shiftType').value = r.shift;
@@ -3131,10 +3159,12 @@ async function loadPendingIssues() {
         const _ebW1 = document.getElementById('chk-wifi1'); if (_ebW1) _ebW1.checked = !!r.wifi1;
         const _ebW15 = document.getElementById('chk-wifi15'); if (_ebW15) _ebW15.checked = !!r.wifi15;
         refreshEquipLabels();
+        applyDayMode();
         
         if (parsedNote.venue) {
             parsedNote.venue.split('\n').forEach((line, index) => {
                 if (!line.trim()) return;
+                if (SHIFT_DAY === 7 && /櫈|椅/.test(line)) return;   // 星期日項目由櫈況區還原
                 let match = line.match(/\[(.*?)\]\s*位置:\s*(.*?)\s*\[狀態:(.*?)\]/);
                 if (match) {
                     let catProbStr = match[1];
@@ -3774,6 +3804,7 @@ function collectItems() {
 temp: detOn('temp') ? document.getElementById('temp').value : "",
 bgm: detOn('bgm') ? document.getElementById('bgm').value : "",
 checklist: detOn('nfc') ? checklistString : "",
+            shift_day: SHIFT_DAY || null,
             soundbar: equipValue('chk-soundbar', '已檢測'),
             firecheck15: equipValue('chk-fire15', '已檢查', 'firecheck15'),
             firecheck30: equipValue('chk-fire30', '已檢查', 'firecheck30'),
