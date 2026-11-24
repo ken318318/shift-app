@@ -3081,7 +3081,7 @@ async function loadPendingIssues() {
             .then(res => res.json())
             .then(data => { 
                 alert(data.message); 
-                if (data.status === 'success') showList(); 
+                if (data.status === 'success') { loadMonthlyChecks(true); showList(); } 
             })
             .catch(err => alert("❌ 連線失敗，請稍後再試。")); 
         } 
