@@ -474,7 +474,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-24", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-25", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3452,7 +3452,7 @@ def api_table_codes():
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT table_code, COALESCE(status, '營運'), COALESCE(hall, ''), COALESCE(pit, '') FROM hall_tables")
+        c.execute("SELECT table_code, COALESCE(status, '營運'), COALESCE(hall::text, ''), COALESCE(pit::text, '') FROM hall_tables")
         codes, stopped, stopped_detail = [], [], []
         for code, st, hall, pit in c.fetchall():
             k = _up_norm(code)
