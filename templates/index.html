@@ -1359,7 +1359,7 @@ function setSubmitting(on) {
             const g = document.getElementById('nfc-issue-group'); if (g) g.style.display = 'none';
         } else {
             if (nfcHead) nfcHead.style.display = 'flex';
-            toggleNfcFold(false);
+            toggleNfcFold(!detOn('nfc'));
             if (nfcArea) nfcArea.style.display = detOn('nfc') ? 'block' : 'none';
             const sel = document.getElementById('nfc-hall-select');
             if (sel && SHIFT_DAY >= 1 && SHIFT_DAY <= 6) sel.value = 'Hall ' + SHIFT_DAY;
@@ -1601,21 +1601,21 @@ function setSubmitting(on) {
     function toggleNfcFold(force) {
         NFC_FOLDED = (typeof force === 'boolean') ? force : !NFC_FOLDED;
         const area = document.getElementById('nfc-input-area');
-        if (area) area.style.display = (!NFC_FOLDED && detOn('nfc')) ? 'block' : 'none';
+        if (area) area.style.display = NFC_FOLDED ? 'none' : 'block';
         const btn = document.getElementById('nfc-fold');
         if (btn) btn.textContent = NFC_FOLDED ? '▼ 展開' : '▲ 收起';
     }
 
     function toggleDet(type) {
         const on = detOn(type);
-        if (type === 'nfc' && on) {
-            NFC_FOLDED = false;   // 勾返 NFC 就自動展開
+        if (type === 'nfc') {
+            NFC_FOLDED = !on;     // 勾＝展開、唔勾＝收起
             const _fb = document.getElementById('nfc-fold');
-            if (_fb) _fb.textContent = '▲ 收起';
+            if (_fb) _fb.textContent = NFC_FOLDED ? '▼ 展開' : '▲ 收起';
         }
         const area = document.getElementById(type + '-input-area');
         if (type === 'nfc') {
-            if (area) area.style.display = (on && !NFC_FOLDED) ? 'block' : 'none';
+            if (area) area.style.display = NFC_FOLDED ? 'none' : 'block';
         } else if (area) area.style.display = on ? 'block' : 'none';
         const g = document.getElementById(type + '-issue-group');
         if (!on) { if (g) g.style.display = 'none'; }
