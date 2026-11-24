@@ -47,7 +47,7 @@
         button.submit-btn { width: 100%; padding: 14px; margin-top: 25px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
         .record-card { background: #fff; border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .record-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; font-size: 14px; gap: 10px; }
-        .record-data { font-size: 13px; color: #555; margin-bottom: 10px; background: #f4f6f8; padding: 12px 10px; border-radius: 6px; line-height: 1.9; }
+        .record-data { font-size: 13px; color: #555; margin-bottom: 8px; background: #f4f6f8; padding: 8px 9px; border-radius: 6px; line-height: 1.65; }
         .issue-data { font-size: 14px; margin-bottom: 8px; padding: 10px; border-radius: 4px; line-height: 1.5; display: grid; grid-template-columns: 1fr auto; align-items: start; gap: 8px; }
         .issue-data span:first-child { min-width: 0; word-break: break-word; }
         .issue-data span:last-child { align-self: start; }
@@ -2665,16 +2665,25 @@ async function loadPendingIssues() {
                     if (hallName) {
                         rows.push(`<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-bottom:8px;"><span style="font-weight:bold; white-space:nowrap;">🛰️ 本更 NFC 檢測：</span><span style="font-weight:bold; white-space:nowrap;">${hallName}</span><span style="background:#1a73e8; color:#fff; padding:2px 8px; border-radius:10px; font-size:11px; white-space:nowrap;">✅ 已完成</span></div>`);
                     }
-                    // 本月檢查（放喺 NFC 下面，分兩行，加大間距）
+                    // 本月檢查（NFC 下面；Sound Bar 同標題同一行，消防放第二行）
                     {
                         const _m = MONTHLY || {};
-                        const _mchip = function (info, okText, noText) {
-                            return (info && info.done)
-                                ? chip(okText + (info.date ? '（' + String(info.date).slice(5) + '）' : ''), 'ok')
-                                : chip(noText, 'warn');
+                        const _smallChip = function (info, okText, noText) {
+                            const ok = !!(info && info.done);
+                            const txt = ok ? (okText + (info.date ? ' ' + String(info.date).slice(5) : '')) : noText;
+                            return '<span style="display:inline-block; padding:1px 6px; border-radius:9px; font-size:10.5px; white-space:nowrap; '
+                                + 'background:' + (ok ? '#e6f4ea' : '#fff4e5') + '; color:' + (ok ? '#137333' : '#b26a00') + '; '
+                                + 'border:1px solid ' + (ok ? '#b7e1cd' : '#ffd8a8') + ';">'
+                                + (ok ? '✅ ' : '⚠️ ') + txt + '</span>';
                         };
-                        rows.push(`<div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:8px; border-top:1px dashed #c5d9f1;"><span style="font-weight:bold; white-space:nowrap; font-size:12px;">🛠️ 本月檢查：</span>${_mchip(_m.soundbar, 'Sound Bar 已檢測', 'Sound Bar 未檢測')}</div>`);
-                        rows.push(`<div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:6px;">${_mchip(_m.fire15, '消防 15日已檢查', '消防 15日未檢查')}${_mchip(_m.fire30, '消防 30日已檢查', '消防 30日未檢查')}</div>`);
+                        rows.push('<div style="display:flex; flex-wrap:nowrap; align-items:center; gap:5px; padding-top:6px; border-top:1px solid #dbe7f5; overflow:hidden;">'
+                            + '<span style="font-weight:bold; white-space:nowrap; font-size:11.5px;">🛠️ 本月檢查：</span>'
+                            + _smallChip(_m.soundbar, 'Sound Bar 已檢測', 'Sound Bar 未檢測')
+                            + '</div>');
+                        rows.push('<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:4px; padding-left:2px;">'
+                            + _smallChip(_m.fire15, '消防 15日已檢查', '消防 15日未檢查')
+                            + _smallChip(_m.fire30, '消防 30日已檢查', '消防 30日未檢查')
+                            + '</div>');
                     }
                     if (rows.length) {
                         let hasMeterIssue = !!(r.lux_issue || r.temp_issue || r.db_issue);
