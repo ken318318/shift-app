@@ -2730,14 +2730,25 @@ async function loadPendingIssues() {
                             + '<span style="font-weight:bold; white-space:nowrap; font-size:11.5px;">🛠️ 本月檢查：</span>'
                             + (_sbOk ? _chip(true, 'Sound Bar 已檢測') : _chip(false, 'Sound Bar 尚未檢測'))
                             + '</div>');
-                        const _slot = function (val, label, okWord, noWord) {
-                            if (!val) return '';
-                            const ok = (val.indexOf('未') !== 0);
-                            return _chip(ok, label + (ok ? okWord : noWord));
+                        // 冇紀錄值時：本月已完成 → 已做；檢查日已到／已過 → 尚未做；未到檢查日 → 唔顯示
+                        const _slot = function (val, field, label, okWord, mKey) {
+                            let v = val || '';
+                            if (!v) {
+                                const m = MONTHLY[mKey] || {};
+                                const dd = DUE_DAY[field];
+                                const day = MONTHLY_TODAY ? parseInt(String(MONTHLY_TODAY).slice(8, 10), 10) : 0;
+                                if (m.done) v = '已';
+                                else if (dd && day >= dd) v = '未';
+                                else return '';
+                            }
+                            const ok = (String(v).charAt(0) === '已');
+                            return _chip(ok, label + (ok ? '已' : '尚未') + okWord);
                         };
-                        const _line2 = _slot(r.firecheck15, '本月15號', '已檢查', '尚未檢查') + _slot(r.firecheck30, '本月30號', '已檢查', '尚未檢查');
+                        const _line2 = _slot(r.firecheck15, 'firecheck15', '本月15號', '檢查', 'fire15')
+                                     + _slot(r.firecheck30, 'firecheck30', '本月30號', '檢查', 'fire30');
                         if (_line2) rows.push('<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:4px; padding-left:2px;">' + _line2 + '</div>');
-                        const _line3 = _slot(r.wifi1, '本月1號', '已檢測', '尚未檢測') + _slot(r.wifi15, '本月15號', '已檢測', '尚未檢測');
+                        const _line3 = _slot(r.wifi1, 'wifi1', '本月1號', '檢測', 'wifi1')
+                                     + _slot(r.wifi15, 'wifi15', '本月15號', '檢測', 'wifi15');
                         if (_line3) rows.push('<div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; margin-top:4px; padding-left:2px;">' + _line3 + '</div>');
                     }
                     if (rows.length) {
