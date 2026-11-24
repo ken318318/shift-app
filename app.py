@@ -65,6 +65,7 @@ def ensure_tables():
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS firecheck30 TEXT DEFAULT ''")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS wifi1 TEXT DEFAULT ''")
         c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS wifi15 TEXT DEFAULT ''")
+        c.execute("ALTER TABLE records ADD COLUMN IF NOT EXISTS shift_day SMALLINT")
         c.execute("""CREATE TABLE IF NOT EXISTS audit_logs (
                         id BIGSERIAL PRIMARY KEY,
                         actor TEXT,
@@ -480,7 +481,7 @@ def force_primary_domain():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-30", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-31", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1134,8 +1135,8 @@ def submit():
         now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
         _items = _record_items(data.get('note'), data.get('checklist'))
         c.execute("""INSERT INTO records 
-                     (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, soundbar, firecheck, firecheck15, firecheck30, wifi1, wifi15, created_at, items) 
-                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""", 
+                     (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, soundbar, firecheck, firecheck15, firecheck30, wifi1, wifi15, shift_day, created_at, items) 
+                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                    data.get('checklist'), data.get('status'), data.get('follower'), data.get('on_duty'), data.get('note'),
                    data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
@@ -1143,6 +1144,7 @@ def submit():
                    data.get('layout_side'), data.get('soundbar') or '', data.get('firecheck15') or data.get('firecheck') or '',
                    data.get('firecheck15') or '', data.get('firecheck30') or '',
                    data.get('wifi1') or '', data.get('wifi15') or '',
+                   data.get('shift_day') or None,
                    now_macau, psycopg2.extras.Json(_items)))
         _new_rid = c.fetchone()[0]
         _si_write_items(c, _new_rid, data.get('items'), 'submit')
@@ -1190,7 +1192,7 @@ def overwrite_record():
                      name=%s, shift=%s, lux=%s, temp=%s, bgm=%s, checklist=%s, status=%s,
                      follower=%s, on_duty=%s, note=%s, lux_issue=%s, temp_issue=%s, db_issue=%s,
                      guest_feedback=%s, dlr_feedback=%s, layout_side=%s, soundbar=%s, firecheck=%s,
-                     firecheck15=%s, firecheck30=%s, wifi1=%s, wifi15=%s, items=%s
+                     firecheck15=%s, firecheck30=%s, wifi1=%s, wifi15=%s, shift_day=%s, items=%s
                      WHERE id=%s""", 
                   (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
                    data.get('checklist'), data.get('status'), data.get('follower'), data.get('on_duty'), data.get('note'),
@@ -1198,7 +1200,7 @@ def overwrite_record():
                    data.get('guest_feedback'), data.get('dlr_feedback'),
                    data.get('layout_side'), data.get('soundbar') or '', data.get('firecheck15') or data.get('firecheck') or '',
                    data.get('firecheck15') or '', data.get('firecheck30') or '',
-                   data.get('wifi1') or '', data.get('wifi15') or '',
+                   data.get('wifi1') or '', data.get('wifi15') or '', data.get('shift_day') or None,
                    psycopg2.extras.Json(_items), old_id))
         # 該筆的問題項重寫（保留 mark_done 寫下的 resolve 記錄）
         c.execute("DELETE FROM shift_items WHERE record_id = %s AND source <> 'resolve'", (old_id,))
@@ -1267,7 +1269,7 @@ def get_records_home():
                             COALESCE(reviewed_by, ''),
                             items, COALESCE(soundbar, ''), COALESCE(firecheck, ''),
                             COALESCE(firecheck15, ''), COALESCE(firecheck30, ''),
-                            COALESCE(wifi1, ''), COALESCE(wifi15, '')
+                            COALESCE(wifi1, ''), COALESCE(wifi15, ''), COALESCE(shift_day, 0)
                      FROM records""" + sql_where + " ORDER BY id DESC LIMIT %s OFFSET %s",
                   params + [limit, offset])
         rows = c.fetchall()
@@ -1286,7 +1288,8 @@ def get_records_home():
             "firecheck15": r[24] or '',
             "firecheck30": r[25] or '',
             "wifi1": r[26] or '',
-            "wifi15": r[27] or ''
+            "wifi15": r[27] or '',
+            "shift_day": r[28] or 0
         } for r in rows]
         resp = jsonify({"records": records, "total": total, "limit": limit, "offset": offset})
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
@@ -1314,7 +1317,7 @@ def get_records():
                  COALESCE(reviewed_by, ''),
                  items, COALESCE(soundbar, ''), COALESCE(firecheck, ''),
                  COALESCE(firecheck15, ''), COALESCE(firecheck30, ''),
-                 COALESCE(wifi1, ''), COALESCE(wifi15, '')
+                 COALESCE(wifi1, ''), COALESCE(wifi15, ''), COALESCE(shift_day, 0)
                  FROM records ORDER BY id DESC"""
     if _limit > 0:
         c.execute(_sql + " LIMIT %s OFFSET %s", (min(_limit, 1000), max(0, _offset)))
@@ -1339,7 +1342,8 @@ def get_records():
             "firecheck15": row[24] or '',
             "firecheck30": row[25] or '',
             "wifi1": row[26] or '',
-            "wifi15": row[27] or ''
+            "wifi15": row[27] or '',
+            "shift_day": row[28] or 0
         })
     return jsonify(records)
 
@@ -1857,7 +1861,7 @@ def build_update_report_xlsx(data_rows):
 _BACKUP_COLUMNS = ['id', 'name', 'shift', 'lux', 'temp', 'bgm', 'checklist', 'status', 'follower',
                    'on_duty', 'note', 'lux_issue', 'temp_issue', 'db_issue', 'guest_feedback',
                    'dlr_feedback', 'layout_side', 'soundbar', 'firecheck', 'firecheck15', 'firecheck30',
-                   'wifi1', 'wifi15',
+                   'wifi1', 'wifi15', 'shift_day',
                    'reviewed', 'reviewed_at', 'reviewed_by', 'created_at']
 
 
