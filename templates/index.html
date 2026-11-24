@@ -1588,7 +1588,12 @@ function setSubmitting(on) {
         initVenueCategory(document.querySelector('.venue-item:last-child .venue-category')); 
         transformInputs(); 
         let items = document.querySelectorAll('.venue-item'); 
-        items[items.length - 1].querySelector('.venue-location').focus(); 
+        let _lastItem = items[items.length - 1];
+        let _catSel = _lastItem ? _lastItem.querySelector('.venue-category') : null;
+        if (_catSel) {
+            _catSel.focus();
+            if (typeof _catSel.showPicker === 'function') { try { _catSel.showPicker(); } catch (e) {} }
+        }
         debouncedSaveDraft(); 
     }
 
@@ -1602,6 +1607,10 @@ function setSubmitting(on) {
             document.getElementById('skip-' + type).checked = false; 
             document.getElementById(type + '-input-area').style.display = 'block'; 
         });
+        const _lxSel = document.getElementById('lux'); if (_lxSel) _lxSel.value = '450-650';
+        const _tpSel = document.getElementById('temp'); if (_tpSel) _tpSel.value = '正常 (22.5-24.5)';
+        const _bgSel = document.getElementById('bgm'); if (_bgSel) _bgSel.value = '正常 (65-75)';
+        const _nfcHall = document.getElementById('nfc-hall-select'); if (_nfcHall && _nfcHall.options.length) _nfcHall.selectedIndex = 0;
         document.getElementById('nfc-status').value = '無異常';
         document.getElementById('nfc-issue-group').style.display = 'none';
         document.getElementById('lux-issue-group').style.display = 'none';
@@ -2665,7 +2674,114 @@ function collectItems() {
     return out;
 }
 
+
+    // ===== 提交前防漏填檢查 =====
+    function validateFillAll() {
+        const errs = [];
+        const num = function (v) { const n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return isNaN(n) ? null : n; };
+
+        // ---- 場面問題 ----
+        document.querySelectorAll('.venue-item').forEach(function (item, idx) {
+            const n = idx + 1;
+            const cat = ((item.querySelector('.venue-category') || {}).value || '').trim();
+            const prob = ((item.querySelector('.venue-problem') || {}).value || '').trim();
+            const locEls = Array.from(item.querySelectorAll('.venue-location'));
+            const noteEls = Array.from(item.querySelectorAll('.venue-loc-note'));
+            const locs = locEls.map(function (x) { return (x.value || '').trim(); });
+            const notes = noteEls.map(function (x) { return (x.value || '').trim(); });
+            const hasAnyLoc = locs.some(Boolean);
+            const used = cat || hasAnyLoc || notes.some(Boolean);
+            if (!used) return;
+            if (!cat) { errs.push('場面問題 ' + n + '：未選擇「項目（類別）」'); return; }
+            if (!prob) errs.push('場面問題 ' + n + '：未選擇「問題」');
+            if (!hasAnyLoc) errs.push('場面問題 ' + n + '：未填台號');
+            if (hasAnyLoc && locs.some(function (v) { return !v; })) {
+                errs.push('場面問題 ' + n + '：有台號行未填（請填寫或按 X 刪除）');
+            }
+        });
+
+        // ---- Lux ----
+        if (!document.getElementById('skip-lux').checked) {
+            const luxSel = document.getElementById('lux').value;
+            const limit = 450;
+            document.querySelectorAll('.lux-item').forEach(function (item, idx) {
+                const n = idx + 1;
+                const table = ((item.querySelector('.lux-table') || {}).value || '').trim();
+                const boxes = ['lux-box1', 'lux-box3', 'lux-box6'].map(function (c) {
+                    const el = item.querySelector('.' + c);
+                    return el ? (el.value || '').trim() : '';
+                });
+                const anyBox = boxes.some(Boolean);
+                if (!table && !anyBox) return;
+                if (!table) errs.push('Lux 異常 ' + n + '：未填台號');
+                if (!anyBox) errs.push('Lux 異常 ' + n + '：未填 Box 數值（至少一個）');
+                boxes.forEach(function (v, bi) {
+                    if (!v) return;
+                    const x = num(v);
+                    const boxName = ['Box 1', 'Box 3', 'Box 6'][bi];
+                    if (x === null) { errs.push('Lux 異常 ' + n + ' ' + boxName + '：數值不是數字'); return; }
+                    if (luxSel === '< 450' && !(x < limit)) errs.push('Lux 異常 ' + n + ' ' + boxName + '：' + x + ' 不符合「< 450」');
+                    if (luxSel === '> 650' && !(x > 650)) errs.push('Lux 異常 ' + n + ' ' + boxName + '：' + x + ' 不符合「> 650」');
+                });
+            });
+        }
+
+        // ---- 溫度 ----
+        if (!document.getElementById('skip-temp').checked && document.getElementById('temp-issue-group').style.display === 'block') {
+            const tSel = document.getElementById('temp').value;
+            document.querySelectorAll('.temp-item').forEach(function (item, idx) {
+                const n = idx + 1;
+                const table = ((item.querySelector('.temp-table') || {}).value || '').trim();
+                const val = ((item.querySelector('.temp-value') || {}).value || '').trim();
+                if (!table && !val) return;
+                if (!table) errs.push('溫度異常 ' + n + '：未填台號');
+                if (!val) { errs.push('溫度異常 ' + n + '：未填數值'); return; }
+                const x = num(val);
+                if (x === null) { errs.push('溫度異常 ' + n + '：數值不是數字'); return; }
+                if (tSel.indexOf('偏低') >= 0 && !(x < 22.5)) errs.push('溫度異常 ' + n + '：' + x + ' 不符合「偏低（< 22.5）」');
+                if (tSel.indexOf('偏高') >= 0 && !(x > 24.5)) errs.push('溫度異常 ' + n + '：' + x + ' 不符合「偏高（> 24.5）」');
+            });
+        }
+
+        // ---- BGM 分貝 ----
+        if (!document.getElementById('skip-bgm').checked && document.getElementById('bgm-issue-group').style.display === 'block') {
+            const bSel = document.getElementById('bgm').value;
+            document.querySelectorAll('.bgm-item').forEach(function (item, idx) {
+                const n = idx + 1;
+                const table = ((item.querySelector('.bgm-table') || {}).value || '').trim();
+                const val = ((item.querySelector('.bgm-value') || {}).value || '').trim();
+                if (!table && !val) return;
+                if (!table) errs.push('分貝異常 ' + n + '：未填台號');
+                if (!val) { errs.push('分貝異常 ' + n + '：未填數值'); return; }
+                const x = num(val);
+                if (x === null) { errs.push('分貝異常 ' + n + '：數值不是數字'); return; }
+                if (bSel.indexOf('偏低') >= 0 && !(x < 65)) errs.push('分貝異常 ' + n + '：' + x + ' 不符合「偏低（< 65）」');
+                if (bSel.indexOf('偏高') >= 0 && !(x > 75)) errs.push('分貝異常 ' + n + '：' + x + ' 不符合「偏高（> 75）」');
+            });
+        }
+
+        // ---- NFC ----
+        if (!document.getElementById('skip-nfc').checked && document.getElementById('nfc-status').value === '有異常') {
+            document.querySelectorAll('.nfc-item').forEach(function (item, idx) {
+                const n = idx + 1;
+                const table = ((item.querySelector('.nfc-table') || {}).value || '').trim();
+                const boxes = item.querySelectorAll('.nfc-box:checked').length;
+                if (!table && !boxes) return;
+                if (!table) errs.push('NFC 異常 ' + n + '：未填台號');
+                if (!boxes) errs.push('NFC 異常 ' + n + '：最少要選 1 個 Box');
+            });
+        }
+
+        if (errs.length) {
+            const show = errs.slice(0, 10).join('\n• ');
+            alert('⚠️ 有 ' + errs.length + ' 項未填好，未能提交：\n\n• ' + show + (errs.length > 10 ? '\n• …' : ''));
+            return false;
+        }
+        return true;
+    }
+
     function submitForm() {
+        if (!validateFillAll()) return;
         let pendingCheckboxes = document.querySelectorAll('.pending-checkbox'); 
         let doneOldItems = [];
         let reopenKeys = [];
