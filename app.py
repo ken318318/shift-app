@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-36", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-37", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3820,6 +3820,7 @@ def add_hall_table():
             return jsonify({'status': 'error', 'message': '⚠️ 該 Hall／Pit／台號 已存在。'})
         conn.commit()
         log_action('新增台號', '%s / Pit %s / %s' % (hall, pit, code))
+        bust()
         return jsonify({'status': 'success', 'message': '✅ 已新增台號 %s。' % code})
     except Exception as e:
         print('新增台號失敗:', e)
@@ -3861,6 +3862,7 @@ def update_hall_table():
             return jsonify({'status': 'error', 'message': '❌ 找不到該台號。'})
         conn.commit()
         log_action('修改台號', '%s / Pit %s / %s（%s）' % (hall, pit, code, status))
+        bust()
         return jsonify({'status': 'success', 'message': '✅ 已更新台號。'})
     except Exception as e:
         print('修改台號失敗:', e)
@@ -3892,6 +3894,7 @@ def delete_hall_table():
         c.execute("DELETE FROM hall_tables WHERE id = %s", (rid,))
         conn.commit()
         log_action('刪除台號', row[0])
+        bust()
         return jsonify({'status': 'success', 'message': '✅ 已刪除台號 %s。' % row[0]})
     except Exception as e:
         print('刪除台號失敗:', e)
@@ -3926,6 +3929,7 @@ def set_hall_status():
         updated = c.rowcount
         conn.commit()
         log_action('修改台號狀態', '%d 個台號 → %s' % (updated, status))
+        bust()
         return jsonify({'status': 'success', 'message': '✅ 已更新 %d 個台號為「%s」。' % (updated, status),
                         'updated': updated})
     except Exception as e:
