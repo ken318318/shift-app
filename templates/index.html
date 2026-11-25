@@ -204,6 +204,15 @@
             </div>
             <div id="home-pending-list" style="display: none; margin-top: 8px; border-top: 1px dashed #e0c97e; padding-top: 8px;"></div>
         </div>
+        <div id="layout-progress-card" style="background:#f3e5f5; padding:9px 12px; border-radius:8px; border:1px solid #ce93d8; margin-bottom:14px;">
+            <div onclick="toggleLayoutProgress()" style="cursor:pointer;">
+                <h3 id="layout-progress-title" style="margin:0; font-size:13px; color:#6a1b9a; line-height:1.45;">🔄 TG Layout 更換進度</h3>
+                <div style="display:flex; justify-content:flex-end; align-items:center; margin-top:2px;">
+                    <span id="layout-progress-arrow" style="color:#6a1b9a; font-weight:bold; font-size:12px; white-space:nowrap;">▼ 展開</span>
+                </div>
+            </div>
+            <div id="layout-progress-list" style="display:none; margin-top:8px; border-top:1px dashed #ce93d8; padding-top:8px;"></div>
+        </div>
         <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap;">
             <input type="date" id="list-date-filter" onchange="window.__listLimit = 60; displayRecords()" style="flex: 1; min-width: 140px; padding: 9px; border: 1px solid #ccc; border-radius: 8px; font-size: 13px; background: #fff;">
             <button type="button" onclick="clearDateFilter()" style="padding: 9px 14px; border: none; border-radius: 8px; background: #eceff1; color: #455a64; font-size: 13px; font-weight: bold;">顯示全部</button>
@@ -666,6 +675,7 @@
                 </div>
                 <span class="cm-sep"></span>
                 <button class="lr-b-blue" onclick="cmSaveImage()">🖼️ 存為圖片</button>
+                <button class="lr-b-blue" onclick="cmShowSchedule()">🔄 換Layout行程</button>
                 <button id="cm-b-reset" class="lr-b-gray" onclick="cmResetLayout()" style="display:none;">↩️ 還原版面</button>
                 <button id="cm-b-edit" class="lr-b-gray" onclick="cmToggleEdit()" style="display:none;">✏️ 編輯</button>
                 <input type="file" id="cm-file" accept=".xlsx,.xlsm" style="display:none" onchange="cmUploadExcel(this)">
@@ -695,6 +705,13 @@
             </div>
             <div id="cm-scroll" style="overflow:auto; background:#fff; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,.08);">
                 <div id="cm-map" style="position:relative; width:1px; height:1px; margin:10px;"></div>
+            </div>
+            <div id="cm-sched-wrap" style="display:none; margin-top:14px; background:#fff; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,.08); padding:10px; overflow:auto;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
+                    <b style="font-size:14px; color:#1a237e;">🔄 TG Layout Replacement Schedule</b>
+                    <button onclick="document.getElementById('cm-sched-wrap').style.display='none'" style="border:none; background:#eceff1; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold;">收起</button>
+                </div>
+                <div id="cm-sched"></div>
             </div>
         </div>
     </div>
@@ -820,6 +837,7 @@
             const b = document.getElementById('btn-admin');
             if (b) b.style.display = 'none';
         }
+        if (typeof loadLayoutProgress === 'function') loadLayoutProgress();
     });
 
     // UI 繪製中標記：轉轉圈會等呢個清零先收
@@ -4634,6 +4652,161 @@ items: collectItems(),
         } catch (e) {
             if (msg) msg.textContent = '❌ 連線失敗';
         }
+    }
+
+    // ================= TG Layout 更換行程表 =================
+    const LAYOUT_SCHED = [
+        { cycle: 'Week 1', total: 66, pits: [['PIT02', 19, 'b'], ['PIT09', 23, 'b'], ['PIT13', 24, 'p']] },
+        { cycle: 'Week 2', total: 59, pits: [['PIT03', 16, 'b'], ['PIT11', 23, 'b'], ['PIT107', 20, 'v']] },
+        { cycle: 'Week 3', total: 65, pits: [['PIT05', 24, 'b'], ['PIT12', 32, 'b'], ['PIT105', 9, 'v']] },
+        { cycle: 'Week 4', total: 58, pits: [['PIT08', 15, 'b'], ['PIT15', 24, 'p'], ['PIT30', 19, 'b']] },
+        { cycle: 'Week 5', total: 64, pits: [['PIT16', 22, 'b'], ['PIT27', 17, 'b'], ['PIT106', 25, 'v']] },
+        { cycle: 'Week 6', total: 63, pits: [['PIT17', 19, 'v'], ['PIT26', 22, 'b'], ['PIT29', 22, 'b']] },
+        { cycle: 'Week 7', total: 62, pits: [['PIT19', 5, 'v'], ['PIT25', 34, 'b'], ['PIT28', 23, 'b']] },
+        { cycle: 'Week 8', total: 66, pits: [['PIT18', 22, 'v'], ['PIT32', 11, 'b'], ['PIT33', 12, 'b'], ['PIT35', 2, 'b'], ['PIT01', 0, 'o'], ['PIT31', 0, 'o'], ['PIT63', 0, 'o']] }
+    ];
+    const LAYOUT_COLORS = { b: '#99CCFF', v: '#CCCCFF', p: '#FF99CC', o: '#FFCC99' };
+    const LAYOUT_LEGEND = [
+        ['#FFCC99', 'No stand Betting Area & No pair+'],
+        ['#90EE90', 'Stand Betting Area & pair+'],
+        ['#99CCFF', 'Stand Betting Area & No pair+'],
+        ['#CCCCFF', 'No stand Betting Area / have pair+ and have Lucky6-7 stand Betting Area'],
+        ['#FF99CC', 'No stand Betting Area & No Lucky6-7 stand Betting Area / have pair+']
+    ];
+    let layoutDone = {};
+    let layoutLoaded = false;
+
+    function layoutPitCount() {
+        return LAYOUT_SCHED.reduce(function (n, w) { return n + w.pits.length; }, 0);
+    }
+
+    async function layoutLoadDone(force) {
+        if (layoutLoaded && !force) return layoutDone;
+        try {
+            const r = await fetch('/api/layout_schedule?_t=' + Date.now(), { cache: 'no-store' });
+            const d = await r.json();
+            if (d && d.status === 'success') { layoutDone = d.done || {}; layoutLoaded = true; }
+        } catch (e) { }
+        return layoutDone;
+    }
+
+    function schedCellHtml(pit) {
+        const d = layoutDone[pit] || '';
+        return '<label style="display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">'
+            + '<input type="checkbox" data-pit="' + pit + '"' + (d ? ' checked' : '') + ' onchange="schedToggle(this)" style="width:18px; height:18px;">'
+            + '<span id="sched-date-' + pit + '" style="font-size:11.5px; color:#c2185b; font-weight:bold;">' + (d ? d.slice(5) : '') + '</span>'
+            + '</label>';
+    }
+
+    function schedTableHtml() {
+        let h = '<table style="border-collapse:collapse; width:100%; min-width:520px; font-size:12.5px; text-align:center;">';
+        h += '<colgroup><col style="width:12%"><col style="width:18%"><col style="width:22%"><col style="width:30%"><col style="width:18%"></colgroup>';
+        h += '<tr style="background:#ffe9a8; font-weight:bold;"><td colspan="5" style="border:1px solid #b8a45a; padding:8px; font-size:15px; letter-spacing:.5px;">TG Layout Replacement Schedule</td></tr>';
+        h += '<tr style="background:#fff6cc; font-size:11.5px;"><td colspan="3" style="border:1px solid #b8a45a; padding:4px; text-align:left;">更新 2026 / NOV / 17</td><td colspan="2" style="border:1px solid #b8a45a; padding:4px;">8 WEEKS　503 TOTAL LAYOUT</td></tr>';
+        h += '<tr style="background:#111; color:#fff; font-weight:bold;"><td style="border:1px solid #000; padding:6px;">CYCLE</td><td style="border:1px solid #000; padding:6px;">PIT</td><td style="border:1px solid #000; padding:6px;">ST TABLE LAYOUT</td><td style="border:1px solid #000; padding:6px;">MONOR GAME</td><td style="border:1px solid #000; padding:6px;">TOTAL</td></tr>';
+        LAYOUT_SCHED.forEach(function (w) {
+            w.pits.forEach(function (p, i) {
+                h += '<tr>';
+                if (i === 0) h += '<td rowspan="' + w.pits.length + '" style="border:1px solid #b8a45a; padding:6px; font-weight:bold; background:#fff;">' + w.cycle + '</td>';
+                h += '<td style="border:1px solid #b8a45a; padding:6px; font-weight:bold; background:' + LAYOUT_COLORS[p[2]] + ';">' + p[0] + '</td>';
+                h += '<td style="border:1px solid #b8a45a; padding:6px; background:#ffffcc;">' + (p[1] || '') + '</td>';
+                let monor = schedCellHtml(p[0]);
+                if (p[0] === 'PIT01') monor = '<div style="font-size:10.5px; color:#555; margin-bottom:2px;">8 BJ · 5 CS · 6FP</div>' + monor;
+                h += '<td style="border:1px solid #b8a45a; padding:4px; background:#ffd9e8;">' + monor + '</td>';
+                if (i === 0) h += '<td rowspan="' + w.pits.length + '" style="border:1px solid #b8a45a; padding:6px; font-weight:bold; background:#ffffcc;">' + w.total + '</td>';
+                h += '</tr>';
+            });
+        });
+        h += '<tr style="background:#111; color:#fff; font-weight:bold;"><td style="border:1px solid #000; padding:6px;">Total</td><td style="border:1px solid #000; padding:6px;"></td><td style="border:1px solid #000; padding:6px;">484</td><td style="border:1px solid #000; padding:6px;">19</td><td style="border:1px solid #000; padding:6px;">503</td></tr>';
+        h += '</table>';
+        h += '<div style="margin-top:8px; font-size:11.5px; color:#444; line-height:1.7;">';
+        LAYOUT_LEGEND.forEach(function (x) {
+            h += '<div style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:16px; height:14px; background:' + x[0] + '; border:1px solid #999;"></span><span>' + x[1] + '</span></div>';
+        });
+        h += '</div>';
+        return h;
+    }
+
+    async function cmShowSchedule() {
+        const wrap = document.getElementById('cm-sched-wrap');
+        if (!wrap) return;
+        wrap.style.display = 'block';
+        await layoutLoadDone(true);
+        document.getElementById('cm-sched').innerHTML = schedTableHtml();
+        if (wrap.scrollIntoView) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function schedToggle(el) {
+        const pit = el.getAttribute('data-pit');
+        const on = el.checked;
+        el.disabled = true;
+        try {
+            const r = await fetch('/api/layout_schedule', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pit: pit, done: on })
+            });
+            const d = await r.json();
+            if (!d || d.status !== 'success') { alert((d && d.message) || '❌ 儲存失敗'); el.checked = !on; return; }
+            layoutDone = d.done || {};
+            layoutLoaded = true;
+            const sp = document.getElementById('sched-date-' + pit);
+            if (sp) sp.textContent = (layoutDone[pit] || '').slice(5);
+            renderLayoutProgress();
+            cmToast(d.message || '✅ 已更新');
+        } catch (e) {
+            alert('❌ 連線失敗');
+            el.checked = !on;
+        } finally {
+            el.disabled = false;
+        }
+    }
+
+    function toggleLayoutProgress() {
+        const list = document.getElementById('layout-progress-list');
+        const arrow = document.getElementById('layout-progress-arrow');
+        if (!list) return;
+        const open = list.style.display !== 'block';
+        list.style.display = open ? 'block' : 'none';
+        if (arrow) arrow.textContent = open ? '▲ 收起' : '▼ 展開';
+        if (open) renderLayoutProgress();
+    }
+
+    async function loadLayoutProgress() {
+        await layoutLoadDone(true);
+        renderLayoutProgress();
+    }
+
+    function renderLayoutProgress() {
+        const title = document.getElementById('layout-progress-title');
+        const list = document.getElementById('layout-progress-list');
+        if (!title) return;
+        const total = layoutPitCount();
+        const donePits = Object.keys(layoutDone).filter(function (p) { return layoutDone[p]; });
+        let curWeek = '';
+        LAYOUT_SCHED.forEach(function (w) {
+            const all = w.pits.every(function (p) { return !!layoutDone[p[0]]; });
+            if (!all && !curWeek) curWeek = w.cycle;
+        });
+        let latest = '';
+        donePits.forEach(function (p) { if (layoutDone[p] > latest) latest = layoutDone[p]; });
+        title.textContent = '🔄 TG Layout 更換進度：' + donePits.length + '／' + total + ' 個 PIT'
+            + (curWeek ? '｜進行中：' + curWeek : (donePits.length >= total ? '｜✅ 全部完成' : ''))
+            + (latest ? '｜最近 ' + latest.slice(5) : '');
+        if (!list || list.style.display === 'none') return;
+        if (!donePits.length) {
+            list.innerHTML = '<div style="font-size:12px; color:#777;">尚未有 PIT 標記更換完成。請去「🪑 櫈況圖 → 🔄 換Layout行程」打勾。</div>';
+            return;
+        }
+        let h = '';
+        LAYOUT_SCHED.forEach(function (w) {
+            h += '<div style="font-size:11.5px; font-weight:bold; color:#6a1b9a; margin:6px 0 2px;">' + w.cycle + '</div><div style="display:flex; flex-wrap:wrap; gap:5px;">';
+            w.pits.forEach(function (p) {
+                const d = layoutDone[p[0]];
+                h += '<span style="font-size:11px; padding:2px 7px; border-radius:10px; border:1px solid ' + (d ? '#ce93d8' : '#e0e0e0') + '; background:' + (d ? '#f3e5f5' : '#fafafa') + '; color:' + (d ? '#6a1b9a' : '#999') + '; font-weight:bold;">' + p[0] + (d ? ' ✅' + d.slice(5) : '') + '</span>';
+            });
+            h += '</div>';
+        });
+        list.innerHTML = h;
     }
 
     function cmToggleEdit() {
