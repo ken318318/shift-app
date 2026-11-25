@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-40", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-41", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -4699,8 +4699,6 @@ def chair_map_bulk():
 
     data = request.json or {}
     action = (data.get('action') or '').strip()
-    if session.get('role') != 'admin' and action in ('operating', 'inactive', 'event', 'unevent'):
-        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以修改營運／停運／活動區。'})
     codes = data.get('codes') or []
     if not isinstance(codes, list):
         codes = [codes]
@@ -4864,11 +4862,9 @@ def chair_map_edit():
 
 @app.route('/api/chair_map/event', methods=['POST'])
 def chair_map_event():
-    """標記／取消活動台（唔計入台數及 DLR 數量）。"""
+    """標記／取消活動台（唔計入台數及 DLR 數量）。已登入同事均可使用。"""
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
-    if session.get('role') != 'admin':
-        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以修改活動台。'})
     data = request.json or {}
     codes = data.get('codes') or []
     if not isinstance(codes, list):
@@ -4895,12 +4891,10 @@ def chair_map_event():
 
 @app.route('/api/chair_map/import', methods=['POST'])
 def chair_map_import():
-    """上傳 Excel 版面（僅管理員）。解析後存 app_settings['chair_layout']。"""
+    """上傳 Excel 版面（已登入同事均可）。解析後存 app_settings['chair_layout']。"""
     global _CHAIR_LAYOUT_CACHE
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
-    if session.get('role') != 'admin':
-        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以上傳版面。'})
     f = request.files.get('file')
     if not f or not f.filename:
         return jsonify({'status': 'error', 'message': '❌ 沒有收到檔案。'})
@@ -4937,12 +4931,10 @@ def chair_map_import():
 
 @app.route('/api/chair_map/reset', methods=['POST'])
 def chair_map_reset():
-    """還原為 static 預設版面（僅管理員）。"""
+    """還原為 static 預設版面（已登入同事均可）。"""
     global _CHAIR_LAYOUT_CACHE
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
-    if session.get('role') != 'admin':
-        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以還原版面。'})
     if not set_setting(_CHAIR_LAYOUT_KEY, ''):
         return jsonify({'status': 'error', 'message': '❌ 還原失敗。'})
     _CHAIR_LAYOUT_CACHE = None
