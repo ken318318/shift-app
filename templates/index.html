@@ -754,11 +754,17 @@
             <div class="lr-bar">
                 <button class="lr-b-close" onclick="closeLayoutSchedule()">✖ 返回</button>
                 <b style="font-size:13px; color:#1a237e; white-space:nowrap;">🔄 TG Layout 更換行程</b>
-                <span id="ls-msg" style="margin-left:auto; font-size:11px; color:#555;"></span>
+                <div class="cm-zoom" style="margin-left:auto;">
+                    <button class="lr-b-gray" onclick="lsZoomStep(-1)">➖</button>
+                    <span id="ls-zoom-label" class="cm-zoom-label">100%</span>
+                    <button class="lr-b-gray" onclick="lsZoomStep(1)">➕</button>
+                    <button class="lr-b-gray" onclick="lsZoomFit()">適合</button>
+                </div>
             </div>
             <div class="lr-tip" style="font-size:11.5px;">
                 地圖顏色＝該台所屬 PIT 喺下面「TG Layout Replacement Schedule」嘅分類顏色。表格打勾＝該 PIT 更換完成（只作記錄，不影響櫈況圖自動顏色同交更邏輯）。
             </div>
+            <div id="ls-msg" style="font-size:11px; color:#555; margin:2px 2px 4px;"></div>
             <div id="ls-mapbox" style="overflow:auto; background:#fff; border:1px solid #e0e0e0; border-radius:10px; max-height:58vh; margin-top:6px;">
                 <div id="ls-map" style="position:relative; width:1px; height:1px; margin:8px;"></div>
             </div>
@@ -4149,12 +4155,12 @@ items: collectItems(),
         if (eb) eb.style.display = '';
         ['cm-b-event', 'cm-b-clear', 'cm-b-oper', 'cm-b-stop'].forEach(function (id) {
             const b = document.getElementById(id);
-            if (b) b.style.display = isAdmin ? '' : 'none';
+            if (b) b.style.display = '';
         });
         const ib = document.getElementById('cm-b-import');
         if (ib) ib.style.display = isAdmin ? '' : 'none';
         const rb = document.getElementById('cm-b-reset');
-        if (rb) rb.style.display = isAdmin ? '' : 'none';
+        if (rb) rb.style.display = '';
         bsLoading(true, '載入中…', true);
         loadChairMap();
     }
@@ -4582,7 +4588,6 @@ items: collectItems(),
     let cmEventOrig = [];
 
     function cmOpenEventPicker() {
-        if (!isAdmin) { alert('只有管理員可以修改活動區。'); return; }
         fetch('/api/table_codes?_t=' + Date.now(), { cache: 'no-store' })
             .then(function (r) { return r.json(); })
             .then(function (d) {
@@ -4784,7 +4789,7 @@ items: collectItems(),
             lg.innerHTML = h;
         }
         updateLsMsg();
-        if (!document.getElementById('ls-map').dataset.drawn) await lsRenderMap();
+        await lsRenderMap();
     }
 
     function closeLayoutSchedule() {
@@ -4793,90 +4798,46 @@ items: collectItems(),
         document.body.style.overflow = '';
     }
 
-    async function lsRenderMap() {
+    let lsZoom = 1;
+
+    function lsApplyZoom() {
         const map = document.getElementById('ls-map');
-        if (!map) return;
-        let d = null;
-        try {
-            d = await (await fetch('/api/chair_map?_t=' + Date.now(), { cache: 'no-store' })).json();
-        } catch (e) { return; }
-        if (!d || d.status === 'error') return;
-        const cells = d.cells || [];
-        const colsW = {}, rowsH = {};
-        (d.cols || []).forEach(function (x) { colsW[x.c] = x.w; });
-        (d.rows || []).forEach(function (x) { rowsH[x.r] = x.h; });
-        const cw = function (c) { const w = colsW[c] || 8.43; return Math.round(w * 7) + 5; };
-        const rh = function (r) { const h = rowsH[r] || 15; return Math.round(h * 96 / 72); };
-        const minC = d.minC || 1, minR = d.minR || 1;
-        const maxC = d.maxCu || d.maxC || 70, maxR = d.maxRu || d.maxR || 62;
-        const X = {}, Y = {};
-        let acc = 0;
-        for (let c = minC; c <= maxC + 1; c++) { X[c] = acc; acc += cw(c); }
-        acc = 0;
-        for (let r = minR; r <= maxR + 1; r++) { Y[r] = acc; acc += rh(r); }
-        const W = X[maxC + 1], H = Y[maxR + 1];
-        map.style.width = W + 'px';
-        map.style.height = H + 'px';
-        map.innerHTML = '';
-        const cv = document.createElement('canvas');
-        const dpr = window.devicePixelRatio || 1;
-        cv.width = Math.round(W * dpr);
-        cv.height = Math.round(H * dpr);
-        cv.style.width = W + 'px';
-        cv.style.height = H + 'px';
-        map.appendChild(cv);
-        const ctx = cv.getContext('2d');
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(0, 0, W, H);
+        const lbl = document.getElementById('ls-zoom-label');
+        if (map) map.style.zoom = String(lsZoom);
+        if (lbl) lbl.textContent = Math.round(lsZoom * 100) + '%';
+    }
 
-        const merges = d.merges || [];
-        const covered = {}, mergeAt = {};
-        merges.forEach(function (m) {
-            const rs = m.rs || 1, cs = m.cs || 1;
-            mergeAt[m.r + ',' + m.c] = m;
-            for (let i = 0; i < rs; i++) {
-                for (let k = 0; k < cs; k++) {
-                    if (i === 0 && k === 0) continue;
-                    covered[(m.r + i) + ',' + (m.c + k)] = 1;
-                }
-            }
-        });
+    function lsZoomStep(d) {
+        lsZoom = Math.min(2, Math.max(0.2, Math.round((lsZoom + d * 0.1) * 100) / 100));
+        lsApplyZoom();
+    }
 
-        function drawText(x0, y0, x1, y1, text, fs, bold) {
-            if (!text) return;
-            const px = Math.max(9, Math.round((fs || 11) * 96 / 72));
-            ctx.font = (bold ? 'bold ' : '') + px + 'px "Microsoft JhengHei","Microsoft YaHei",Arial,sans-serif';
-            ctx.fillStyle = '#111';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText(String(text), (x0 + x1) / 2, (y0 + y1) / 2 + 1);
+    function lsZoomFit() {
+        const box = document.getElementById('ls-mapbox');
+        const map = document.getElementById('ls-map');
+        if (!box || !map) return;
+        const w = parseFloat(map.style.width) || map.offsetWidth;
+        const h = parseFloat(map.style.height) || map.offsetHeight;
+        if (!w || !h) return;
+        lsZoom = Math.max(0.15, Math.min(1, Math.min((box.clientWidth - 24) / w, (box.clientHeight - 24) / h)));
+        lsZoom = Math.round(lsZoom * 100) / 100;
+        lsApplyZoom();
+    }
+
+    async function lsRenderMap() {
+        if (!cmData) {
+            try {
+                cmData = await (await fetch('/api/chair_map?_t=' + Date.now(), { cache: 'no-store' })).json();
+            } catch (e) { cmData = null; return; }
+            if (!cmData || cmData.status === 'error') { cmData = null; return; }
         }
-
-        cells.forEach(function (cell) {
-            const k = cell.r + ',' + cell.c;
-            if (covered[k]) return;
-            const m = mergeAt[k];
-            const rs = m ? (m.rs || 1) : 1, cs = m ? (m.cs || 1) : 1;
-            const x0 = X[cell.c], y0 = Y[cell.r];
-            let x1 = x0, y1 = y0;
-            for (let i = 0; i < cs; i++) x1 += cw(cell.c + i);
-            for (let i = 0; i < rs; i++) y1 += rh(cell.r + i);
-            const bg = cell.code ? (layoutPitColor(cell.pit) || '#f5f5f5') : '';
-            if (bg) { ctx.fillStyle = bg; ctx.fillRect(x0, y0, x1 - x0, y1 - y0); }
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            if (cell.t || m) { ctx.moveTo(x0, y0 + 0.5); ctx.lineTo(x1, y0 + 0.5); }
-            if (cell.b || m) { ctx.moveTo(x0, y1 - 0.5); ctx.lineTo(x1, y1 - 0.5); }
-            if (cell.l || m) { ctx.moveTo(x0 + 0.5, y0); ctx.lineTo(x0 + 0.5, y1); }
-            if (cell.rr || m) { ctx.moveTo(x1 - 0.5, y0); ctx.lineTo(x1 - 0.5, y1); }
-            ctx.stroke();
-            const txt = cell.v || (m && m.v) || '';
-            drawText(x0, y0, x1, y1, txt, cell.fs || (m && m.fs), cell.bold || (m && m.bold));
+        renderChairMap({
+            mapEl: document.getElementById('ls-map'),
+            noChrome: true,
+            zoom: lsZoom,
+            colourFor: function (cell) { return layoutPitColor(cell.pit) || '#f5f5f5'; }
         });
-
-        map.dataset.drawn = '1';
+        lsApplyZoom();
     }
 
     function toggleHomeSearch() {
@@ -5266,10 +5227,13 @@ items: collectItems(),
         await cmSaveEdits();
     }
 
-    function renderChairMap() {
-        const map = document.getElementById('cm-map');
-        const legend = document.getElementById('cm-legend');
-        const tip = document.getElementById('cm-tip');
+    function renderChairMap(opts) {
+        opts = opts || {};
+        const map = opts.mapEl || document.getElementById('cm-map');
+        const legend = opts.noChrome ? null : document.getElementById('cm-legend');
+        const tip = opts.noChrome ? null : document.getElementById('cm-tip');
+        const colourFor = (typeof opts.colourFor === 'function') ? opts.colourFor : null;
+        function ovColor(cell) { return (colourFor && cell && cell.code) ? (colourFor(cell) || '') : ''; }
         if (!map || !cmData) return;
         map.innerHTML = '';
 
@@ -5289,8 +5253,13 @@ items: collectItems(),
         const W = X[maxC + 1], H = Y[maxR + 1];
         map.style.width = W + 'px';
         map.style.height = H + 'px';
-        cmGeo = { X: X, Y: Y, cw: cw, rh: rh, merges: [], minR: minR, maxR: maxR, minC: minC, maxC: maxC };
-        cmApplyZoom();
+        const geo = { X: X, Y: Y, cw: cw, rh: rh, merges: [], minR: minR, maxR: maxR, minC: minC, maxC: maxC };
+        if (!opts.mapEl) {
+            cmGeo = geo;
+            cmApplyZoom();
+        } else {
+            map.style.zoom = String(opts.zoom || 1);
+        }
 
         if (tip) {
             const c = cmData.counts || {};
@@ -5318,7 +5287,9 @@ items: collectItems(),
         const merges = (cmData.merges || []).filter(function (m) {
             return !unset[cmEditKey(m.r, m.c)];
         }).concat(cmEdits.merges || []);
-        cmGeo.merges = merges;
+        cmGeo = cmGeo || {};
+        geo.merges = merges;
+        if (!opts.mapEl) cmGeo.merges = merges;
 
         const covered = {};
         merges.forEach(function (m) {
@@ -5342,15 +5313,15 @@ items: collectItems(),
             return 'rgb(' + parseInt(h.substr(0, 2), 16) + ',' + parseInt(h.substr(2, 2), 16) + ',' + parseInt(h.substr(4, 2), 16) + ')';
         }
 
-        let cv = document.getElementById('cm-canvas');
+        let cv = map.querySelector('canvas');
         if (!cv) {
             cv = document.createElement('canvas');
-            cv.id = 'cm-canvas';
             cv.style.position = 'absolute';
             cv.style.left = '0';
             cv.style.top = '0';
             map.appendChild(cv);
         }
+        if (!opts.mapEl) cv.id = 'cm-canvas';
         const dpr = window.devicePixelRatio || 1;
         cv.width = Math.max(1, Math.round(W * dpr));
         cv.height = Math.max(1, Math.round(H * dpr));
@@ -5395,7 +5366,8 @@ items: collectItems(),
             for (let i = 0; i < (m.cs || 1); i++) x1 += cw(m.c + i);
             for (let i = 0; i < (m.rs || 1); i++) y1 += rh(m.r + i);
             const isManual = (cmEdits.merges || []).indexOf(m) >= 0;
-            fillCell(x0, y0, x1, y1, m.bg ? rgb(m.bg, null) : null);
+            const moc = ovColor(m);
+            fillCell(x0, y0, x1, y1, moc ? rgb(moc, null) : (m.bg ? rgb(m.bg, null) : null));
             if (isManual || m.t || m.l || m.rr || m.b) drawBorder(x0, y0, x1, y1, m.t, m.l, m.rr, m.b);
             drawText(x0, y0, x1, y1, m.v || '', m.fs || 11, m.bold, m.fc ? rgb(m.fc, '#333') : '#333');
             if (m.v && /^[0-9]+$/.test(String(m.v).trim())) {
@@ -5436,6 +5408,8 @@ items: collectItems(),
                 bg = c.bg || null;
                 fc = c.fc || '#333';
             }
+            const oc = ovColor(c);
+            if (oc) { bg = oc; fc = '#111'; }
             if (ed) {
                 if ('bg' in ed) bg = ed.bg || '#fff';
                 if ('fc' in ed) fc = ed.fc || '#111';
@@ -5495,6 +5469,8 @@ items: collectItems(),
                 const bx1 = (p[1] === 0 ? xm : x1);
                 const by0 = (p[0] === 0 ? y0 : ym);
                 const by1 = (p[0] === 0 ? ym : y1);
+                const oc = ovColor(cellData);
+                if (oc) { ctx.fillStyle = oc; ctx.fillRect(Math.round(bx0) + 1, Math.round(by0) + 1, Math.round(bx1 - bx0) - 2, Math.round(by1 - by0) - 2); }
                 drawText(bx0, by0, bx1, by1, cellData.v, 18, true, '#111');
             });
         }
@@ -5550,6 +5526,8 @@ items: collectItems(),
                     fc = cd.stand ? '#111' : (cd.chair === 'new' ? '#7b2fd0' : (cd.chair === 'old' ? '#d95a00' : '#111'));
                     if (cd.chair && !cd.stand) bold = true;
                 }
+                const o8 = ovColor(cd);
+                if (o8) { bg = o8; fc = '#111'; }
                 if (bg) { ctx.fillStyle = bg; ctx.fillRect(p[2] + 1, p[4] + 1, p[3] - p[2] - 2, p[5] - p[4] - 2); }
                 drawText(p[2], p[4], p[3], p[5], cd.v, cd.fs || 11, bold, fc);
             });
@@ -5593,11 +5571,13 @@ items: collectItems(),
             }
         }
 
-        map.onpointerdown = cmPointerDown;
-        map.onpointermove = cmPointerMove;
+        map.onpointerdown = opts.noChrome ? null : cmPointerDown;
+        map.onpointermove = opts.noChrome ? null : cmPointerMove;
         map.ondragstart = function (e) { e.preventDefault(); };
-        if (cmEditMode) cmDrawSel();
-        cmRefreshTools();
+        if (!opts.noChrome) {
+            if (cmEditMode) cmDrawSel();
+            cmRefreshTools();
+        }
     }
 
 
