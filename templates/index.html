@@ -754,6 +754,8 @@
                     <button class="lr-b-gray" onclick="lsZoomStep(1)">➕</button>
                     <button class="lr-b-gray" onclick="lsZoomFit()">適合</button>
                 </div>
+                <button id="ls-b-newround" class="lr-b-blue" onclick="lsNewRound()">🔄 開始新一輪</button>
+                <button id="ls-b-undo" class="lr-b-gray" onclick="lsUndoRound()" style="display:none;">↩️ 還原上一輪</button>
             </div>
             <div class="lr-tip" style="font-size:11.5px;">
                 地圖顏色＝該台所屬 PIT 喺下面「TG Layout Replacement Schedule」嘅分類顏色。表格打勾＝該 PIT 更換完成（只作記錄，不影響櫈況圖自動顏色同交更邏輯）。
@@ -4728,6 +4730,8 @@ items: collectItems(),
     ];
     let layoutDone = {};
     let layoutLoaded = false;
+    let layoutRound = 1;
+    let layoutLast = null;
 
     function layoutPitCount() {
         return LAYOUT_SCHED.reduce(function (n, w) { return n + w.pits.length; }, 0);
@@ -4738,7 +4742,12 @@ items: collectItems(),
         try {
             const r = await fetch('/api/layout_schedule?_t=' + Date.now(), { cache: 'no-store' });
             const d = await r.json();
-            if (d && d.status === 'success') { layoutDone = d.done || {}; layoutLoaded = true; }
+            if (d && d.status === 'success') {
+                layoutDone = d.done || {};
+                layoutRound = d.round || 1;
+                layoutLast = d.last || null;
+                layoutLoaded = true;
+            }
         } catch (e) { }
         return layoutDone;
     }
@@ -4798,7 +4807,10 @@ items: collectItems(),
         const el = document.getElementById('ls-msg');
         if (!el) return;
         const done = Object.keys(layoutDone).filter(function (p) { return layoutDone[p]; }).length;
-        el.textContent = '已完成 ' + done + '／' + layoutPitCount() + ' 個 PIT';
+        el.textContent = '第 ' + layoutRound + ' 輪　已完成 ' + done + '／' + layoutPitCount() + ' 個 PIT'
+            + (layoutLast && layoutLast.finished_at ? '　（上一輪：第 ' + layoutLast.round + ' 輪 ' + (layoutLast.count || 0) + '／' + layoutPitCount() + '，' + String(layoutLast.finished_at).slice(5) + ' 存檔）' : '');
+        const ub = document.getElementById('ls-b-undo');
+        if (ub) ub.style.display = (layoutLast && layoutLast.finished_at) ? '' : 'none';
     }
 
     async function openLayoutSchedule() {
@@ -4840,6 +4852,47 @@ items: collectItems(),
     function lsZoomStep(d) {
         lsZoom = Math.min(2, Math.max(0.2, Math.round((lsZoom + d * 0.1) * 100) / 100));
         lsApplyZoom();
+    }
+
+    async function lsNewRound() {
+        const done = Object.keys(layoutDone).filter(function (p) { return layoutDone[p]; }).length;
+        const total = layoutPitCount();
+        const ask = done < total
+            ? ('本輪仍有 ' + (total - done) + ' 個 PIT 未完成。\n\n確定開始新一輪？\n（舊一輪會完整存檔，主頁紀錄卡不受影響）')
+            : ('本輪已完成 ' + done + '／' + total + '。\n\n確定開始新一輪？\n（舊一輪會完整存檔，主頁紀錄卡不受影響）');
+        if (!confirm(ask)) return;
+        try {
+            const r = await fetch('/api/layout_schedule/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+            const d = await r.json();
+            if (!d || d.status !== 'success') { alert((d && d.message) || '❌ 操作失敗'); return; }
+            layoutDone = d.done || {};
+            layoutRound = d.round || (layoutRound + 1);
+            layoutLast = d.last || layoutLast;
+            document.getElementById('ls-sched').innerHTML = schedTableHtml();
+            updateLsMsg();
+            renderLayoutProgress();
+            cmToast(d.message || '✅ 已開始新一輪');
+        } catch (e) {
+            alert('❌ 連線失敗');
+        }
+    }
+
+    async function lsUndoRound() {
+        if (!confirm('還原上一次「開始新一輪」？\n會恢復上一輪嘅完成日期，並取消目前呢一輪。')) return;
+        try {
+            const r = await fetch('/api/layout_schedule/undo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+            const d = await r.json();
+            if (!d || d.status !== 'success') { alert((d && d.message) || '❌ 操作失敗'); return; }
+            layoutDone = d.done || {};
+            layoutRound = d.round || layoutRound;
+            layoutLast = d.last || null;
+            document.getElementById('ls-sched').innerHTML = schedTableHtml();
+            updateLsMsg();
+            renderLayoutProgress();
+            cmToast(d.message || '✅ 已還原上一輪');
+        } catch (e) {
+            alert('❌ 連線失敗');
+        }
     }
 
     function lsZoomFit() {
@@ -4941,9 +4994,10 @@ items: collectItems(),
         });
         let latest = '';
         donePits.forEach(function (p) { if (layoutDone[p] > latest) latest = layoutDone[p]; });
-        title.textContent = '🔄 TG Layout 更換進度：' + donePits.length + '／' + total + ' 個 PIT'
-            + (curWeek ? '｜進行中：' + curWeek : (donePits.length >= total ? '｜✅ 全部完成' : ''))
-            + (latest ? '｜最近 ' + latest.slice(5) : '');
+        title.textContent = '🔄 TG Layout 更換進度：第 ' + layoutRound + ' 輪　' + donePits.length + '／' + total + ' 個 PIT'
+            + (curWeek ? '｜進行中：' + curWeek : (donePits.length >= total ? '｜✅ 本輪完成' : ''))
+            + (latest ? '｜最近 ' + latest.slice(5) : '')
+            + (layoutLast && layoutLast.finished_at ? '｜上一輪 ' + (layoutLast.full ? '全部完成' : (layoutLast.count || 0) + '／' + total) + '（' + String(layoutLast.finished_at).slice(5) + '）' : '');
         if (!list || list.style.display === 'none') return;
         if (!donePits.length) {
             list.innerHTML = '<div style="font-size:12px; color:#777;">尚未有 PIT 標記更換完成。請去「🪑 櫈況圖 → 🔄 換Layout行程」打勾。</div>';
