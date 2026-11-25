@@ -482,7 +482,7 @@
                 document.getElementById('panel-' + k).classList.toggle('hide', k !== name);
             });
             let jobs = [];
-            if (name === 'records') jobs.push(loadRecords());
+            if (name === 'records') jobs.push(applyRecordFilters());
             if (name === 'progress') jobs.push(loadRecords().then(renderProgress));
             if (name === 'stats') jobs.push(loadRecords().then(renderStats));
             if (name === 'hall') jobs.push(loadHallSummary(), loadHallTables());
