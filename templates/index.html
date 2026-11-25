@@ -4790,6 +4790,7 @@ items: collectItems(),
         }
         updateLsMsg();
         await lsRenderMap();
+        if (!lsFitDone) { lsFitDone = true; lsZoomFit(); }
     }
 
     function closeLayoutSchedule() {
@@ -4799,6 +4800,7 @@ items: collectItems(),
     }
 
     let lsZoom = 1;
+    let lsFitDone = false;
 
     function lsApplyZoom() {
         const map = document.getElementById('ls-map');
