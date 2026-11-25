@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-37", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-38", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -4645,14 +4645,14 @@ def chair_map_get():
 
 @app.route('/api/chair_map/bulk', methods=['POST'])
 def chair_map_bulk():
-    """批量設定：新櫈／舊櫈／取消新舊／營運／停運／活動台（管理員）。"""
+    """批量設定：新櫈／舊櫈／取消新舊（同事及管理員）／營運／停運／活動台（管理員）。"""
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
-    if session.get('role') != 'admin':
-        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以修改。'})
 
     data = request.json or {}
     action = (data.get('action') or '').strip()
+    if session.get('role') != 'admin' and action in ('operating', 'inactive', 'event', 'unevent'):
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以修改營運／停運／活動區。'})
     codes = data.get('codes') or []
     if not isinstance(codes, list):
         codes = [codes]
@@ -4723,11 +4723,9 @@ def chair_map_bulk():
 
 @app.route('/api/chair_map/type', methods=['POST'])
 def chair_map_set_type():
-    """設定新舊 DLR 椅（存 app_settings）。"""
+    """設定新舊 DLR 椅（存 app_settings）。已登入同事均可使用。"""
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
-    if session.get('role') != 'admin':
-        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以修改新舊櫈。'})
     data = request.json or {}
     code = _up_norm(data.get('code'))
     typ = (data.get('type') or '').strip().lower()
@@ -4747,11 +4745,9 @@ def chair_map_set_type():
 
 @app.route('/api/chair_map/edit', methods=['POST'])
 def chair_map_edit():
-    """儲存櫈況圖手動編輯（文字顏色／底色／粗體／框線／文字／合併）。只有管理員可改。"""
+    """儲存櫈況圖手動編輯（文字顏色／底色／粗體／框線／文字／合併）。已登入同事均可使用。"""
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
-    if session.get('role') != 'admin':
-        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以修改版面。'})
     data = request.json or {}
     raw = data.get('edits')
     if not isinstance(raw, dict):
