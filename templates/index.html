@@ -5832,6 +5832,8 @@ items: collectItems(),
         const title = urEnTitle();
         sheet.style.width = Math.min(1000, Math.max(560, nc * 240)) + 'px';
 
+        if (urState.type === 'layout') { renderLayoutTemplate(sheet); return; }
+
         const w1 = (100 / nc * 0.25).toFixed(3);
         const w2 = (100 / nc * 0.21).toFixed(3);
         const w3 = (100 / nc * 0.54).toFixed(3);
@@ -5914,6 +5916,73 @@ items: collectItems(),
         html += '</table>';
         sheet.innerHTML = html;
 
+        renderUrPool();
+    }
+
+    // ===== Layout 專用表格（跟 Layout.xlsx 模板） =====
+    function renderLayoutTemplate(sheet) {
+        const cols = (urState.columns || []).slice(0, 3);
+        const defs = [
+            { main: 'Layout', sub: 'Stain Nearly Betting Area' },
+            { main: 'Layout', sub: 'Stain Nearly Dealer Area' },
+            { main: 'Thin Layout', sub: 'Thin Layout Affects Dealing' }
+        ];
+        while (cols.length < 3) cols.push({ main: defs[cols.length].main, sub: defs[cols.length].sub, items: [] });
+        const n = Math.max.apply(null, cols.map(function (c) { return (c.items || []).length; }).concat([0]));
+        const BG1 = '#D6F8FA', BG2 = '#99CCFF';
+        const BD = 'border:1px solid #000;';
+        const title = '更新-' + urDateLabel(urState.date) + (urState.sent ? '（已Send Email）' : '（未Send Email）');
+        const total = cols.reduce(function (a, c) { return a + (c.items || []).length; }, 0);
+
+        let h = '<table class="lay-tpl" style="border-collapse:collapse;width:100%;table-layout:fixed;font-size:11px;text-align:center;background:#fff;">';
+        h += '<colgroup><col style="width:4%"><col style="width:8%"><col style="width:7%"><col style="width:16.6%"><col style="width:8%"><col style="width:7%"><col style="width:16.6%"><col style="width:8%"><col style="width:7%"><col style="width:16.8%"></colgroup>';
+        h += '<tr><td colspan="10" style="' + BD + ' border-width:2px; padding:6px 4px; font-size:14px; font-weight:bold;">' + urEscape(title) + '</td></tr>';
+
+        h += '<tr><td rowspan="' + (3 + n + 1) + '" style="' + BD + ' color:#d32f2f; font-weight:bold; font-size:10.5px; line-height:1.25;">紅<br>字<br>為<br>新<br>增</td>';
+        h += '<td colspan="6" style="' + BD + ' background:' + BG1 + '; padding:5px 3px; font-weight:bold;">Layout</td>';
+        h += '<td colspan="3" style="' + BD + ' background:' + BG2 + '; padding:5px 3px; font-weight:bold;">Thin Layout</td></tr>';
+
+        h += '<tr>';
+        for (let i = 0; i < 3; i++) {
+            h += '<td colspan="3" style="' + BD + ' background:' + BG1 + '; padding:4px 2px; font-size:10.5px;">' + urEscape(cols[i].sub || defs[i].sub) + '</td>';
+        }
+        h += '</tr>';
+
+        h += '<tr>';
+        for (let i = 0; i < 3; i++) {
+            h += '<td style="' + BD + ' background:' + BG1 + '; padding:3px 2px; font-weight:bold; font-size:10.5px;">Hall</td>'
+               + '<td style="' + BD + ' background:' + BG1 + '; padding:3px 2px; font-weight:bold; font-size:10.5px;">Pit</td>'
+               + '<td style="' + BD + ' background:' + BG1 + '; padding:3px 2px; font-weight:bold; font-size:10.5px;">table</td>';
+        }
+        h += '</tr>';
+
+        for (let r = 0; r < n; r++) {
+            h += '<tr>';
+            for (let ci = 0; ci < 3; ci++) {
+                const item = (cols[ci].items || [])[r];
+                if (!item) {
+                    h += '<td style="' + BD + ' height:22px;"></td><td style="' + BD + '"></td><td style="' + BD + '"></td>';
+                    continue;
+                }
+                const st = BD + ' height:22px;' + (item.is_new ? ' color:#d32f2f; font-weight:bold;' : '');
+                const at = ' data-c="' + ci + '" data-i="' + r + '"';
+                h += '<td style="' + st + '"' + at + '>' + urEscape(item.hall) + '</td>';
+                h += '<td style="' + st + '"' + at + '>' + urEscape(item.pit) + '</td>';
+                h += '<td style="' + st + '"' + at + '>' + urEscape(item.table)
+                   + (item.note ? '<div class="lr-note">' + urEscape(item.note) + '</div>' : '') + '</td>';
+            }
+            h += '</tr>';
+        }
+
+        h += '<tr>';
+        for (let ci = 0; ci < 3; ci++) {
+            h += '<td colspan="3" style="' + BD + ' background:#000; color:#fff; font-weight:bold; padding:4px 2px;">' + (cols[ci].items || []).length + '</td>';
+        }
+        h += '</tr>';
+
+        h += '<tr><td class="lay-total" colspan="10" style="' + BD + ' background:#000; color:#fff; font-weight:bold; padding:6px 4px; font-size:13px;">總數 ' + total + '</td></tr>';
+        h += '</table>';
+        sheet.innerHTML = h;
         renderUrPool();
     }
 
@@ -6079,8 +6148,9 @@ items: collectItems(),
         const _totEl = sheet.querySelector('.lr-total');
         const _oldT = _tEl ? _tEl.textContent : '';
         const _oldTot = _totEl ? _totEl.textContent : '';
-        if (_tEl) _tEl.textContent = urEnTitle();
-        if (_totEl) _totEl.textContent = _oldTot.replace('總數', 'Total');
+        const _layTpl = !!sheet.querySelector('.lay-tpl');
+        if (_tEl && !_layTpl) _tEl.textContent = urEnTitle();
+        if (_totEl && !_layTpl) _totEl.textContent = _oldTot.replace('總數', 'Total');
         const _restore = function () {
             if (_tEl) _tEl.textContent = _oldT;
             if (_totEl) _totEl.textContent = _oldTot;
