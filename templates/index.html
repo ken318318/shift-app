@@ -2497,9 +2497,11 @@ async function loadPendingIssues() {
         });
         let out = '';
         groups.forEach(function (arr, cat) {
-            out += '<div style="font-size:12px; font-weight:bold; color:#37474f; margin:10px 0 5px; padding: 4px 6px; background:#f5f7fa; border-radius:5px; border-left:3px solid #90a4ae;">'
-                + issueGroupIcon(cat) + htmlEsc(cat) + '（' + arr.length + '）</div>'
-                + arr.join('');
+            out += '<details style="margin:8px 0 4px;">'
+                + '<summary style="cursor:pointer; font-size:12px; font-weight:bold; color:#37474f; padding:6px 8px; background:#f5f7fa; border-radius:5px; border-left:3px solid #90a4ae;">'
+                + issueGroupIcon(cat) + htmlEsc(cat) + '（' + arr.length + '）</summary>'
+                + '<div style="margin-top:4px;">' + arr.join('') + '</div>'
+                + '</details>';
         });
         return out;
     }
