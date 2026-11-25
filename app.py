@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-38", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-39", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3698,6 +3698,51 @@ def api_monthly_checks():
                 release_db_connection(conn)
             except Exception:
                 pass
+
+
+_LAYOUT_SCHED_KEY = 'layout_schedule_done'
+
+
+def _layout_sched_done():
+    raw = get_setting(_LAYOUT_SCHED_KEY, '') or ''
+    try:
+        data = json.loads(raw) if raw.strip() else {}
+        if isinstance(data, dict):
+            return {str(k).upper(): str(v) for k, v in data.items() if k and v}
+    except Exception:
+        pass
+    return {}
+
+
+@app.route('/api/layout_schedule', methods=['GET'])
+def layout_schedule_get():
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    return jsonify({'status': 'success', 'done': _layout_sched_done(), 'today': _up_today()})
+
+
+@app.route('/api/layout_schedule', methods=['POST'])
+def layout_schedule_set():
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    data = request.json or {}
+    pit = (data.get('pit') or '').strip().upper()
+    if not re.match(r'^PIT\d{1,3}$', pit):
+        return jsonify({'status': 'error', 'message': '❌ PIT 編號不正確。'})
+    done = _layout_sched_done()
+    if data.get('done'):
+        done[pit] = _up_today()
+        msg = '✅ %s 已標記更換完成（%s）' % (pit, done[pit])
+    else:
+        done.pop(pit, None)
+        msg = '✅ 已取消 %s 的更換完成標記' % pit
+    if not set_setting(_LAYOUT_SCHED_KEY, json.dumps(done, ensure_ascii=False)):
+        return jsonify({'status': 'error', 'message': '❌ 儲存失敗，請稍後再試。'})
+    try:
+        log_action('Layout 更換', ('完成 ' if data.get('done') else '取消 ') + pit)
+    except Exception:
+        pass
+    return jsonify({'status': 'success', 'done': done, 'message': msg})
 
 
 @app.route('/api/hall_tables', methods=['GET'])
