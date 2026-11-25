@@ -4977,7 +4977,7 @@ items: collectItems(),
     }
 
     async function loadLayoutProgress() {
-        await layoutLoadDone(true);
+        try { await layoutLoadDone(true); } catch (e) { }
         renderLayoutProgress();
     }
 
@@ -6349,6 +6349,7 @@ items: collectItems(),
     document.addEventListener("DOMContentLoaded", function() { 
         buildOnDutyList();
         loadMembers();
+        loadLayoutProgress();
         const ob = document.getElementById('on-duty-box');
         if (ob) ob.addEventListener('toggle', updateOnDutyUI);
         const ol = document.getElementById('on-duty-list');
