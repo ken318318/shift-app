@@ -672,42 +672,34 @@
         <div class="cm-wrap">
             <div class="cm-bar">
                 <button class="lr-b-close" onclick="closeChairMap()">✖ 返回</button>
-                <span class="cm-sep"></span>
                 <button id="cm-b-status" class="lr-b-blue" onclick="setChairMode('status')">🪑 好壞櫈</button>
                 <button id="cm-b-type" class="lr-b-gray" onclick="setChairMode('type')">🆕 新舊櫈</button>
+                <button id="cm-b-edit" class="lr-b-gray" onclick="cmToggleEdit()" style="display:none;">✏️ 編輯</button>
                 <span class="cm-sep"></span>
+                <button id="cm-b-settings" class="lr-b-gray" onclick="cmOpenEventPicker()">⚙️ 台狀態／活動區</button>
+            </div>
+            <div class="cm-bar" style="margin-top:6px;">
                 <div class="cm-zoom">
                     <button class="lr-b-gray" onclick="cmZoomStep(-1)">➖</button>
                     <span id="cm-zoom-label" class="cm-zoom-label">100%</span>
                     <button class="lr-b-gray" onclick="cmZoomStep(1)">➕</button>
                     <button class="lr-b-gray" onclick="cmZoomFit()">適合</button>
                 </div>
-                <span class="cm-sep"></span>
                 <button class="lr-b-blue" onclick="cmSaveImage()">🖼️ 存為圖片</button>
                 <button id="cm-b-reset" class="lr-b-gray" onclick="cmResetLayout()" style="display:none;">↩️ 還原版面</button>
-                <button id="cm-b-edit" class="lr-b-gray" onclick="cmToggleEdit()" style="display:none;">✏️ 編輯</button>
                 <input type="file" id="cm-file" accept=".xlsx,.xlsm" style="display:none" onchange="cmUploadExcel(this)">
-                <span class="cm-legend" id="cm-legend"></span>
             </div>
+            <details style="margin-top:6px; background:#fff; border-radius:10px; padding:6px 10px; box-shadow:0 2px 8px rgba(0,0,0,.06);">
+                <summary style="cursor:pointer; font-size:12px; font-weight:bold; color:#37474f;">🎨 顏色說明</summary>
+                <span class="cm-legend" id="cm-legend" style="margin-top:6px;"></span>
+            </details>
             <div id="cm-tip" class="lr-msg"></div>
             <div id="cm-tools" class="cm-tools">
-                
-                
-                
                 <div class="cm-tools-row">
                     <span class="cm-tools-lbl">操作</span>
-                    <button id="cm-b-event" class="cm-sw" onclick="cmOpenEventPicker()">🏷️ 活動區設定</button>
                     <button class="cm-sw" onclick="cmResetSel()">↩️ 還原自動顏色</button>
                     <button id="cm-b-clear" class="cm-sw" style="color:#c62828" onclick="cmClearAllEdits()">🗑️ 清空全部</button>
                     <button class="cm-sw" style="background:#2e7d32;color:#fff;border-color:#2e7d32" onclick="cmToggleEdit()">✅ 完成編輯</button>
-                </div>
-                <div class="cm-tools-row">
-                    <span class="cm-tools-lbl">台狀態</span>
-                    <button class="cm-sw" onclick="cmSetChairAction('new')">🆕 新櫈</button>
-                    <button class="cm-sw" onclick="cmSetChairAction('old')">🕰️ 舊櫈</button>
-                    <button class="cm-sw" onclick="cmSetChairAction('none')">➖ 取消新舊</button>
-                    <button id="cm-b-oper" class="cm-sw" onclick="cmSetChairAction('operating')">✅ 營運</button>
-                    <button id="cm-b-stop" class="cm-sw" onclick="cmSetChairAction('inactive')">⛔ 停運</button>
                 </div>
                 <div id="cm-selinfo" class="cm-tools-lbl" style="margin:2px;font-weight:normal;color:#455a64;">未選取格仔（點一下或拖選）</div>
             </div>
@@ -725,25 +717,27 @@
         <div><a id="cm-dl" download="櫈況圖.png" style="display:inline-block; margin:12px 0 30px; padding:10px 18px; background:#1a73e8; color:#fff; border-radius:8px; font-size:14px; font-weight:bold; text-decoration:none;">⬇️ 下載圖片</a></div>
     </div>
 
-    <!-- ===== 活動區設定（打勾式） ===== -->
+    <!-- ===== 台狀態／活動區設定（下拉打勾） ===== -->
     <div id="cm-eventbox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:10010; padding:12px; overflow:auto;">
         <div style="max-width:560px; margin:0 auto; background:#fff; border-radius:12px; padding:12px; box-shadow:0 4px 20px rgba(0,0,0,.25);">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px;">
-                <b style="font-size:14px; color:#6a1b9a;">🏷️ 活動區設定</b>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
+                <b style="font-size:14px; color:#6a1b9a;">⚙️ 台狀態／活動區設定</b>
                 <button type="button" onclick="cmCloseEventPicker()" style="border:none; background:#eee; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold;">✖ 關閉</button>
             </div>
-            <div style="font-size:11.5px; color:#666; margin-bottom:8px;">打勾＝活動區（唔計入台數及 DLR 數量）。可以打台號搜尋。</div>
+            <select id="cm-set-mode" onchange="cmSetModeChanged()" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; font-size:13px; font-weight:bold; color:#37474f; background:#fff;">
+                <option value="event">🏷️ 活動區</option>
+                <option value="new">🆕 新櫈</option>
+                <option value="old">🕰️ 舊櫈</option>
+                <option value="none">➖ 取消新舊</option>
+                <option value="operating">✅ 營運</option>
+                <option value="inactive">⛔ 停運</option>
+            </select>
+            <div id="cm-set-hint" style="font-size:11.5px; color:#666; margin:8px 2px;"></div>
             <input id="cm-event-q" type="text" placeholder="搜尋台號，例如 2001" oninput="cmRenderEventList()" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
             <div style="display:flex; gap:6px; align-items:center; margin:8px 0;">
-                <button type="button" onclick="cmEventCheckAll(true)" style="border:1px solid #ce93d8; background:#f3e5f5; color:#6a1b9a; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold;">全選（顯示中）</button>
-                <button type="button" onclick="cmEventCheckAll(false)" style="border:1px solid #cfd8dc; background:#eceff1; color:#37474f; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold;">清除（顯示中）</button>
-                <span id="cm-event-count" style="font-size:12px; color:#6a1b9a; font-weight:bold; margin-left:auto;"></span>
+                <span id="cm-event-count" style="font-size:12px; color:#6a1b9a; font-weight:bold;"></span>
             </div>
             <div id="cm-event-list" style="max-height:50vh; overflow:auto; border:1px solid #eee; border-radius:8px; padding:4px 6px;"></div>
-            <div style="display:flex; gap:8px; margin-top:10px;">
-                <button type="button" onclick="cmCloseEventPicker()" style="flex:1; padding:11px; background:#eee; color:#444; border:none; border-radius:8px; font-size:13px; font-weight:bold;">取消</button>
-                <button type="button" id="cm-event-save" onclick="cmSaveEventPicker()" style="flex:1; padding:11px; background:#6a1b9a; color:#fff; border:none; border-radius:8px; font-size:13px; font-weight:bold;">💾 儲存</button>
-            </div>
             <div id="cm-event-msg" style="font-size:12px; color:#d32f2f; margin-top:6px; min-height:16px;"></div>
         </div>
     </div>
@@ -4582,26 +4576,17 @@ items: collectItems(),
         }
     }
 
-    // ===== 活動區設定（打勾式，取代點格仔） =====
-    let cmEventAll = [];
-    let cmEventCur = [];
-    let cmEventOrig = [];
+    // ===== 台狀態／活動區設定（下拉打勾） =====
+    let cmSetMode = 'event';
 
     function cmOpenEventPicker() {
-        fetch('/api/table_codes?_t=' + Date.now(), { cache: 'no-store' })
-            .then(function (r) { return r.json(); })
-            .then(function (d) {
-                if (!d || d.status === 'error') { alert('❌ 台號讀取失敗'); return; }
-                cmEventAll = (d.codes || []).slice();
-                cmEventCur = (d.event || []).slice();
-                cmEventOrig = cmEventCur.slice();
-                document.getElementById('cm-event-q').value = '';
-                const msg = document.getElementById('cm-event-msg');
-                if (msg) msg.textContent = '';
-                cmRenderEventList();
-                document.getElementById('cm-eventbox').style.display = 'block';
-            })
-            .catch(function () { alert('❌ 連線失敗'); });
+        const box = document.getElementById('cm-eventbox');
+        if (box) box.style.display = 'block';
+        const q = document.getElementById('cm-event-q');
+        if (q) q.value = '';
+        const msg = document.getElementById('cm-event-msg');
+        if (msg) msg.textContent = '';
+        cmSetModeChanged();
     }
 
     function cmCloseEventPicker() {
@@ -4609,73 +4594,116 @@ items: collectItems(),
         if (el) el.style.display = 'none';
     }
 
-    function cmEventFiltered() {
-        const q = (document.getElementById('cm-event-q').value || '').trim().toUpperCase();
-        return cmEventAll.filter(function (c) { return !q || String(c).toUpperCase().indexOf(q) >= 0; });
+    function cmSetModeChanged() {
+        const sel = document.getElementById('cm-set-mode');
+        cmSetMode = (sel && sel.value) || 'event';
+        const hints = {
+            event: '打勾＝活動區（唔計入台數及 DLR 數量）；再打勾取消。',
+            new: '打勾＝該台設為新櫈（原本舊櫈會即時轉為新櫈）。',
+            old: '打勾＝該台設為舊櫈（原本新櫈會即時轉為舊櫈）。',
+            none: '以下係已設新／舊櫈嘅台，打勾＝取消該台新舊設定。',
+            operating: '以下係現時停運嘅台，打勾＝改回營運。',
+            inactive: '以下係現時營運嘅台，打勾＝設為停運。'
+        };
+        const hint = document.getElementById('cm-set-hint');
+        if (hint) hint.textContent = hints[cmSetMode] || '';
+        cmRenderEventList();
+    }
+
+    function cmCellByCode(code) {
+        const cells = (cmData && cmData.cells) || [];
+        for (let i = 0; i < cells.length; i++) if (cells[i].code === code) return cells[i];
+        return null;
+    }
+
+    function cmSetRows() {
+        const cells = (cmData && cmData.cells) || [];
+        const rows = [];
+        cells.forEach(function (c) {
+            if (!c.code) return;
+            if (cmSetMode === 'event') {
+                rows.push({ code: c.code, on: !!c.event });
+            } else if (cmSetMode === 'new') {
+                if (c.chair !== 'new') rows.push({ code: c.code, on: false });
+            } else if (cmSetMode === 'old') {
+                if (c.chair !== 'old') rows.push({ code: c.code, on: false });
+            } else if (cmSetMode === 'none') {
+                if (c.chair) rows.push({ code: c.code, on: false, tag: (c.chair === 'new' ? '新櫈' : '舊櫈') });
+            } else if (cmSetMode === 'operating') {
+                if (c.status === '停運') rows.push({ code: c.code, on: false });
+            } else if (cmSetMode === 'inactive') {
+                if (c.status !== '停運') rows.push({ code: c.code, on: false });
+            }
+        });
+        rows.sort(function (a, b) { return a.code < b.code ? -1 : (a.code > b.code ? 1 : 0); });
+        return rows;
     }
 
     function cmRenderEventList() {
         const box = document.getElementById('cm-event-list');
-        const list = cmEventFiltered();
-        if (!list.length) {
-            box.innerHTML = '<div style="padding:16px;text-align:center;color:#999;font-size:12px;">冇符合台號</div>';
-            cmUpdateEventCount();
+        if (!box) return;
+        const qEl = document.getElementById('cm-event-q');
+        const q = ((qEl && qEl.value) || '').trim().toUpperCase();
+        const all = cmSetRows();
+        const rows = all.filter(function (r) { return !q || r.code.toUpperCase().indexOf(q) >= 0; });
+        const cntEl = document.getElementById('cm-event-count');
+        if (cntEl) {
+            cntEl.textContent = q
+                ? ('符合 ' + rows.length + ' 台（可設定 ' + all.length + ' 台）')
+                : ('可設定 ' + all.length + ' 台');
+        }
+        if (!rows.length) {
+            box.innerHTML = '<div style="padding:16px;text-align:center;color:#999;font-size:12px;">冇符合台號／已經全部完成</div>';
             return;
         }
-        box.innerHTML = list.map(function (c) {
-            const on = cmEventCur.indexOf(c) >= 0;
-            return '<label style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-bottom:1px solid #f2f2f2;font-size:13px;cursor:pointer;">'
-                + '<input type="checkbox" data-code="' + c + '"' + (on ? ' checked' : '') + ' onchange="cmToggleEventCode(this)" style="width:18px;height:18px;">'
-                + '<span style="font-weight:bold;">' + c + '</span>'
-                + (on ? '<span style="font-size:11px;color:#6a1b9a;margin-left:auto;">活動區</span>' : '')
+        const shown = rows.slice(0, 400);
+        box.innerHTML = shown.map(function (r) {
+            const tag = r.tag || (r.on ? '活動區' : '');
+            return '<label style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid #f2f2f2;font-size:13px;cursor:pointer;">'
+                + '<input type="checkbox" data-code="' + r.code + '"' + (r.on ? ' checked' : '') + ' onchange="cmApplySet(this)" style="width:18px;height:18px;">'
+                + '<span style="font-weight:bold;">' + r.code + '</span>'
+                + (tag ? '<span style="font-size:11px;color:#6a1b9a;margin-left:auto;">' + tag + '</span>' : '')
                 + '</label>';
-        }).join('');
-        cmUpdateEventCount();
+        }).join('') + (rows.length > 400 ? '<div style="padding:8px;text-align:center;color:#999;font-size:11.5px;">（只顯示前 400 台，請用搜尋）</div>' : '');
     }
 
-    function cmToggleEventCode(el) {
-        const c = el.getAttribute('data-code');
-        const i = cmEventCur.indexOf(c);
-        if (el.checked) { if (i < 0) cmEventCur.push(c); }
-        else if (i >= 0) { cmEventCur.splice(i, 1); }
-        cmUpdateEventCount();
-    }
-
-    function cmEventCheckAll(on) {
-        cmEventFiltered().forEach(function (c) {
-            const i = cmEventCur.indexOf(c);
-            if (on) { if (i < 0) cmEventCur.push(c); }
-            else if (i >= 0) { cmEventCur.splice(i, 1); }
-        });
-        cmRenderEventList();
-    }
-
-    function cmUpdateEventCount() {
-        const el = document.getElementById('cm-event-count');
-        if (el) el.textContent = '已選 ' + cmEventCur.length + ' 台';
-    }
-
-    async function cmSaveEventPicker() {
+    async function cmApplySet(el) {
+        const code = el.getAttribute('data-code');
+        const on = el.checked;
+        const mode = cmSetMode;
         const msg = document.getElementById('cm-event-msg');
-        const added = cmEventCur.filter(function (c) { return cmEventOrig.indexOf(c) < 0; });
-        const removed = cmEventOrig.filter(function (c) { return cmEventCur.indexOf(c) < 0; });
-        if (!added.length && !removed.length) { cmCloseEventPicker(); cmToast('沒有改動'); return; }
         if (msg) msg.textContent = '儲存中…';
+        el.disabled = true;
         try {
-            for (const p of [{ codes: added, on: true }, { codes: removed, on: false }]) {
-                if (!p.codes.length) continue;
-                const r = await fetch('/api/chair_map/event', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(p)
-                });
-                const d = await r.json();
-                if (!d || d.status !== 'success') { if (msg) msg.textContent = (d && d.message) || '❌ 儲存失敗'; return; }
+            let url = '/api/chair_map/bulk';
+            let body = { action: mode, codes: [code] };
+            if (mode === 'event') {
+                url = '/api/chair_map/event';
+                body = { codes: [code], on: on };
+            } else if (mode === 'new' || mode === 'old') {
+                body = { action: on ? mode : 'none', codes: [code] };
+            } else if (mode === 'none') {
+                body = { action: 'none', codes: [code] };
             }
-            cmCloseEventPicker();
+            const r = await fetch(url, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const d = await r.json();
+            if (!d || d.status !== 'success') {
+                if (msg) msg.textContent = (d && d.message) || '❌ 儲存失敗';
+                el.checked = !on;
+                return;
+            }
+            if (msg) msg.textContent = '';
             await loadChairMap();
-            cmToast('✅ 活動區已更新（' + cmEventCur.length + ' 台）');
+            cmRenderEventList();
+            cmToast('✅ ' + code + ' 已更新');
         } catch (e) {
             if (msg) msg.textContent = '❌ 連線失敗';
+            el.checked = !on;
+        } finally {
+            el.disabled = false;
         }
     }
 
