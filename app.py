@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-39", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-40", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -4605,13 +4605,15 @@ def chair_map_get():
         return jsonify(_cached)
     layout = _chair_layout()
     hall_status = {}
+    hall_pit = {}
     conn = None
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("SELECT table_code, status FROM hall_tables")
-        for code, st in c.fetchall():
+        c.execute("SELECT table_code, status, pit FROM hall_tables")
+        for code, st, pit in c.fetchall():
             hall_status[_up_norm(code)] = st
+            hall_pit[_up_norm(code)] = pit
     except Exception as e:
         print('櫈況圖讀取台號失敗:', e)
     finally:
@@ -4638,6 +4640,7 @@ def chair_map_get():
             'rr': cell.get('rr', 0), 'b': cell.get('b', 0),
             'code': code,
             'status': st,
+            'pit': hall_pit.get(key),
             'dlr_bad': bool(iss.get('dlr_bad')),
             'guest_bad': bool(iss.get('guest_bad')),
             'stand': stand,
