@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-41", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-43", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3701,6 +3701,9 @@ def api_monthly_checks():
 
 
 _LAYOUT_SCHED_KEY = 'layout_schedule_done'
+_LAYOUT_ROUND_KEY = 'layout_schedule_round'
+_LAYOUT_HIST_KEY = 'layout_schedule_history'
+_LAYOUT_PIT_TOTAL = 28
 
 
 def _layout_sched_done():
@@ -3714,11 +3717,95 @@ def _layout_sched_done():
     return {}
 
 
+def _layout_round_no():
+    try:
+        return max(1, int(get_setting(_LAYOUT_ROUND_KEY, '1') or 1))
+    except Exception:
+        return 1
+
+
+def _layout_history():
+    raw = get_setting(_LAYOUT_HIST_KEY, '') or ''
+    try:
+        data = json.loads(raw) if raw.strip() else []
+        if isinstance(data, list):
+            return data
+    except Exception:
+        pass
+    return []
+
+
+def _layout_last_summary():
+    hist = _layout_history()
+    if not hist:
+        return None
+    last = hist[-1] or {}
+    items = last.get('items') or {}
+    return {
+        'round': last.get('round'),
+        'count': len(items),
+        'total': _LAYOUT_PIT_TOTAL,
+        'finished_at': last.get('finished_at') or '',
+        'full': len(items) >= _LAYOUT_PIT_TOTAL,
+    }
+
+
 @app.route('/api/layout_schedule', methods=['GET'])
 def layout_schedule_get():
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
-    return jsonify({'status': 'success', 'done': _layout_sched_done(), 'today': _up_today()})
+    return jsonify({'status': 'success', 'done': _layout_sched_done(), 'today': _up_today(),
+                    'round': _layout_round_no(), 'last': _layout_last_summary(),
+                    'rounds_done': len(_layout_history()), 'total_pits': _LAYOUT_PIT_TOTAL})
+
+
+@app.route('/api/layout_schedule/reset', methods=['POST'])
+def layout_schedule_reset():
+    """完成一輪 → 存檔舊一輪（保留日期）並開始新一輪；不影響交更紀錄同主頁紀錄卡。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    done = _layout_sched_done()
+    if not done:
+        return jsonify({'status': 'error', 'message': '本輪尚未有任何完成記錄，無需開始新一輪。'})
+    rnd = _layout_round_no()
+    hist = _layout_history()
+    hist.append({'round': rnd, 'items': done, 'finished_at': _up_today(), 'count': len(done)})
+    hist = hist[-30:]
+    if not set_setting(_LAYOUT_HIST_KEY, json.dumps(hist, ensure_ascii=False)):
+        return jsonify({'status': 'error', 'message': '❌ 儲存失敗，請稍後再試。'})
+    if not set_setting(_LAYOUT_SCHED_KEY, '{}'):
+        return jsonify({'status': 'error', 'message': '❌ 儲存失敗，請稍後再試。'})
+    set_setting(_LAYOUT_ROUND_KEY, str(rnd + 1))
+    try:
+        log_action('Layout 更換', '第 %d 輪完成（%d／%d），開始第 %d 輪' % (rnd, len(done), _LAYOUT_PIT_TOTAL, rnd + 1))
+    except Exception:
+        pass
+    return jsonify({'status': 'success', 'round': rnd + 1, 'done': {}, 'last': _layout_last_summary(),
+                    'message': '✅ 第 %d 輪已存檔（%d 個 PIT），已開始第 %d 輪。' % (rnd, len(done), rnd + 1)})
+
+
+@app.route('/api/layout_schedule/undo', methods=['POST'])
+def layout_schedule_undo():
+    """還原上一次「開始新一輪」（找回舊一輪的完成日期）。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    hist = _layout_history()
+    if not hist:
+        return jsonify({'status': 'error', 'message': '沒有可還原嘅上一輪。'})
+    last = hist.pop() or {}
+    items = last.get('items') or {}
+    if not set_setting(_LAYOUT_HIST_KEY, json.dumps(hist, ensure_ascii=False)):
+        return jsonify({'status': 'error', 'message': '❌ 儲存失敗，請稍後再試。'})
+    if not set_setting(_LAYOUT_SCHED_KEY, json.dumps(items, ensure_ascii=False)):
+        return jsonify({'status': 'error', 'message': '❌ 儲存失敗，請稍後再試。'})
+    rnd = last.get('round') or (len(hist) + 1)
+    set_setting(_LAYOUT_ROUND_KEY, str(rnd))
+    try:
+        log_action('Layout 更換', '還原第 %d 輪（%d 個 PIT）' % (rnd, len(items)))
+    except Exception:
+        pass
+    return jsonify({'status': 'success', 'round': rnd, 'done': items, 'last': _layout_last_summary(),
+                    'message': '✅ 已還原第 %d 輪（%d 個 PIT）。' % (rnd, len(items))})
 
 
 @app.route('/api/layout_schedule', methods=['POST'])
