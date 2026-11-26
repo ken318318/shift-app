@@ -758,7 +758,7 @@
     <div id="lc-box" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10025; padding:16px; align-items:center; justify-content:center;">
         <div style="max-width:430px; width:100%; background:#fff; border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);">
             <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
-                <b style="font-size:15px; color:#1a237e;">🎨 PIT 顏色手動設定</b>
+                <b style="font-size:15px; color:#1a237e;">🎨 台號顏色設定</b>
                 <button onclick="lcClose()" style="border:none; background:#eee; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold;">✖ 關閉</button>
             </div>
             <select id="lc-mode" onchange="lcRender()" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; font-size:13px; font-weight:bold; color:#37474f; background:#fff;">
@@ -768,7 +768,8 @@
                 <option value="o">🟠 橙（#FFCC99）</option>
                 <option value="">↩️ 還原預設顏色</option>
             </select>
-            <div style="font-size:11.5px; color:#666; margin:8px 2px;">打勾＝套用上面揀嘅顏色；取消打勾＝還原預設。</div>
+            <input id="lc-q" type="text" placeholder="搜尋台號，例如 1236" oninput="lcRender()" style="width:100%; margin-top:8px; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
+            <div style="font-size:11.5px; color:#666; margin:8px 2px;">打勾＝該台用上面揀嘅顏色；取消打勾＝還原（停運灰／PIT 顏色）。</div>
             <div id="lc-list" style="max-height:52vh; overflow:auto; border:1px solid #eee; border-radius:8px; padding:4px 6px;"></div>
             <div id="lc-msg" style="font-size:12px; color:#d32f2f; margin-top:6px; min-height:16px;"></div>
         </div>
@@ -4826,6 +4827,7 @@ items: collectItems(),
     let layoutRound = 1;
     let layoutLast = null;
     let layoutColors = {};
+    let layoutCodeColors = {};
 
     function layoutPitCount() {
         return LAYOUT_SCHED.reduce(function (n, w) { return n + w.pits.length; }, 0);
@@ -4841,6 +4843,7 @@ items: collectItems(),
                 layoutRound = d.round || 1;
                 layoutLast = d.last || null;
                 layoutColors = d.colors || {};
+                layoutCodeColors = d.code_colors || {};
                 layoutLoaded = true;
             }
         } catch (e) { }
@@ -4855,21 +4858,56 @@ items: collectItems(),
             + '</label>';
     }
 
-    // ===== PIT 顏色手動設定 =====
+    // ===== 台號顏色手動設定 =====
     const LC_NAMES = { b: '藍', v: '紫', p: '粉', o: '橙' };
 
-    function lcAllPits() {
-        const out = [];
-        LAYOUT_SCHED.forEach(function (w) {
-            w.pits.forEach(function (p) { out.push({ key: p[0], def: p[2] }); });
+    function lcAllCodes() {
+        const codes = [];
+        const seen = {};
+        ((cmData && cmData.cells) || []).forEach(function (c) {
+            if (c.code && !seen[c.code]) { seen[c.code] = 1; codes.push({ key: c.code, pit: c.pit, status: c.status }); }
         });
-        return out;
+        codes.sort(function (a, b) { return a.key < b.key ? -1 : (a.key > b.key ? 1 : 0); });
+        return codes;
+    }
+
+    function lcEffectiveName(r) {
+        const ov = layoutCodeColors[r.key];
+        if (ov) return '手動・' + (LC_NAMES[ov] || '');
+        if (r.status === '停運') return '預設・停運灰';
+        const key = 'PIT' + String(r.pit || '').padStart(2, '0');
+        const def = (layoutColors && layoutColors[key]) || '';
+        for (let i = 0; i < LAYOUT_SCHED.length; i++) {
+            const w = LAYOUT_SCHED[i];
+            for (let j = 0; j < w.pits.length; j++) {
+                if (w.pits[j][0] === key) return '預設・' + (LC_NAMES[def || w.pits[j][2]] || '');
+            }
+        }
+        return '預設・（不在行程）';
+    }
+
+    function lcEffColor(r) {
+        const ov = layoutCodeColors[r.key];
+        if (ov) return LAYOUT_COLORS[ov];
+        if (r.status === '停運') return '#cfd8dc';
+        const key = 'PIT' + String(r.pit || '').padStart(2, '0');
+        const c2 = (layoutColors && layoutColors[key]) || '';
+        if (c2) return LAYOUT_COLORS[c2];
+        for (let i = 0; i < LAYOUT_SCHED.length; i++) {
+            const w = LAYOUT_SCHED[i];
+            for (let j = 0; j < w.pits.length; j++) {
+                if (w.pits[j][0] === key) return LAYOUT_COLORS[w.pits[j][2]];
+            }
+        }
+        return '#ffffff';
     }
 
     function lcOpen() {
         const box = document.getElementById('lc-box');
         const msg = document.getElementById('lc-msg');
         if (msg) msg.textContent = '';
+        const q = document.getElementById('lc-q');
+        if (q) q.value = '';
         lcRender();
         if (box) box.style.display = 'flex';
     }
@@ -4883,23 +4921,27 @@ items: collectItems(),
         const box = document.getElementById('lc-list');
         if (!box) return;
         const mode = document.getElementById('lc-mode').value;
-        const rows = lcAllPits();
+        const qEl = document.getElementById('lc-q');
+        const q = ((qEl && qEl.value) || '').trim().toUpperCase();
+        const rows = lcAllCodes().filter(function (r) { return !q || r.key.indexOf(q) >= 0; });
+        if (!rows.length) {
+            box.innerHTML = '<div style="padding:16px;text-align:center;color:#999;font-size:12px;">冇符合台號</div>';
+            return;
+        }
         box.innerHTML = rows.map(function (r) {
-            const ov = layoutColors[r.key] || '';
-            const cur = ov || r.def;
+            const ov = layoutCodeColors[r.key] || '';
             const checked = mode ? (ov === mode) : !!ov;
-            const tag = (ov ? '手動' : '預設') + '・' + (LC_NAMES[cur] || '');
             return '<label style="display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px solid #f2f2f2; font-size:13px; cursor:pointer;">'
-                + '<input type="checkbox" data-pit="' + r.key + '"' + (checked ? ' checked' : '') + ' onchange="lcToggle(this)" style="width:18px; height:18px;">'
+                + '<input type="checkbox" data-code="' + r.key + '"' + (checked ? ' checked' : '') + ' onchange="lcToggle(this)" style="width:18px; height:18px;">'
                 + '<span style="font-weight:bold;">' + r.key + '</span>'
-                + '<span style="display:inline-block; width:16px; height:12px; background:' + (LAYOUT_COLORS[cur] || '#fff') + '; border:1px solid #999;"></span>'
-                + '<span style="font-size:11px; color:#666; margin-left:auto;">' + tag + '</span>'
+                + '<span style="display:inline-block; width:16px; height:12px; background:' + lcEffColor(r) + '; border:1px solid #999;"></span>'
+                + '<span style="font-size:11px; color:#666; margin-left:auto;">' + lcEffectiveName(r) + '</span>'
                 + '</label>';
         }).join('');
     }
 
     async function lcToggle(el) {
-        const pit = el.getAttribute('data-pit');
+        const code = el.getAttribute('data-code');
         const mode = document.getElementById('lc-mode').value;
         const colour = el.checked ? (mode || '') : '';
         const msg = document.getElementById('lc-msg');
@@ -4907,7 +4949,7 @@ items: collectItems(),
         try {
             const r = await fetch('/api/layout_colors', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pit: pit, colour: colour })
+                body: JSON.stringify({ code: code, colour: colour })
             });
             const d = await r.json();
             if (!d || d.status !== 'success') {
@@ -4915,9 +4957,8 @@ items: collectItems(),
                 el.checked = !el.checked;
                 return;
             }
-            layoutColors = d.colors || {};
+            layoutCodeColors = d.code_colors || {};
             if (msg) msg.textContent = d.message || '';
-            document.getElementById('ls-sched').innerHTML = schedTableHtml();
             await lsRenderMap();
             lsApplyZoom();
             lcRender();
@@ -4964,6 +5005,8 @@ items: collectItems(),
     // 地圖顏色：停運＝灰；行程外 PIT＝白；其餘跟 PIT 顏色
     function lsColourFor(cell) {
         if (!cell || !cell.code) return '';
+        const ov = layoutCodeColors[cell.code];
+        if (ov) return LAYOUT_COLORS[ov];
         if (cell.status === '停運') return '#cfd8dc';
         return layoutPitColor(cell.pit) || '#ffffff';
     }
