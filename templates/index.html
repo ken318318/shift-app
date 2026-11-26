@@ -742,6 +742,20 @@
         </div>
     </div>
 
+    <!-- ===== 開始新一輪（三選一） ===== -->
+    <div id="ls-newbox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10020; padding:16px;">
+        <div style="max-width:430px; margin:12vh auto 0; background:#fff; border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);">
+            <b style="font-size:15px; color:#1a237e;">🔄 開始新一輪</b>
+            <div id="ls-newbox-msg" style="font-size:12.5px; color:#444; margin:10px 0 14px; line-height:1.7;"></div>
+            <div style="display:flex; gap:8px;">
+                <button onclick="lsCloseNewBox()" style="flex:1; padding:11px 6px; border:none; border-radius:8px; background:#eceff1; color:#455a64; font-size:13px; font-weight:bold;">取消</button>
+                <button onclick="lsDoRestoreDraft()" style="flex:1; padding:11px 6px; border:none; border-radius:8px; background:#fff3cd; color:#856404; font-size:13px; font-weight:bold;">還原（草稿）</button>
+                <button onclick="lsDoNewRound()" style="flex:1; padding:11px 6px; border:none; border-radius:8px; background:#1a73e8; color:#fff; font-size:13px; font-weight:bold;">確定</button>
+            </div>
+            <div id="ls-newbox-tip" style="font-size:11px; color:#888; margin-top:10px; line-height:1.5;"></div>
+        </div>
+    </div>
+
     <!-- ===== 換 Layout 行程（獨立頁面） ===== -->
     <div id="ls-modal" class="lr-modal">
         <div class="lr-wrap" style="max-width:1100px;">
@@ -4862,13 +4876,34 @@ items: collectItems(),
         lsApplyZoom();
     }
 
-    async function lsNewRound() {
+    function lsNewRound() {
         const done = Object.keys(layoutDone).filter(function (p) { return layoutDone[p]; }).length;
         const total = layoutPitCount();
-        const ask = done < total
-            ? ('本輪仍有 ' + (total - done) + ' 個 PIT 未完成。\n\n確定開始新一輪？\n（舊一輪會完整存檔，主頁紀錄卡不受影響）')
-            : ('本輪已完成 ' + done + '／' + total + '。\n\n確定開始新一輪？\n（舊一輪會完整存檔，主頁紀錄卡不受影響）');
-        if (!confirm(ask)) return;
+        const msg = document.getElementById('ls-newbox-msg');
+        const tip = document.getElementById('ls-newbox-tip');
+        if (msg) {
+            msg.innerHTML = '本輪（第 ' + layoutRound + ' 輪）已完成 <b>' + done + '／' + total + '</b> 個 PIT。'
+                + '<br>• 確定：將本輪存檔，開一張空白新表'
+                + '<br>• 還原（草稿）：將上一輪已存檔嘅資料載回，當草稿繼續修改';
+        }
+        if (tip) {
+            tip.textContent = (layoutLast && layoutLast.finished_at)
+                ? ('可還原：第 ' + layoutLast.round + ' 輪（' + (layoutLast.count || 0) + '／' + total + '，' + String(layoutLast.finished_at).slice(5) + ' 存檔）')
+                : '（目前冇可還原嘅上一輪）';
+        }
+        const rb = document.querySelector('#ls-newbox button[onclick="lsDoRestoreDraft()"]');
+        if (rb) rb.disabled = !(layoutLast && layoutLast.finished_at);
+        const box = document.getElementById('ls-newbox');
+        if (box) box.style.display = 'block';
+    }
+
+    function lsCloseNewBox() {
+        const box = document.getElementById('ls-newbox');
+        if (box) box.style.display = 'none';
+    }
+
+    async function lsDoNewRound() {
+        lsCloseNewBox();
         try {
             const r = await fetch('/api/layout_schedule/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
             const d = await r.json();
@@ -4880,6 +4915,24 @@ items: collectItems(),
             updateLsMsg();
             renderLayoutProgress();
             cmToast(d.message || '✅ 已開始新一輪');
+        } catch (e) {
+            alert('❌ 連線失敗');
+        }
+    }
+
+    async function lsDoRestoreDraft() {
+        lsCloseNewBox();
+        try {
+            const r = await fetch('/api/layout_schedule/undo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+            const d = await r.json();
+            if (!d || d.status !== 'success') { alert((d && d.message) || '❌ 操作失敗'); return; }
+            layoutDone = d.done || {};
+            layoutRound = d.round || layoutRound;
+            layoutLast = d.last || null;
+            document.getElementById('ls-sched').innerHTML = schedTableHtml();
+            updateLsMsg();
+            renderLayoutProgress();
+            cmToast(d.message || '✅ 已還原為草稿');
         } catch (e) {
             alert('❌ 連線失敗');
         }
