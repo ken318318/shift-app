@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-49", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-50", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -4795,8 +4795,7 @@ def chair_map_get():
         key = _up_norm(code)
         st = hall_status.get(key, '營運') if key else ''
         iss = issues.get(key, {}) if key else {}
-        stand = bool(key) and (code.upper().startswith(('RL', 'DS', 'SB')) or code.upper() in
-                               ('NB1626','NB1627','NB1628','NB1629','NB1630','NB1631','NB1632','NB1633'))
+        stand = bool(key) and code.upper().startswith(('RL', 'DS'))   # 企位只有 DS／RL
         cells.append({
             'r': cell.get('r'), 'c': cell.get('c'),
             'v': cell.get('v', ''),
