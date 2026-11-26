@@ -758,7 +758,7 @@
                 <button id="ls-b-undo" class="lr-b-gray" onclick="lsUndoRound()" style="display:none;">↩️ 還原上一輪</button>
             </div>
             <div class="lr-tip" style="font-size:11.5px;">
-                地圖顏色＝該台所屬 PIT 喺下面「TG Layout Replacement Schedule」嘅分類顏色。表格打勾＝該 PIT 更換完成（只作記錄，不影響櫈況圖自動顏色同交更邏輯）。
+                地圖顏色＝該台所屬 PIT 喺下面「TG Layout Replacement Schedule」嘅分類顏色；停運台顯示灰色，不在行程嘅 PIT 顯示白色。表格打勾＝該 PIT 更換完成（只作記錄，不影響櫈況圖自動顏色同交更邏輯）。
             </div>
             <div id="ls-msg" style="font-size:11px; color:#555; margin:2px 2px 4px;"></div>
             <div id="ls-mapbox" style="overflow:auto; background:#fff; border:1px solid #e0e0e0; border-radius:10px; max-height:58vh; margin-top:6px;">
@@ -4792,6 +4792,13 @@ items: collectItems(),
     // ===== 換 Layout 行程（獨立頁面） =====
     function layoutPitKey(pit) { return 'PIT' + String(pit).padStart(2, '0'); }
 
+    // 地圖顏色：停運＝灰；行程外 PIT＝白；其餘跟 PIT 顏色
+    function lsColourFor(cell) {
+        if (!cell || !cell.code) return '';
+        if (cell.status === '停運') return '#cfd8dc';
+        return layoutPitColor(cell.pit) || '#ffffff';
+    }
+
     function layoutPitColor(pit) {
         const k = layoutPitKey(pit);
         for (let i = 0; i < LAYOUT_SCHED.length; i++) {
@@ -4826,7 +4833,8 @@ items: collectItems(),
             LAYOUT_LEGEND.forEach(function (x) {
                 h += '<span style="display:inline-flex; align-items:center; gap:4px;"><span style="display:inline-block; width:14px; height:12px; background:' + x[0] + '; border:1px solid #999;"></span>' + x[1] + '</span>';
             });
-            lg.innerHTML = h;
+            lg.innerHTML = h + '<span style="display:inline-flex; align-items:center; gap:4px;"><span style="display:inline-block; width:14px; height:12px; background:#cfd8dc; border:1px solid #999;"></span>停運（唔計入PIT顏色）</span>'
+                + '<span style="display:inline-flex; align-items:center; gap:4px;"><span style="display:inline-block; width:14px; height:12px; background:#ffffff; border:1px solid #999;"></span>不在行程嘅 PIT</span>';
         }
         updateLsMsg();
         await lsRenderMap();
@@ -4918,7 +4926,7 @@ items: collectItems(),
             mapEl: document.getElementById('ls-map'),
             noChrome: true,
             zoom: lsZoom,
-            colourFor: function (cell) { return layoutPitColor(cell.pit) || '#f5f5f5'; }
+            colourFor: lsColourFor
         });
         lsApplyZoom();
     }
