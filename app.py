@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-43", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-44", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3818,7 +3818,15 @@ def layout_schedule_set():
         return jsonify({'status': 'error', 'message': '❌ PIT 編號不正確。'})
     done = _layout_sched_done()
     if data.get('done'):
-        done[pit] = _up_today()
+        use_date = _up_today()
+        raw_date = (data.get('date') or '').strip()
+        if raw_date:
+            try:
+                datetime.datetime.strptime(raw_date, '%Y-%m-%d')
+                use_date = raw_date
+            except Exception:
+                return jsonify({'status': 'error', 'message': '❌ 日期格式必須係 YYYY-MM-DD。'})
+        done[pit] = use_date
         msg = '✅ %s 已標記更換完成（%s）' % (pit, done[pit])
     else:
         done.pop(pit, None)
