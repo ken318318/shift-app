@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-46", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-47", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1227,10 +1227,10 @@ def overwrite_record():
         old_reviewed, old_reviewed_at, old_reviewed_by = row[1], row[2], row[3]
 
         if session.get('role') != 'admin':
-            c.execute("SELECT NOW() - created_at < interval '5 minutes' FROM records WHERE id = %s", (old_id,))
+            c.execute("SELECT NOW() - created_at < interval '20 minutes' FROM records WHERE id = %s", (old_id,))
             is_within_5_mins = c.fetchone()[0]
             if not is_within_5_mins:
-                return jsonify({"status": "error", "message": "⏰ 已超過 5 分鐘修改時限，無法修改！"})
+                return jsonify({"status": "error", "message": "⏰ 已超過 20 分鐘修改時限，無法修改！"})
 
         # ★ 改為 UPDATE 同一 row：保留 id／created_at／reviewed，修改後 items 身份不會流失
         now_macau = datetime.datetime.now(pytz.timezone('Asia/Macau'))
@@ -2436,10 +2436,10 @@ def update_record():
             return jsonify({"status": "error", "message": "❌ 找不到該紀錄！"})
             
         if session.get('role') != 'admin':
-            c.execute("SELECT NOW() - created_at < interval '5 minutes' FROM records WHERE id = %s", (data.get('id'),))
+            c.execute("SELECT NOW() - created_at < interval '20 minutes' FROM records WHERE id = %s", (data.get('id'),))
             is_within_5_mins = c.fetchone()[0]
             if not is_within_5_mins: 
-                return jsonify({"status": "error", "message": "⏰ 已超過 5 分鐘修改時限，無法修改！"})
+                return jsonify({"status": "error", "message": "⏰ 已超過 20 分鐘修改時限，無法修改！"})
                 
         c.execute("UPDATE records SET note = %s, status = %s WHERE id = %s", (data.get('note'), data.get('status'), data.get('id')))
         conn.commit()
