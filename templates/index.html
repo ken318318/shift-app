@@ -199,7 +199,7 @@
                 <button disabled style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#9e9e9e; background:#f5f5f5; padding:8px 4px; border-radius:6px; border:1px dashed #e0e0e0; font-size:12px; font-weight:bold;">➕ 待定</button>
             </div>
         </div>
-        <button class="submit-btn" onclick="openDayPicker()" style="margin-top: 0; margin-bottom: 10px; background-color: #2ecc71;">📝 新增BS交更紀錄</button>
+        <button class="submit-btn" onclick="openNewRecordChoice()" style="margin-top: 0; margin-bottom: 10px; background-color: #2ecc71;">📝 新增BS交更紀錄</button>
         
         <div id="home-pending-container" style="display: none; background: #fff3cd; padding: 9px 12px; border-radius: 8px; border: 1px solid #ffeeba; margin-bottom: 14px;">
             <div onclick="toggleHomePending()" style="cursor: pointer;">
@@ -742,17 +742,15 @@
         </div>
     </div>
 
-    <!-- ===== 開始新一輪（三選一） ===== -->
+    <!-- ===== 開始新一輪（確認） ===== -->
     <div id="ls-newbox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10020; padding:16px;">
-        <div style="max-width:430px; margin:12vh auto 0; background:#fff; border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);">
+        <div style="max-width:420px; margin:12vh auto 0; background:#fff; border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);">
             <b style="font-size:15px; color:#1a237e;">🔄 開始新一輪</b>
             <div id="ls-newbox-msg" style="font-size:12.5px; color:#444; margin:10px 0 14px; line-height:1.7;"></div>
             <div style="display:flex; gap:8px;">
                 <button onclick="lsCloseNewBox()" style="flex:1; padding:11px 6px; border:none; border-radius:8px; background:#eceff1; color:#455a64; font-size:13px; font-weight:bold;">取消</button>
-                <button onclick="lsDoRestoreDraft()" style="flex:1; padding:11px 6px; border:none; border-radius:8px; background:#fff3cd; color:#856404; font-size:13px; font-weight:bold;">還原（草稿）</button>
-                <button onclick="lsDoNewRound()" style="flex:1; padding:11px 6px; border:none; border-radius:8px; background:#1a73e8; color:#fff; font-size:13px; font-weight:bold;">確定</button>
+                <button onclick="lsDoNewRound()" style="flex:1; padding:11px 6px; border:none; border-radius:8px; background:#1a73e8; color:#fff; font-size:13px; font-weight:bold;">確定（開新表）</button>
             </div>
-            <div id="ls-newbox-tip" style="font-size:11px; color:#888; margin-top:10px; line-height:1.5;"></div>
         </div>
     </div>
 
@@ -769,7 +767,6 @@
                     <button class="lr-b-gray" onclick="lsZoomFit()">適合</button>
                 </div>
                 <button id="ls-b-newround" class="lr-b-blue" onclick="lsNewRound()">🔄 開始新一輪</button>
-                <button id="ls-b-undo" class="lr-b-gray" onclick="lsUndoRound()" style="display:none;">↩️ 還原上一輪</button>
             </div>
             <div class="lr-tip" style="font-size:11.5px;">
                 地圖顏色＝該台所屬 PIT 喺下面「TG Layout Replacement Schedule」嘅分類顏色；停運台顯示灰色，不在行程嘅 PIT 顯示白色。表格打勾＝該 PIT 更換完成（只作記錄，不影響櫈況圖自動顏色同交更邏輯）。
@@ -1297,19 +1294,24 @@ function setSubmitting(on) {
             const _cbW1 = document.getElementById('chk-wifi1'); if (_cbW1) _cbW1.checked = !!d.wifi1;
             const _cbW15 = document.getElementById('chk-wifi15'); if (_cbW15) _cbW15.checked = !!d.wifi15;
             transformInputs();
-            const _keep = confirm("🔄 發現未提交的交更草稿。\n\n按「確定」＝還原草稿\n按「取消」＝不還原（清除草稿，由空白開始）");
+            let _keep;
+            if (DRAFT_DECISION === 'new') _keep = false;
+            else if (DRAFT_DECISION === 'restore') _keep = true;
+            else _keep = confirm("🔄 發現未提交的交更草稿。\n\n按「確定」＝還原草稿\n按「取消」＝不還原（清除草稿，由空白開始）");
             if (!_keep) {
                 try { localStorage.removeItem(draftKey()); } catch (e2) {}
                 DRAFT_DAY = null;
                 SUNDAY_BIND = {};
                 resetForm(false);       // 只清空表單，PENDING_DAY 保留 → 入返你揀嘅星期
-                alert("🧹 已清除草稿，由空白開始。");
+                if (DRAFT_DECISION !== 'new') alert("🧹 已清除草稿，由空白開始。");
+                DRAFT_DECISION = null;
                 return;
             }
             // 還原：去返草稿所屬嘅星期（草稿冇記錄就用你啱啱揀嘅）
             if (DRAFT_DAY) { SHIFT_DAY = DRAFT_DAY; PENDING_DAY = null; }
             DRAFT_DAY = null;
-            alert("✅ 已還原草稿。");
+            if (DRAFT_DECISION !== 'restore') alert("✅ 已還原草稿。");
+            DRAFT_DECISION = null;
         } catch(e) {
             console.error("載入草稿失敗", e);
         }
@@ -1418,6 +1420,60 @@ function setSubmitting(on) {
     let SUNDAY_LOCK = { g: {}, d: {} };   // 伺服器鎖：已有未處理項目
     let SUNDAY_EVENT = {};                // 活動區台號（鎖定，不參與櫈況）
     let SUNDAY_BIND = {};                 // 本地暫存：{code: {g:'問題', d:'問題'}}（未提交前可解鎖）
+
+    // ===== 新增交更三選一 =====
+    let DRAFT_DECISION = null;   // 'new' = 開新表；'restore' = 還原草稿
+
+    function draftHasData() {
+        try {
+            const raw = localStorage.getItem(draftKey());
+            if (!raw) return false;
+            const d = JSON.parse(raw);
+            return !!d && typeof d === 'object';
+        } catch (e) { return false; }
+    }
+
+    function draftShiftDay() {
+        try {
+            const d = JSON.parse(localStorage.getItem(draftKey()) || '{}');
+            return (d && d.shiftDay) ? d.shiftDay : null;
+        } catch (e) { return null; }
+    }
+
+    function openNewRecordChoice() {
+        const has = draftHasData();
+        const tip = document.getElementById('nr-choice-tip');
+        if (tip) tip.textContent = has
+            ? '偵測到未提交嘅交更草稿，可以撳「還原草稿」繼續填寫。'
+            : '目前冇未提交草稿。撳「確定」選擇交更日並開新表。';
+        const rb = document.getElementById('nr-choice-restore');
+        if (rb) rb.disabled = !has;
+        const m = document.getElementById('nr-choicebox');
+        if (m) m.style.display = 'flex';
+    }
+
+    function nrClose() {
+        const m = document.getElementById('nr-choicebox');
+        if (m) m.style.display = 'none';
+    }
+
+    function nrChooseNew() {
+        nrClose();
+        DRAFT_DECISION = 'new';
+        openDayPicker();
+    }
+
+    function nrChooseRestore() {
+        nrClose();
+        DRAFT_DECISION = 'restore';
+        const day = draftShiftDay();
+        if (day) {
+            PENDING_DAY = day;
+            showForm(true);
+        } else {
+            openDayPicker();
+        }
+    }
 
     function openDayPicker() {
         const grid = document.getElementById('day-picker-grid');
@@ -4830,8 +4886,6 @@ items: collectItems(),
         const done = Object.keys(layoutDone).filter(function (p) { return layoutDone[p]; }).length;
         el.textContent = '第 ' + layoutRound + ' 輪　已完成 ' + done + '／' + layoutPitCount() + ' 個 PIT'
             + (layoutLast && layoutLast.finished_at ? '　（上一輪：第 ' + layoutLast.round + ' 輪 ' + (layoutLast.count || 0) + '／' + layoutPitCount() + '，' + String(layoutLast.finished_at).slice(5) + ' 存檔）' : '');
-        const ub = document.getElementById('ls-b-undo');
-        if (ub) ub.style.display = (layoutLast && layoutLast.finished_at) ? '' : 'none';
     }
 
     async function openLayoutSchedule() {
@@ -4880,19 +4934,10 @@ items: collectItems(),
         const done = Object.keys(layoutDone).filter(function (p) { return layoutDone[p]; }).length;
         const total = layoutPitCount();
         const msg = document.getElementById('ls-newbox-msg');
-        const tip = document.getElementById('ls-newbox-tip');
         if (msg) {
             msg.innerHTML = '本輪（第 ' + layoutRound + ' 輪）已完成 <b>' + done + '／' + total + '</b> 個 PIT。'
-                + '<br>• 確定：將本輪存檔，開一張空白新表'
-                + '<br>• 還原（草稿）：將上一輪已存檔嘅資料載回，當草稿繼續修改';
+                + '<br><br>確定後會將本輪存檔（保留每個 PIT 完成日期），並開一張空白新表。';
         }
-        if (tip) {
-            tip.textContent = (layoutLast && layoutLast.finished_at)
-                ? ('可還原：第 ' + layoutLast.round + ' 輪（' + (layoutLast.count || 0) + '／' + total + '，' + String(layoutLast.finished_at).slice(5) + ' 存檔）')
-                : '（目前冇可還原嘅上一輪）';
-        }
-        const rb = document.querySelector('#ls-newbox button[onclick="lsDoRestoreDraft()"]');
-        if (rb) rb.disabled = !(layoutLast && layoutLast.finished_at);
         const box = document.getElementById('ls-newbox');
         if (box) box.style.display = 'block';
     }
@@ -6481,6 +6526,19 @@ items: collectItems(),
         });
     })();
     </script>
+
+    <!-- ===== 新增交更三選一 ===== -->
+    <div id="nr-choicebox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10030; padding:16px; align-items:center; justify-content:center;">
+        <div style="max-width:400px; width:100%; background:#fff; border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);">
+            <b style="font-size:15px; color:#1a237e;">📝 新增交更紀錄</b>
+            <div id="nr-choice-tip" style="font-size:12px; color:#666; margin:8px 0 14px; line-height:1.6;"></div>
+            <div style="display:flex; gap:8px;">
+                <button onclick="nrClose()" style="flex:1; padding:11px 6px; border:none; border-radius:8px; background:#eceff1; color:#455a64; font-size:13px; font-weight:bold;">取消</button>
+                <button id="nr-choice-restore" onclick="nrChooseRestore()" style="flex:1; padding:11px 6px; border:none; border-radius:8px; background:#fff3cd; color:#856404; font-size:13px; font-weight:bold;">還原草稿</button>
+                <button onclick="nrChooseNew()" style="flex:1; padding:11px 6px; border:none; border-radius:8px; background:#1a73e8; color:#fff; font-size:13px; font-weight:bold;">確定（開新表）</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ===== 選星期彈窗（v39） ===== -->
     <div id="day-picker" style="display: none; position: fixed; inset: 0; z-index: 10040; background: rgba(0,0,0,.45); align-items: center; justify-content: center; padding: 16px;">
