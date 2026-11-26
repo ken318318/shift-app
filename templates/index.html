@@ -3174,7 +3174,7 @@ async function loadPendingIssues() {
     function editRecord(id) {
         let r = allRecords.find(x => x.id == id);
         if (!r) return;
-        // 普通帳號：超過 5 分鐘唔可以修改（只有管理員可以）
+        // 普通帳號：超過 20 分鐘唔可以修改（只有管理員可以）
         if (!isAdmin) {
             try {
                 // 以伺服器提供嘅 age_sec 計時（避免手機時區／時鐘偏差）
@@ -3185,8 +3185,8 @@ async function loadPendingIssues() {
                     const _t = new Date(String(r.created_at || '').replace(' ', 'T'));
                     if (!isNaN(_t.getTime())) _age = (Date.now() - _t.getTime()) / 1000;
                 }
-                if (_age !== null && !isNaN(_age) && _age > 5 * 60) {
-                    alert('⏰ 已超過 5 分鐘修改時限，無法修改！\n\n如需更正，請聯絡管理員。');
+                if (_age !== null && !isNaN(_age) && _age > 20 * 60) {
+                    alert('⏰ 已超過 20 分鐘修改時限，無法修改！\n\n如需更正，請聯絡管理員。');
                     return;
                 }
             } catch (e) {}
