@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-45", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-46", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3704,6 +3704,7 @@ _LAYOUT_SCHED_KEY = 'layout_schedule_done'
 _LAYOUT_ROUND_KEY = 'layout_schedule_round'
 _LAYOUT_HIST_KEY = 'layout_schedule_history'
 _LAYOUT_COLORS_KEY = 'layout_schedule_colors'
+_LAYOUT_CODE_COLORS_KEY = 'layout_schedule_code_colors'
 _LAYOUT_PIT_TOTAL = 28
 
 
@@ -3762,18 +3763,46 @@ def _layout_colors_override():
     return {}
 
 
+def _layout_code_colors():
+    raw = get_setting(_LAYOUT_CODE_COLORS_KEY, '') or ''
+    try:
+        d = json.loads(raw) if raw.strip() else {}
+        if isinstance(d, dict):
+            return {str(k).upper(): str(v) for k, v in d.items() if str(v) in ('b', 'v', 'p', 'o')}
+    except Exception:
+        pass
+    return {}
+
+
 @app.route('/api/layout_colors', methods=['POST'])
 def layout_colors_set():
-    """手動指定某個 PIT 嘅顏色（b/v/p/o），colour 為空＝還原預設。"""
+    """手動指定某個 PIT 或台號嘅顏色（b/v/p/o），colour 為空＝還原預設。"""
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
     data = request.json or {}
-    pit = (data.get('pit') or '').strip().upper()
     colour = (data.get('colour') or '').strip().lower()
-    if not re.match(r'^PIT\d{1,3}$', pit):
-        return jsonify({'status': 'error', 'message': '❌ PIT 編號不正確。'})
+    code = (data.get('code') or '').strip().upper()
+    pit = (data.get('pit') or '').strip().upper()
     if colour not in ('b', 'v', 'p', 'o', ''):
         return jsonify({'status': 'error', 'message': '❌ 顏色不正確。'})
+    if code:
+        if not re.match(r'^[A-Z]{1,4}\d{2,6}$', code):
+            return jsonify({'status': 'error', 'message': '❌ 台號格式不正確。'})
+        cur = _layout_code_colors()
+        if colour:
+            cur[code] = colour
+        else:
+            cur.pop(code, None)
+        if not set_setting(_LAYOUT_CODE_COLORS_KEY, json.dumps(cur, ensure_ascii=False)):
+            return jsonify({'status': 'error', 'message': '❌ 儲存失敗，請稍後再試。'})
+        try:
+            log_action('Layout 顏色', '%s → %s' % (code, colour or '預設'))
+        except Exception:
+            pass
+        return jsonify({'status': 'success', 'code_colors': cur, 'colors': _layout_colors_override(),
+                        'message': ('✅ %s 顏色已手動設定。' % code) if colour else ('✅ %s 已還原預設顏色。' % code)})
+    if not re.match(r'^PIT\d{1,3}$', pit):
+        return jsonify({'status': 'error', 'message': '❌ 請提供台號或 PIT 編號。'})
     cur = _layout_colors_override()
     if colour:
         cur[pit] = colour
@@ -3785,8 +3814,8 @@ def layout_colors_set():
         log_action('Layout 顏色', '%s → %s' % (pit, colour or '預設'))
     except Exception:
         pass
-    return jsonify({'status': 'success', 'colors': cur,
-                    'message': ('✅ %s 顏已改為手動設定。' % pit) if colour else ('✅ %s 已還原預設顏色。' % pit)})
+    return jsonify({'status': 'success', 'colors': cur, 'code_colors': _layout_code_colors(),
+                    'message': ('✅ %s 顏色已改為手動設定。' % pit) if colour else ('✅ %s 已還原預設顏色。' % pit)})
 
 
 @app.route('/api/layout_schedule', methods=['GET'])
@@ -3796,7 +3825,7 @@ def layout_schedule_get():
     return jsonify({'status': 'success', 'done': _layout_sched_done(), 'today': _up_today(),
                     'round': _layout_round_no(), 'last': _layout_last_summary(),
                     'rounds_done': len(_layout_history()), 'total_pits': _LAYOUT_PIT_TOTAL,
-                    'colors': _layout_colors_override()})
+                    'colors': _layout_colors_override(), 'code_colors': _layout_code_colors()})
 
 
 @app.route('/api/layout_schedule/reset', methods=['POST'])
