@@ -1441,6 +1441,7 @@ function setSubmitting(on) {
     }
 
     function openNewRecordChoice() {
+        DRAFT_DECISION = null;
         const has = draftHasData();
         const tip = document.getElementById('nr-choice-tip');
         if (tip) tip.textContent = has
