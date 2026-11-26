@@ -5743,13 +5743,15 @@ items: collectItems(),
                         fc = c.dlr_bad ? '#e53935' : (c.status === '停運' ? '#2e7d32' : '#111');
                     }
                 } else {
-                    if (c.event) bg = '#FF99CC';
-                    else if (c.status === '停運') bg = '#cfd8dc';
-                    else if (c.stand) bg = '#c5cae9';
-                    else if (c.chair === 'new') bg = '#E8DDFF';
-                    else if (c.chair === 'old') bg = '#FFE7CC';
-                    fc = (c.chair === 'new') ? '#7b2fd0' : ((c.chair === 'old') ? '#d95a00' : '#111');
-                    if (c.chair && !c.stand) bold = true;
+                    if (c.stand) {
+                        bg = (c.status === '停運') ? '#cfd8dc' : '#c5cae9';
+                        fc = '#111';
+                    } else {
+                        if (c.chair === 'new') bg = '#E8DDFF';
+                        else if (c.chair === 'old') bg = '#FFE7CC';
+                        fc = (c.chair === 'new') ? '#7b2fd0' : ((c.chair === 'old') ? '#d95a00' : '#111');
+                        if (c.chair) bold = true;
+                    }
                 }
             } else {
                 bg = c.bg || null;
@@ -5773,6 +5775,17 @@ items: collectItems(),
                 ctx.strokeStyle = '#9e9e9e';
                 ctx.lineWidth = 1;
                 ctx.strokeRect(Math.round(x0) + 0.5, Math.round(y0) + 0.5, Math.round(x1 - x0) - 1, Math.round(y1 - y0) - 1);
+            }
+            if (cmMode === 'type' && !opts.noChrome && c.code && !c.stand) {
+                if (c.event) {
+                    ctx.strokeStyle = '#d81b60';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(Math.round(x0) + 1.5, Math.round(y0) + 1.5, Math.round(x1 - x0) - 3, Math.round(y1 - y0) - 3);
+                } else if (c.status === '停運') {
+                    ctx.strokeStyle = '#546e7a';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(Math.round(x0) + 1.5, Math.round(y0) + 1.5, Math.round(x1 - x0) - 3, Math.round(y1 - y0) - 3);
+                }
             }
 
         });
@@ -5870,13 +5883,15 @@ items: collectItems(),
                         fc = cd.dlr_bad ? '#e53935' : (cd.status === '停運' ? '#2e7d32' : '#111');
                     }
                 } else {
-                    if (cd.event) bg = '#FF99CC';
-                    else if (cd.status === '停運') bg = '#cfd8dc';
-                    else if (cd.stand) bg = '#c5cae9';
-                    else if (cd.chair === 'new') bg = '#E8DDFF';
-                    else if (cd.chair === 'old') bg = '#FFE7CC';
-                    fc = (cd.chair === 'new') ? '#7b2fd0' : ((cd.chair === 'old') ? '#d95a00' : '#111');
-                    if (cd.chair && !cd.stand) bold = true;
+                    if (cd.stand) {
+                        bg = (cd.status === '停運') ? '#cfd8dc' : '#c5cae9';
+                        fc = '#111';
+                    } else {
+                        if (cd.chair === 'new') bg = '#E8DDFF';
+                        else if (cd.chair === 'old') bg = '#FFE7CC';
+                        fc = (cd.chair === 'new') ? '#7b2fd0' : ((cd.chair === 'old') ? '#d95a00' : '#111');
+                        if (cd.chair) bold = true;
+                    }
                 }
                 const o8 = ovColor(cd);
                 if (o8) { bg = o8; fc = '#111'; }
@@ -5917,11 +5932,11 @@ items: collectItems(),
                         '<span>客櫈每台 5 張</span>' +
                     '</div>';
             } else {
-                legend.innerHTML = '<span style="color:#7b2fd0;font-weight:bold;background:#E8DDFF;border-radius:4px;padding:1px 5px;">紫＝新櫈</span>' +
-                    '<span style="color:#d95a00;font-weight:bold;background:#FFE7CC;border-radius:4px;padding:1px 5px;">橙＝舊櫈</span>' +
-                    '<span><i class="cm-dot" style="background:#FF99CC"></i>粉底＝活動區</span>' +
-                    '<span><i class="cm-dot" style="background:#cfd8dc"></i>灰底＝停運</span>' +
-                    '<span><i class="cm-dot" style="background:#c5cae9"></i>藍底＝企位營運（冇DLR櫈）；企位停運＝灰底</span>' +
+                legend.innerHTML = '<span style="color:#7b2fd0;font-weight:bold;background:#E8DDFF;border-radius:4px;padding:1px 5px;">紫底＝新櫈</span>' +
+                    '<span style="color:#d95a00;font-weight:bold;background:#FFE7CC;border-radius:4px;padding:1px 5px;">橙底＝舊櫈</span>' +
+                    '<span style="color:#d81b60;font-weight:bold">■ 粉框＝活動區</span>' +
+                    '<span style="color:#546e7a;font-weight:bold">■ 灰框＝停運</span>' +
+                    '<span><i class="cm-dot" style="background:#c5cae9"></i>藍底＝企位（冇DLR櫈）</span>' +
                     '<span>黑字＝未設定新舊</span>';
             }
         }
