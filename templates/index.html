@@ -4902,14 +4902,15 @@ items: collectItems(),
         return '#ffffff';
     }
 
-    function lcOpen() {
+    async function lcOpen() {
         const box = document.getElementById('lc-box');
         const msg = document.getElementById('lc-msg');
         if (msg) msg.textContent = '';
         const q = document.getElementById('lc-q');
         if (q) q.value = '';
-        lcRender();
         if (box) box.style.display = 'flex';
+        if (!cmData) { try { await lsRenderMap(); } catch (e) { } }
+        lcRender();
     }
 
     function lcClose() {
@@ -4920,6 +4921,7 @@ items: collectItems(),
     function lcRender() {
         const box = document.getElementById('lc-list');
         if (!box) return;
+        if (!cmData) { box.innerHTML = '<div style="padding:16px;text-align:center;color:#999;font-size:12px;">載入台號中…</div>'; return; }
         const mode = document.getElementById('lc-mode').value;
         const qEl = document.getElementById('lc-q');
         const q = ((qEl && qEl.value) || '').trim().toUpperCase();
