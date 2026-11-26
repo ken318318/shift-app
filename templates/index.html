@@ -1459,6 +1459,7 @@ function setSubmitting(on) {
     }
 
     function nrChooseNew() {
+        if (draftHasData() && !confirm('⚠️ 現有未提交草稿將會被清除，由空白新表開始。\n\n確定繼續？')) return;
         nrClose();
         DRAFT_DECISION = 'new';
         openDayPicker();
