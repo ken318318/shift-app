@@ -5816,7 +5816,13 @@ items: collectItems(),
                 const by1 = (p[0] === 0 ? ym : y1);
                 const oc = ovColor(cellData);
                 if (oc) { ctx.fillStyle = oc; ctx.fillRect(Math.round(bx0) + 1, Math.round(by0) + 1, Math.round(bx1 - bx0) - 2, Math.round(by1 - by0) - 2); }
-                drawText(bx0, by0, bx1, by1, cellData.v, 18, true, '#111');
+                let _sfc = '#111';
+  if (cmMode === 'type') {
+      _sfc = (cellData.chair === 'new') ? '#7b2fd0' : ((cellData.chair === 'old') ? '#d95a00' : '#111');
+  } else if (cmMode === 'status') {
+      _sfc = cellData.dlr_bad ? '#e53935' : ((cellData.status === '停運') ? '#2e7d32' : '#111');
+  }
+  drawText(bx0, by0, bx1, by1, cellData.v, 18, true, _sfc);
             });
         }
         // hlines/vlines（細線灰、粗線黑）
