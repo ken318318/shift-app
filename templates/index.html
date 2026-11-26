@@ -754,6 +754,26 @@
         </div>
     </div>
 
+    <!-- ===== PIT 顏色手動設定 ===== -->
+    <div id="lc-box" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10025; padding:16px; align-items:center; justify-content:center;">
+        <div style="max-width:430px; width:100%; background:#fff; border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;">
+                <b style="font-size:15px; color:#1a237e;">🎨 PIT 顏色手動設定</b>
+                <button onclick="lcClose()" style="border:none; background:#eee; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold;">✖ 關閉</button>
+            </div>
+            <select id="lc-mode" onchange="lcRender()" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; font-size:13px; font-weight:bold; color:#37474f; background:#fff;">
+                <option value="b">🔵 藍（#99CCFF）</option>
+                <option value="v">🟣 紫（#CCCCFF）</option>
+                <option value="p">🩷 粉（#FF99CC）</option>
+                <option value="o">🟠 橙（#FFCC99）</option>
+                <option value="">↩️ 還原預設顏色</option>
+            </select>
+            <div style="font-size:11.5px; color:#666; margin:8px 2px;">打勾＝套用上面揀嘅顏色；取消打勾＝還原預設。</div>
+            <div id="lc-list" style="max-height:52vh; overflow:auto; border:1px solid #eee; border-radius:8px; padding:4px 6px;"></div>
+            <div id="lc-msg" style="font-size:12px; color:#d32f2f; margin-top:6px; min-height:16px;"></div>
+        </div>
+    </div>
+
     <!-- ===== 換 Layout 行程（獨立頁面） ===== -->
     <div id="ls-modal" class="lr-modal">
         <div class="lr-wrap" style="max-width:1100px;">
@@ -766,6 +786,7 @@
                     <button class="lr-b-gray" onclick="lsZoomStep(1)">➕</button>
                     <button class="lr-b-gray" onclick="lsZoomFit()">適合</button>
                 </div>
+                <button class="lr-b-gray" onclick="lcOpen()">🎨 PIT 顏色</button>
                 <button id="ls-b-newround" class="lr-b-blue" onclick="lsNewRound()">🔄 開始新一輪</button>
             </div>
             <div class="lr-tip" style="font-size:11.5px;">
@@ -4804,6 +4825,7 @@ items: collectItems(),
     let layoutLoaded = false;
     let layoutRound = 1;
     let layoutLast = null;
+    let layoutColors = {};
 
     function layoutPitCount() {
         return LAYOUT_SCHED.reduce(function (n, w) { return n + w.pits.length; }, 0);
@@ -4818,6 +4840,7 @@ items: collectItems(),
                 layoutDone = d.done || {};
                 layoutRound = d.round || 1;
                 layoutLast = d.last || null;
+                layoutColors = d.colors || {};
                 layoutLoaded = true;
             }
         } catch (e) { }
@@ -4832,6 +4855,80 @@ items: collectItems(),
             + '</label>';
     }
 
+    // ===== PIT 顏色手動設定 =====
+    const LC_NAMES = { b: '藍', v: '紫', p: '粉', o: '橙' };
+
+    function lcAllPits() {
+        const out = [];
+        LAYOUT_SCHED.forEach(function (w) {
+            w.pits.forEach(function (p) { out.push({ key: p[0], def: p[2] }); });
+        });
+        return out;
+    }
+
+    function lcOpen() {
+        const box = document.getElementById('lc-box');
+        const msg = document.getElementById('lc-msg');
+        if (msg) msg.textContent = '';
+        lcRender();
+        if (box) box.style.display = 'flex';
+    }
+
+    function lcClose() {
+        const box = document.getElementById('lc-box');
+        if (box) box.style.display = 'none';
+    }
+
+    function lcRender() {
+        const box = document.getElementById('lc-list');
+        if (!box) return;
+        const mode = document.getElementById('lc-mode').value;
+        const rows = lcAllPits();
+        box.innerHTML = rows.map(function (r) {
+            const ov = layoutColors[r.key] || '';
+            const cur = ov || r.def;
+            const checked = mode ? (ov === mode) : !!ov;
+            const tag = (ov ? '手動' : '預設') + '・' + (LC_NAMES[cur] || '');
+            return '<label style="display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px solid #f2f2f2; font-size:13px; cursor:pointer;">'
+                + '<input type="checkbox" data-pit="' + r.key + '"' + (checked ? ' checked' : '') + ' onchange="lcToggle(this)" style="width:18px; height:18px;">'
+                + '<span style="font-weight:bold;">' + r.key + '</span>'
+                + '<span style="display:inline-block; width:16px; height:12px; background:' + (LAYOUT_COLORS[cur] || '#fff') + '; border:1px solid #999;"></span>'
+                + '<span style="font-size:11px; color:#666; margin-left:auto;">' + tag + '</span>'
+                + '</label>';
+        }).join('');
+    }
+
+    async function lcToggle(el) {
+        const pit = el.getAttribute('data-pit');
+        const mode = document.getElementById('lc-mode').value;
+        const colour = el.checked ? (mode || '') : '';
+        const msg = document.getElementById('lc-msg');
+        el.disabled = true;
+        try {
+            const r = await fetch('/api/layout_colors', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pit: pit, colour: colour })
+            });
+            const d = await r.json();
+            if (!d || d.status !== 'success') {
+                if (msg) msg.textContent = (d && d.message) || '❌ 儲存失敗';
+                el.checked = !el.checked;
+                return;
+            }
+            layoutColors = d.colors || {};
+            if (msg) msg.textContent = d.message || '';
+            document.getElementById('ls-sched').innerHTML = schedTableHtml();
+            await lsRenderMap();
+            lsApplyZoom();
+            lcRender();
+        } catch (e) {
+            if (msg) msg.textContent = '❌ 連線失敗';
+            el.checked = !el.checked;
+        } finally {
+            el.disabled = false;
+        }
+    }
+
     function schedTableHtml() {
         let h = '<table style="border-collapse:collapse; width:100%; font-size:10.5px; text-align:center; table-layout:fixed;">';
         h += '<colgroup><col style="width:13%"><col style="width:16%"><col style="width:17%"><col style="width:40%"><col style="width:14%"></colgroup>';
@@ -4842,7 +4939,7 @@ items: collectItems(),
             w.pits.forEach(function (p, i) {
                 h += '<tr>';
                 if (i === 0) h += '<td rowspan="' + w.pits.length + '" style="border:1px solid #b8a45a; padding:4px 2px; font-weight:bold; background:#fff;">' + w.cycle + '</td>';
-                h += '<td style="border:1px solid #b8a45a; padding:4px 2px; font-weight:bold; background:' + LAYOUT_COLORS[p[2]] + ';">' + p[0] + '</td>';
+                h += '<td style="border:1px solid #b8a45a; padding:4px 2px; font-weight:bold; background:' + (layoutPitColor(parseInt(String(p[0]).replace('PIT', ''), 10)) || LAYOUT_COLORS[p[2]]) + ';">' + p[0] + '</td>';
                 h += '<td style="border:1px solid #b8a45a; padding:4px 2px; background:#ffffcc;">' + (p[1] || '') + '</td>';
                 let monor = schedCellHtml(p[0]);
                 if (p[0] === 'PIT01') monor = '<div style="font-size:9.5px; color:#555; margin-bottom:2px;">8 BJ · 5 CS · 6FP</div>' + monor;
@@ -4873,6 +4970,7 @@ items: collectItems(),
 
     function layoutPitColor(pit) {
         const k = layoutPitKey(pit);
+        if (layoutColors && layoutColors[k]) return LAYOUT_COLORS[layoutColors[k]];
         for (let i = 0; i < LAYOUT_SCHED.length; i++) {
             const w = LAYOUT_SCHED[i];
             for (let j = 0; j < w.pits.length; j++) {
