@@ -4717,6 +4717,8 @@ items: collectItems(),
         const rows = [];
         cells.forEach(function (c) {
             if (!c.code) return;
+            const chairMode = (cmSetMode === 'new' || cmSetMode === 'old' || cmSetMode === 'none');
+            if (chairMode && c.stand) return;   // 企位（DS/RL/活動區）冇 DLR 櫈
             if (cmSetMode === 'event') {
                 rows.push({ code: c.code, on: !!c.event });
             } else if (cmSetMode === 'new') {
@@ -4794,7 +4796,11 @@ items: collectItems(),
             if (msg) msg.textContent = '';
             await loadChairMap();
             cmRenderEventList();
-            cmToast('✅ ' + code + ' 已更新');
+            if ((mode === 'new' || mode === 'old' || mode === 'none') && cmMode === 'status') {
+                cmToast('✅ ' + code + ' 已更新（切去「新舊櫈」睇顏色）');
+            } else {
+                cmToast('✅ ' + code + ' 已更新');
+            }
         } catch (e) {
             if (msg) msg.textContent = '❌ 連線失敗';
             el.checked = !on;
@@ -5607,7 +5613,8 @@ items: collectItems(),
                     '　<span style="color:#2e7d32;font-weight:bold">spare ' + (c.spare || 0) + '</span>' +
                     '　<span style="color:#c2185b;font-weight:bold">活動區 ' + (c.event || 0) + ' 台</span>';
             } else {
-                html += '　新櫈 ' + (c.new || 0) + '、舊櫈 ' + (c.old || 0) + '、未設定 ' + Math.max(0, (c.total_all || c.total || 0) - (c.new || 0) - (c.old || 0));
+                html += '　新櫈 ' + (c.new || 0) + '、舊櫈 ' + (c.old || 0) + '、未設定 ' + Math.max(0, (c.chairs || 0) - (c.new || 0) - (c.old || 0))
+                    + '（共 ' + (c.chairs || 0) + ' 張；企位 ' + Math.max(0, (c.total_all || 0) - (c.chairs || 0)) + ' 唔計）';
             }
             html += '　' + (cmMode === 'status'
                 ? '（紅字＝壞 DLR、藍底＝壞客櫈、綠字＝spare、灰底＝停運）'
