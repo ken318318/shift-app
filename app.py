@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-48", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-49", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -4815,10 +4815,13 @@ def chair_map_get():
             'bg': cell.get('bg', ''),
             'event': bool(key) and _up_norm(code) in event_codes
         })
-    cnt = {'total': 0, 'total_all': 0, 'active': 0, 'inactive': 0, 'dlr_bad': 0, 'guest_bad': 0, 'spare': 0, 'new': 0, 'old': 0, 'event': 0}
+    cnt = {'total': 0, 'total_all': 0, 'chairs': 0, 'active': 0, 'inactive': 0, 'dlr_bad': 0, 'guest_bad': 0, 'spare': 0, 'new': 0, 'old': 0, 'event': 0}
     for x in cells:
         if x.get('code'):
             cnt['total_all'] += 1
+        if not x.get('code') or x.get('stand'):
+            continue          # 企位（DS/RL/活動區）冇 DLR 櫈，唔計入新舊櫈
+        cnt['chairs'] += 1
         if x.get('chair') == 'new':
             cnt['new'] += 1
         elif x.get('chair') == 'old':
