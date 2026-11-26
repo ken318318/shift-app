@@ -5743,6 +5743,8 @@ items: collectItems(),
                 } else {
                     if (c.status === '停運') bg = '#cfd8dc';
                     else if (c.stand) bg = '#c5cae9';
+                    else if (c.chair === 'new') bg = '#E8DDFF';
+                    else if (c.chair === 'old') bg = '#FFE7CC';
                     fc = c.stand ? '#111' : (c.chair === 'new' ? '#7b2fd0' : (c.chair === 'old' ? '#d95a00' : '#111'));
                     if (c.chair && !c.stand) bold = true;
                 }
@@ -5865,6 +5867,8 @@ items: collectItems(),
                 } else {
                     if (cd.status === '停運') bg = '#cfd8dc';
                     else if (cd.stand) bg = '#c5cae9';
+                    else if (cd.chair === 'new') bg = '#E8DDFF';
+                    else if (cd.chair === 'old') bg = '#FFE7CC';
                     fc = cd.stand ? '#111' : (cd.chair === 'new' ? '#7b2fd0' : (cd.chair === 'old' ? '#d95a00' : '#111'));
                     if (cd.chair && !cd.stand) bold = true;
                 }
@@ -5907,8 +5911,8 @@ items: collectItems(),
                         '<span>客櫈每台 5 張</span>' +
                     '</div>';
             } else {
-                legend.innerHTML = '<span style="color:#7b2fd0;font-weight:bold">紫字＝新櫈</span>' +
-                    '<span style="color:#d95a00;font-weight:bold">橙字＝舊櫈</span>' +
+                legend.innerHTML = '<span style="color:#7b2fd0;font-weight:bold;background:#E8DDFF;border-radius:4px;padding:1px 5px;">紫＝新櫈</span>' +
+                    '<span style="color:#d95a00;font-weight:bold;background:#FFE7CC;border-radius:4px;padding:1px 5px;">橙＝舊櫈</span>' +
                     '<span><i class="cm-dot" style="background:#cfd8dc"></i>灰底＝停運</span><span>黑字＝企位</span>';
             }
         }
