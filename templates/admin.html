@@ -97,7 +97,6 @@
             <button class="tab" data-tab="export" onclick="switchTab('export')">匯出</button>
             <button class="tab" data-tab="stats" onclick="switchTab('stats')">統計</button>
             <button class="tab" data-tab="hall" onclick="switchTab('hall')">台號狀態</button>
-            <button class="tab" data-tab="chairs" onclick="switchTab('chairs')">櫈況圖</button>
             <button class="tab" data-tab="members" onclick="switchTab('members')">成員</button>
             <button class="tab" data-tab="account" onclick="switchTab('account')">帳號</button>
         </div>
@@ -246,20 +245,6 @@
         </div>
         <div class="muted" style="margin-top:6px;">修改後，「交更報表（自動填數）」的數字會即時跟隨。</div>
         <div id="hall-list" style="margin-top:10px;"></div>
-    </div>
-
-    <!-- ================= 櫈況圖 ================= -->
-    <div class="card hide" id="panel-chairs">
-        <div class="row" style="margin-bottom:6px;">
-            <button class="btn" id="cm-mode-status" onclick="setChairMode('status')">🪑 好壞櫈</button>
-            <button class="btn btn-gray" id="cm-mode-type" onclick="setChairMode('type')">🆕 新舊櫈</button>
-        </div>
-        <div class="muted" id="cm-tip">好壞櫈模式：由交更自動上色；新舊櫈模式：點格仔可切換新／舊。</div>
-        <div class="cm-legend" id="cm-legend" style="margin-top:6px;"></div>
-        <div id="cm-scroll" style="overflow:auto; border:1px solid #e3e9f2; border-radius:8px; margin-top:8px; background:#fafbfc;">
-            <div id="cm-map" style="position:relative; width:1px; height:1px;"></div>
-        </div>
-        <div class="msg" id="cm-msg"></div>
     </div>
 
     <!-- ================= 成員 ================= -->
@@ -478,7 +463,7 @@
         function switchTab(name) {
             currentTab = name;
             document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
-            ['options', 'records', 'progress', 'export', 'stats', 'hall', 'chairs', 'members', 'account'].forEach(k => {
+            ['options', 'records', 'progress', 'export', 'stats', 'hall', 'members', 'account'].forEach(k => {
                 document.getElementById('panel-' + k).classList.toggle('hide', k !== name);
             });
             let jobs = [];
@@ -486,7 +471,6 @@
             if (name === 'progress') jobs.push(loadRecords().then(renderProgress));
             if (name === 'stats') jobs.push(loadRecords().then(renderStats));
             if (name === 'hall') jobs.push(loadHallSummary(), loadHallTables());
-            if (name === 'chairs') jobs.push(loadChairMap());
             if (name === 'members') jobs.push(loadMembers());
             if (name === 'account') jobs.push(loadAuthStatus(), loadAuditLogs());
             if (name === 'options') jobs.push(renderOptions());
@@ -1453,6 +1437,9 @@
 
         /* ================= 統計 ================= */
         function issueItemsOf(r) {
+            if (Array.isArray(r.items) && r.items.length) {
+                return r.items.filter(function (it) { return it && it.key; }).map(function (it) { return it.key; });
+            }
             let items = [];
             const push = (txt) => {
                 if (!txt) return;

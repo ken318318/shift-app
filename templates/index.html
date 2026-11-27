@@ -228,6 +228,7 @@
             <button type="button" onclick="clearKeywordSearch()" style="padding:9px 12px; border:none; border-radius:8px; background:#eceff1; color:#455a64; font-size:13px; font-weight:bold; white-space:nowrap;">清除</button>
         </div>
         <div id="list-count" style="font-size: 12px; color: #888; margin-bottom: 6px;"></div>
+        <div id="issue-search" style="display:none; margin-bottom:12px;"></div>
         <div id="recordList"><div style="text-align:center;color:#999;font-size:13px;padding:18px 0;">⏳ 正在載入歷史紀錄…</div></div>
     </div>
 
@@ -947,11 +948,10 @@ function setSubmitting(on) {
 
     function autoFillTable(el) { 
         let val = el.value.trim(); 
-        if (/^\d+$/.test(val)) { 
-            if (tableDict[val]) el.value = tableDict[val]; 
-            else if (val.length >= 4) el.value = 'NB' + val; 
-        } 
+        if (/^\d+$/.test(val) && tableDict[val]) el.value = tableDict[val];
     }
+
+    const tableCodeSet = new Set(Object.values(tableDict).map(function (v) { return String(v).toUpperCase(); }));
 
     function transformInputs() { 
         document.querySelectorAll('.table-num, .venue-location').forEach(inp => { 
@@ -2805,6 +2805,63 @@ async function loadPendingIssues() {
         return v;
     }
 
+    function renderIssueSearch(keyword) {
+        const box = document.getElementById('issue-search');
+        if (!box) return;
+        const kw = String(keyword || '').trim().toUpperCase();
+        if (!kw) { box.style.display = 'none'; box.innerHTML = ''; return; }
+        box.innerHTML = '<div style="font-size:12px;color:#666;padding:6px 2px;">🔍 搜尋問題項目中…</div>';
+        const run = function (recs) {
+            const groups = {};
+            let total = 0, pending = 0, done = 0;
+            (recs || []).forEach(function (r) {
+                const date = String(r.created_at || '').slice(0, 10);
+                (r.items || []).forEach(function (it) {
+                    const hay = ((it.key || '') + ' ' + (it.detail || '') + ' ' + (it.code || '') + ' ' + (it.category || '') + ' ' + (it.problem || '')).toUpperCase();
+                    if (hay.indexOf(kw) < 0) return;
+                    total++;
+                    const st = String(it.status || '待處理');
+                    const isDone = st.indexOf('已處理') >= 0 || st.indexOf('已完成') >= 0;
+                    if (isDone) done++; else pending++;
+                    if (!groups[date]) groups[date] = { pending: [], done: [] };
+                    (isDone ? groups[date].done : groups[date].pending).push(it);
+                });
+            });
+            if (!total) {
+                box.innerHTML = '<div style="background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:12px;font-size:13px;color:#666;">🔍 「' + htmlEsc(keyword) + '」未有符合嘅問題項目。</div>';
+                return;
+            }
+            let h = '<div style="background:#e8eaf6;border:1px solid #c5cae9;border-radius:10px;padding:10px;">'
+                + '<div style="font-size:14px;font-weight:bold;color:#283593;">🔍 「' + htmlEsc(keyword) + '」問題項目：共 ' + total + ' 項</div>'
+                + '<div style="font-size:12px;color:#455a64;margin-top:4px;">⚠️ 未處理 <b>' + pending + '</b> 項　｜　✅ 已處理 <b>' + done + '</b> 項</div></div>';
+            Object.keys(groups).sort().reverse().forEach(function (date) {
+                const g = groups[date];
+                h += '<div style="margin-top:8px;border:1px solid #e0e0e0;border-radius:10px;padding:8px;background:#fff;">'
+                    + '<div style="font-size:12.5px;font-weight:bold;color:#37474f;">📅 ' + date + '　未處理 ' + g.pending.length + '｜已處理 ' + g.done.length + '</div>';
+                const row = function (it, isDone) {
+                    const code = it.code ? '<b>' + htmlEsc(it.code) + '</b>　' : '';
+                    const detail = htmlEsc(it.detail || it.key || '');
+                    const chip = isDone
+                        ? '<span style="font-size:10.5px;color:#2e7d32;background:#e8f5e9;border-radius:8px;padding:1px 6px;margin-left:6px;">已處理</span>'
+                        : '<span style="font-size:10.5px;color:#c62828;background:#ffebee;border-radius:8px;padding:1px 6px;margin-left:6px;">未處理</span>';
+                    return '<div style="font-size:12px;color:#444;margin-top:5px;line-height:1.5;">' + code + detail + chip + '</div>';
+                };
+                g.pending.forEach(function (it) { h += row(it, false); });
+                g.done.forEach(function (it) { h += row(it, true); });
+                h += '</div>';
+            });
+            box.innerHTML = h;
+        };
+        if (window.__allIssueRecs && window.__allIssueRecs.length) { run(window.__allIssueRecs); return; }
+        fetch('/api/records?limit=300').then(function (r) { return r.json(); }).then(function (d) {
+            const recs = (d && d.records) ? d.records : (d || []);
+            window.__allIssueRecs = recs;
+            run(recs);
+        }).catch(function () {
+            box.innerHTML = '<div style="font-size:12px;color:#c62828;">❌ 搜尋失敗，請稍後再試。</div>';
+        });
+    }
+
     function displayRecords() {
         let firstDiv = document.getElementById('recordList');
         let isFirstLoad = !firstDiv || firstDiv.getAttribute('data-loaded') !== '1';
@@ -2825,6 +2882,16 @@ async function loadPendingIssues() {
             let records = (data && data.records) ? data.records : [];
             let total = (data && typeof data.total === 'number') ? data.total : records.length;
             allRecords = records;
+            const _isBox = document.getElementById('issue-search');
+            const _rlDiv = document.getElementById('recordList');
+            if (keyword && _isBox) {
+                _isBox.style.display = 'block';
+                renderIssueSearch(keyword);
+                if (_rlDiv) _rlDiv.style.display = 'none';
+            } else {
+                if (_isBox) { _isBox.style.display = 'none'; _isBox.innerHTML = ''; }
+                if (_rlDiv) _rlDiv.style.display = '';
+            }
             let listDiv = document.getElementById('recordList');
             listDiv.setAttribute('data-loaded', '1');
 
@@ -4341,10 +4408,27 @@ items: collectItems(),
                 _dateTxt = _dp[0] + ' ' + (_MON[_mi] || _dp[1]) + ' ' + _dp[2];
             }
             octx.fillText('Update date ' + _dateTxt, sx, yy);
-            yy += 30 * dpr;
-            octx.fillStyle = '#222';
-            octx.font = 'bold ' + Math.round(24 * dpr) + 'px "Microsoft JhengHei",sans-serif';
-            octx.fillText('Tables: ' + (cc.total || 0) + '  (Active ' + (cc.active || 0) + ' / Closed ' + (cc.inactive || 0) + ')', sx, yy);
+            if (cmMode === 'type') {
+                const _cells = cmData.cells || [];
+                const _spNew = _cells.filter(function (c) { return c.code && !c.stand && c.status === '停運' && c.chair === 'new'; }).length;
+                const _spOld = _cells.filter(function (c) { return c.code && !c.stand && c.status === '停運' && c.chair === 'old'; }).length;
+                yy += 42 * dpr;
+                octx.fillStyle = '#7b2fd0';
+                octx.font = 'bold ' + Math.round(30 * dpr) + 'px "Arial","Microsoft JhengHei",sans-serif';
+                octx.fillText('New model DLR Chair  ' + (cc.new || 0), sx, yy);
+                yy += 38 * dpr;
+                octx.fillStyle = '#d95a00';
+                octx.fillText('Old model DLR Chair  ' + (cc.old || 0), sx, yy);
+                yy += 30 * dpr;
+                octx.fillStyle = '#555';
+                octx.font = 'bold ' + Math.round(18 * dpr) + 'px "Microsoft JhengHei",sans-serif';
+                octx.fillText('Spare  —  New ' + _spNew + ' / Old ' + _spOld, sx, yy);
+            } else {
+                yy += 30 * dpr;
+                octx.fillStyle = '#222';
+                octx.font = 'bold ' + Math.round(24 * dpr) + 'px "Microsoft JhengHei",sans-serif';
+                octx.fillText('Tables: ' + (cc.total || 0) + '  (Active ' + (cc.active || 0) + ' / Closed ' + (cc.inactive || 0) + ')', sx, yy);
+            }
             if (cmMode === 'status') {
                 yy += 34 * dpr;
                 octx.fillStyle = '#1565c0';
@@ -6653,29 +6737,48 @@ items: collectItems(),
         }
         function pick(item, cls) { return item ? item.querySelector('.' + cls) : null; }
 
+        let _jumpTimer = null;
+        function _doJump(el) {
+            if (!el || !document.body.contains(el)) return;
+            let v = String(el.value || '').trim();
+            if (!v) return;
+            if (/^\d+$/.test(v)) {
+                if (tableDict[v]) v = tableDict[v];
+                else if (v.length >= 4) v = 'NB' + v;
+                el.value = v;
+            }
+            const up = String(v).toUpperCase();
+            const isCode = tableCodeSet.has(up) || /^[A-Z]{1,4}\d{4,6}$/.test(up);
+            if (!isCode) return;
+            const item = el.closest('.lux-item, .temp-item, .bgm-item, .venue-item, .nfc-item');
+            if (el.classList.contains('lux-table')) { var n1 = pick(item, 'lux-box1'); if (n1) n1.focus(); return; }
+            if (el.classList.contains('temp-table')) { var t1 = pick(item, 'temp-value'); if (t1) t1.focus(); return; }
+            if (el.classList.contains('bgm-table')) { var b1 = pick(item, 'bgm-value'); if (b1) b1.focus(); return; }
+            if (el.classList.contains('venue-location')) { openSelect(pick(item, 'issue-status')); return; }
+            if (el.classList.contains('nfc-table')) { openSelect(pick(item, 'issue-status')); return; }
+        }
+
         document.addEventListener('input', function (e) {
             var el = e.target;
             if (!el || !el.classList) return;
             var v = String(el.value || '').trim();
             var item = el.closest('.lux-item, .temp-item, .bgm-item, .venue-item, .nfc-item');
 
-            // Lux：台號(4) → Box1(3) → Box2(3) → Box3(3) → 狀態
-            if (el.classList.contains('lux-table') && /^(?:[A-Za-z]{2})?\d{4}$/.test(v)) { var n1 = pick(item, 'lux-box1'); if (n1) n1.focus(); return; }
+            var isTableInput = el.classList.contains('lux-table') || el.classList.contains('temp-table') ||
+                el.classList.contains('bgm-table') || el.classList.contains('venue-location') || el.classList.contains('nfc-table');
+            if (isTableInput) {
+                clearTimeout(_jumpTimer);
+                _jumpTimer = setTimeout(function () { _doJump(el); }, 650);
+                return;
+            }
+
+            // Lux Box1(3) → Box2(3) → Box3(3) → 狀態
             if (el.classList.contains('lux-box1') && /^\d{3}$/.test(v)) { var n2 = pick(item, 'lux-box2'); if (n2) n2.focus(); return; }
             if (el.classList.contains('lux-box2') && /^\d{3}$/.test(v)) { var n3 = pick(item, 'lux-box3'); if (n3) n3.focus(); return; }
             if (el.classList.contains('lux-box3') && /^\d{3}$/.test(v)) { openSelect(pick(item, 'issue-status')); return; }
 
-            // 溫度／分貝：台號(4) → 數值 → 狀態
-            if (el.classList.contains('temp-table') && /^(?:[A-Za-z]{2})?\d{4}$/.test(v)) { var t1 = pick(item, 'temp-value'); if (t1) t1.focus(); return; }
-            if (el.classList.contains('bgm-table') && /^(?:[A-Za-z]{2})?\d{4}$/.test(v)) { var b1 = pick(item, 'bgm-value'); if (b1) b1.focus(); return; }
             if (el.classList.contains('temp-value') && /^\d{2}\.\d$/.test(v)) { openSelect(pick(item, 'issue-status')); return; }
             if (el.classList.contains('bgm-value') && /^\d{2,3}\.\d$/.test(v)) { openSelect(pick(item, 'issue-status')); return; }
-
-            // 場面：台號(4) → 狀態
-            if (el.classList.contains('venue-location') && /^(?:[A-Za-z]{2})?\d{4}$/.test(v)) { openSelect(pick(item, 'issue-status')); return; }
-
-            // NFC：台號(4) → 狀態
-            if (el.classList.contains('nfc-table') && /^(?:[A-Za-z]{2})?\d{4}$/.test(v)) { openSelect(pick(item, 'issue-status')); return; }
         });
 
         document.addEventListener('change', function (e) {
