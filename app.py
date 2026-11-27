@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-52", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-53", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -2450,7 +2450,17 @@ def api_pending_items():
                 if st == '已交更':
                     continue
                 k = m.get('key')
-                if not k or k in _seen:
+                if not k:
+                    continue
+                if k in _seen:
+                    # 同一 key 已有紀錄：若手動鏡像為「已處理」，標記該筆，令清單可顯示完成
+                    if st != '待處理':
+                        for _d in done:
+                            if _d.get('key') == k:
+                                _d['manual'] = True
+                                _d['manual_id'] = m.get('id')
+                                _d['status'] = st
+                                break
                     continue
                 rec = {"occ_id": None, "record_id": None, "key": k, "type": "手動",
                        "code": m.get('code') or '', "category": m.get('category') or '',
@@ -2474,6 +2484,75 @@ def api_pending_items():
     except Exception as e:
         print('pending_items Error:', e)
         return jsonify({"pending_items": [], "done_items": [], "count": 0, "error": str(e)})
+    finally:
+        if conn:
+            release_db_connection(conn)
+
+
+@app.route('/api/pending_items/complete', methods=['POST'])
+def pending_item_complete():
+    """喺待處理清單直接標記完成／取消完成（會寫 shift_items，並鏡像入手動清單以便交更表引用）。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    data = request.json or {}
+    key = (data.get('key') or '').strip()
+    done = bool(data.get('done', True))
+    if not key or '|' not in key:
+        return jsonify({'status': 'error', 'message': '❌ 項目資料不正確。'})
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""SELECT type, code, category, problem, detail, note, display,
+                            to_char(MIN(event_at) AT TIME ZONE 'Asia/Macau', 'YYYY-MM-DD')
+                     FROM shift_items WHERE item_key = %s GROUP BY type, code, category, problem, detail, note, display
+                     ORDER BY 1 LIMIT 1""", (key,))
+        row = c.fetchone()
+        who = session.get('user_name') or '同事'
+        if done:
+            if not _si_resolve(c, None, key, who):
+                return jsonify({'status': 'error', 'message': '❌ 更新失敗。'})
+        else:
+            _si_write_reopen(c, None, [key])
+        conn.commit()
+        lst = _manual_pending()
+        hit = None
+        for m in lst:
+            if m.get('key') == key and (m.get('status') or '') != '已交更':
+                hit = m
+                break
+        if done:
+            date_str = (row[7] if row and row[7] else _up_today())
+            if hit:
+                hit['status'] = '已處理'
+            else:
+                t, code, detail = _split_key(key)
+                lst.append({'id': str(int(time.time() * 1000)), 'key': key, 'date': date_str,
+                            'category': (row[2] if row else ''), 'problem': (row[3] if row else ''),
+                            'code': (row[1] if row else code), 'note': (row[5] if row else ''),
+                            'status': '已處理', 'created_at': _up_today(), 'from_list': True})
+            _manual_save(lst)
+        else:
+            if hit:
+                hit['status'] = '待處理'
+                _manual_save(lst)
+        try:
+            bust()
+        except Exception:
+            pass
+        try:
+            log_action('待處理清單', ('完成 ' if done else '取消完成 ') + key)
+        except Exception:
+            pass
+        return jsonify({'status': 'success', 'message': '✅ 已標記完成。' if done else '✅ 已取消完成。'})
+    except Exception as e:
+        print('pending complete error:', e)
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        return jsonify({'status': 'error', 'message': '❌ 操作失敗，請稍後再試。'})
     finally:
         if conn:
             release_db_connection(conn)
