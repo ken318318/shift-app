@@ -898,6 +898,9 @@
             <div id="inv-move-name" style="font-size:12px; color:#666; margin:6px 0 10px;"></div>
             <div id="inv-move-list" style="display:flex; flex-wrap:wrap; gap:6px; max-height:50vh; overflow:auto;"></div>
             <div style="margin-top:10px;">
+                <input id="inv-move-qty" type="number" min="1" placeholder="搬幾多？（留空＝全部搬）" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
+            </div>
+            <div style="margin-top:8px;">
                 <input id="inv-move-new" type="text" placeholder="或輸入新位置，例如 B13" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
             </div>
             <div style="display:flex; gap:8px; margin-top:10px;">
@@ -6091,7 +6094,7 @@ items: collectItems(),
         const it = invFind(id);
         if (!it) return;
         invMoveId = id;
-        document.getElementById('inv-move-name').innerHTML = invEsc(it.name) + '（現時：' + invEsc(zoneName(it.zone)) + ' / ' + invEsc(it.loc || '未分類') + '）';
+        document.getElementById('inv-move-name').innerHTML = invEsc(it.name) + '（現時：' + invEsc(zoneName(it.zone)) + ' / ' + invEsc(it.loc || '未分類') + '，數量 ' + ((it.qty === null || it.qty === undefined) ? '—' : it.qty) + ' ' + invEsc(it.unit || '') + '）';
         const byZone = { WH: [], CP: [] };
         invItems.forEach(function (x) {
             if (!x.loc) return;
@@ -6111,6 +6114,8 @@ items: collectItems(),
         });
         box.innerHTML = h || '<span style="font-size:12px; color:#999;">未有其他位置</span>';
         document.getElementById('inv-move-new').value = '';
+        const qtyEl = document.getElementById('inv-move-qty');
+        if (qtyEl) qtyEl.value = '';
         document.getElementById('inv-move-box').style.display = 'flex';
     }
 
@@ -6120,9 +6125,12 @@ items: collectItems(),
 
     async function invMoveTo(loc) {
         if (!invMoveId) return;
+        const qEl = document.getElementById('inv-move-qty');
+        const take = qEl ? String(qEl.value || '').trim() : '';
         try {
             const r = await fetch('/api/inventory/move', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: invMoveId, loc: loc })
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: invMoveId, loc: loc, qty: take === '' ? null : take })
             });
             const d = await r.json();
             invCloseMove();
