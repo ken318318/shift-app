@@ -3155,7 +3155,7 @@ async function loadPendingIssues() {
                 el.disabled = false;
                 return;
             }
-            if (typeof cmToast === 'function') cmToast(d.message || ('✅ 已改為「' + status + '」'));
+            if (typeof cmToast === 'function') { try { cmToast(d.message || ('✅ 已改為「' + status + '」')); } catch (e) { } }
             await plistReload();
         } catch (e) {
             alert('❌ 連線失敗');
@@ -5497,7 +5497,7 @@ items: collectItems(),
             lcDraft = {};
             lcClose();
             try { await lsRenderMap(); lsApplyZoom(); } catch (e) { }
-            if (typeof cmToast === 'function') cmToast('✅ 已套用 ' + done + ' 個台號顏色');
+            if (typeof cmToast === 'function') { try { cmToast('✅ 已套用 ' + done + ' 個台號顏色'); } catch (e) { } }
         } catch (e) {
             if (msg) msg.textContent = '❌ 連線失敗（已套用 ' + done + ' 個）';
         } finally {
