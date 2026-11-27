@@ -3092,7 +3092,7 @@ async function loadPendingIssues() {
                     if (mNames.length) parts.push('<span style="color:#1565c0; font-weight:bold;">♂ ' + escapeText(mNames.map(shortName).join(', ')) + '</span>');
                     if (fNames.length) parts.push('<span style="color:#c2185b; font-weight:bold;">♀ ' + escapeText(fNames.map(shortName).join(', ')) + '</span>');
                     if (oNames.length) parts.push('<span style="color:#546e7a;">' + escapeText(oNames.map(shortName).join(', ')) + '</span>');
-                    onDutyHtml = `<div class="record-data" style="background:#e8f0fe; color:#174ea6; display:flex; flex-wrap:wrap; align-items:center; gap:14px; line-height:1.7;"><span style="white-space:nowrap;">👥 當更同事：</span>${parts.join('')}</div>`;
+                    onDutyHtml = `<div class="record-data" style="background:#e8f0fe; color:#174ea6; display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; line-height:1.7;"><span style="white-space:nowrap; flex:0 0 auto;">👥 當更同事：</span><span style="display:flex; flex-wrap:wrap; gap:6px 14px; min-width:0;">${parts.join('')}</span></div>`;
                 }
 
                 let followerHtml = ''; 
@@ -3102,7 +3102,7 @@ async function loadPendingIssues() {
                         let iconColor = (name.includes('Carman') || name.includes('Stella')) ? '#e91e63' : '#1a73e8'; 
                         return `<span style="margin-right: 8px; font-weight: bold; color: ${iconColor};"><svg viewBox="0 0 24 24" width="14" height="14" fill="${iconColor}" style="vertical-align: text-top; margin-right: 2px;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>${name}</span>`; 
                     }).join(''); 
-                    followerHtml = `<div class="record-data" style="background:#fff3cd; color:#856404; display:flex; align-items:center;">👤 跟進人: <div style="margin-left:5px;">${iconsHtml}</div></div>`; 
+                    followerHtml = `<div class="record-data" style="background:#fff3cd; color:#856404; display:flex; align-items:center; flex-wrap:wrap; gap:6px;"><span style="white-space:nowrap; flex:0 0 auto;">👤 跟進人：</span><span style="display:flex; flex-wrap:wrap; gap:10px; min-width:0;">${iconsHtml}</span></div>`; 
                 }
                 
                 let divider = index > 0 ? `<hr style="border: 0; height: 8px; background: #d1d5db; margin: 30px 0; border-radius: 4px;">` : "";
@@ -4419,10 +4419,6 @@ items: collectItems(),
                 yy += 38 * dpr;
                 octx.fillStyle = '#d95a00';
                 octx.fillText('Old model DLR Chair  ' + (cc.old || 0), sx, yy);
-                yy += 30 * dpr;
-                octx.fillStyle = '#555';
-                octx.font = 'bold ' + Math.round(18 * dpr) + 'px "Microsoft JhengHei",sans-serif';
-                octx.fillText('Spare  —  New ' + _spNew + ' / Old ' + _spOld, sx, yy);
             } else {
                 yy += 30 * dpr;
                 octx.fillStyle = '#222';
@@ -6737,25 +6733,20 @@ items: collectItems(),
         }
         function pick(item, cls) { return item ? item.querySelector('.' + cls) : null; }
 
-        let _jumpTimer = null;
-        function _doJump(el) {
-            if (!el || !document.body.contains(el)) return;
+        function _tryJump(el) {
+            if (!el) return false;
             let v = String(el.value || '').trim();
-            if (!v) return;
-            if (/^\d+$/.test(v)) {
-                if (tableDict[v]) v = tableDict[v];
-                else if (v.length >= 4) v = 'NB' + v;
-                el.value = v;
-            }
-            const up = String(v).toUpperCase();
-            const isCode = tableCodeSet.has(up);
-            if (!isCode) return;
+            if (!v) return false;
+            if (/^\d+$/.test(v) && tableDict[v]) { v = tableDict[v]; el.value = v; }
+            const up = v.toUpperCase();
+            if (!tableCodeSet.has(up)) return false;
             const item = el.closest('.lux-item, .temp-item, .bgm-item, .venue-item, .nfc-item');
-            if (el.classList.contains('lux-table')) { var n1 = pick(item, 'lux-box1'); if (n1) n1.focus(); return; }
-            if (el.classList.contains('temp-table')) { var t1 = pick(item, 'temp-value'); if (t1) t1.focus(); return; }
-            if (el.classList.contains('bgm-table')) { var b1 = pick(item, 'bgm-value'); if (b1) b1.focus(); return; }
-            if (el.classList.contains('venue-location')) { openSelect(pick(item, 'issue-status')); return; }
-            if (el.classList.contains('nfc-table')) { openSelect(pick(item, 'issue-status')); return; }
+            if (el.classList.contains('lux-table')) { var n1 = pick(item, 'lux-box1'); if (n1) { n1.focus(); return true; } }
+            if (el.classList.contains('temp-table')) { var t1 = pick(item, 'temp-value'); if (t1) { t1.focus(); return true; } }
+            if (el.classList.contains('bgm-table')) { var b1 = pick(item, 'bgm-value'); if (b1) { b1.focus(); return true; } }
+            if (el.classList.contains('venue-location')) { openSelect(pick(item, 'issue-status')); return true; }
+            if (el.classList.contains('nfc-table')) { openSelect(pick(item, 'issue-status')); return true; }
+            return false;
         }
 
         document.addEventListener('input', function (e) {
@@ -6767,8 +6758,7 @@ items: collectItems(),
             var isTableInput = el.classList.contains('lux-table') || el.classList.contains('temp-table') ||
                 el.classList.contains('bgm-table') || el.classList.contains('venue-location') || el.classList.contains('nfc-table');
             if (isTableInput) {
-                clearTimeout(_jumpTimer);
-                _jumpTimer = setTimeout(function () { _doJump(el); }, 650);
+                _tryJump(el);
                 return;
             }
 
