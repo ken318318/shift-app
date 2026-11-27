@@ -276,23 +276,27 @@
         <h3 style="font-size:15px; margin:0 0 8px 0; color:#333;">🔑 帳號密碼</h3>
         <div class="muted" id="auth-status">載入中…</div>
 
-        <label>目標帳號</label>
-        <select id="auth-target">
-            <option value="staff">同事帳號</option>
-            <option value="admin">管理員帳號</option>
-        </select>
-
         <label>目前管理員密碼（確認身份）</label>
         <input type="password" id="auth-cur" placeholder="輸入目前管理員密碼">
 
-        <label>新密碼（最少 4 個字元）</label>
+        <label>新管理員密碼（最少 8 個字元）</label>
         <input type="password" id="auth-new" placeholder="新密碼">
 
         <label>再輸入一次新密碼</label>
         <input type="password" id="auth-new2" placeholder="確認新密碼">
 
-        <button class="btn btn-green" style="width:100%; margin-top:12px;" onclick="changePassword()">💾 更新密碼</button>
+        <button class="btn btn-green" style="width:100%; margin-top:12px;" onclick="changePassword()">💾 更新管理員密碼</button>
         <div class="msg" id="auth-msg"></div>
+
+        <hr style="border:none; border-top:1px solid #eef1f5; margin:18px 0;">
+        <h3 style="font-size:14.5px; margin:0 0 6px 0; color:#333;">👤 同事個人密碼</h3>
+        <div class="muted" style="margin-bottom:8px;">選擇同事帳號 → 設定新密碼（即時生效，該同事下次登入要用新密碼）</div>
+        <select id="mem-account"></select>
+        <input type="password" id="mem-new" placeholder="新密碼（最少 8 個字元）">
+        <input type="password" id="mem-new2" placeholder="確認新密碼">
+        <input type="password" id="mem-admin-cur" placeholder="目前管理員密碼（確認身份）">
+        <button class="btn btn-green" style="width:100%; margin-top:10px;" onclick="setMemberPassword()">💾 更新該同事密碼</button>
+        <div class="msg" id="mem-msg"></div>
 
         <button class="btn btn-red" style="width:100%; margin-top:18px;" onclick="kickSessions('staff')">⚠️ 強制登出所有同事</button>
         <div class="muted" style="margin-top:6px;">無需更改密碼，可直接令所有已登入的同事帳號失效（最多 10 秒內生效）。適用於同事離職時使用。</div>
@@ -472,7 +476,7 @@
             if (name === 'stats') jobs.push(loadRecords().then(renderStats));
             if (name === 'hall') jobs.push(loadHallSummary(), loadHallTables());
             if (name === 'members') jobs.push(loadMembers());
-            if (name === 'account') jobs.push(loadAuthStatus(), loadAuditLogs());
+            if (name === 'account') jobs.push(loadAuthStatus(), loadAuditLogs(), loadMemberAccounts());
             if (name === 'options') jobs.push(renderOptions());
             if (jobs.length) {
                 bsLoading(true, '載入中…');
@@ -1581,22 +1585,21 @@
 
         async function changePassword() {
             let msg = document.getElementById('auth-msg');
-            let target = document.getElementById('auth-target').value;
             let cur = document.getElementById('auth-cur').value;
             let p1 = document.getElementById('auth-new').value;
             let p2 = document.getElementById('auth-new2').value;
 
             if (!cur) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 請輸入目前管理員密碼'; return; }
-            if (p1.length < 4) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 新密碼最少 4 個字元'; return; }
+            if (p1.length < 8) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 新密碼最少 8 個字元'; return; }
             if (p1 !== p2) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 兩次輸入的新密碼不一致'; return; }
-            if (!confirm('確定更新密碼？\n\n帳號：' + (target === 'admin' ? '管理員' : '同事') + '\n\n請記住新密碼，忘記後需要改 app.py。')) return;
+            if (!confirm('確定更新「管理員」密碼？\n\n請記住新密碼；忘記後需要改資料庫或改 app.py。')) return;
 
             msg.style.color = '#666';
             msg.textContent = '更新中…';
             try {
                 let res = await fetch('/api/change_password', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ target: target, current_admin_password: cur, new_password: p1 })
+                    body: JSON.stringify({ target: 'admin', current_admin_password: cur, new_password: p1 })
                 });
                 let data = await res.json();
                 if (data.status !== 'success') {
@@ -1608,9 +1611,52 @@
                 document.getElementById('auth-new').value = '';
                 document.getElementById('auth-new2').value = '';
                 msg.style.color = '#2e7d32';
-                msg.textContent = data.message || '✅ 密碼已更新';
+                msg.textContent = data.message || '✅ 管理員密碼已更新';
                 loadAuthStatus();
                 loadAuditLogs();
+            } catch (e) {
+                msg.style.color = '#d32f2f';
+                msg.textContent = '❌ 連線失敗';
+            }
+        }
+
+        async function loadMemberAccounts() {
+            const sel = document.getElementById('mem-account');
+            if (!sel) return;
+            try {
+                const list = await (await fetch('/api/members?_t=' + Date.now(), {cache: 'no-store'})).json();
+                const arr = Array.isArray(list) ? list : (list.members || []);
+                const opts = arr.filter(m => m.account).map(m => '<option value="' + m.account + '">BS' + m.account + ' — ' + m.name + '</option>').join('');
+                sel.innerHTML = opts || '<option value="">（無帳號）</option>';
+            } catch (e) { }
+        }
+
+        async function setMemberPassword() {
+            const msg = document.getElementById('mem-msg');
+            const acct = document.getElementById('mem-account').value;
+            const p1 = document.getElementById('mem-new').value;
+            const p2 = document.getElementById('mem-new2').value;
+            const cur = document.getElementById('mem-admin-cur').value;
+            if (!acct) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 請選擇同事帳號'; return; }
+            if (p1.length < 8) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 新密碼最少 8 個字元'; return; }
+            if (p1 !== p2) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 兩次輸入不一致'; return; }
+            if (!cur) { msg.style.color = '#d32f2f'; msg.textContent = '⚠️ 請輸入目前管理員密碼確認身份'; return; }
+            if (!confirm('確定重設 BS' + acct + ' 嘅密碼？\n\n該同事下次登入要用新密碼。')) return;
+            msg.style.color = '#666';
+            msg.textContent = '更新中…';
+            try {
+                const r = await fetch('/api/member_set_password', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ account: acct, new_password: p1, current_admin_password: cur })
+                });
+                const d = await r.json();
+                msg.style.color = d.status === 'success' ? '#2e7d32' : '#d32f2f';
+                msg.textContent = d.message || (d.status === 'success' ? '✅ 已更新' : '❌ 更新失敗');
+                if (d.status === 'success') {
+                    document.getElementById('mem-new').value = '';
+                    document.getElementById('mem-new2').value = '';
+                    document.getElementById('mem-admin-cur').value = '';
+                }
             } catch (e) {
                 msg.style.color = '#d32f2f';
                 msg.textContent = '❌ 連線失敗';
