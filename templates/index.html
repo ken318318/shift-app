@@ -822,6 +822,7 @@
     <div id="bs-confirm-box" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10090; padding:16px; align-items:center; justify-content:center;">
         <div style="max-width:400px; width:100%; background:#fff; border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);">
             <div id="bs-confirm-msg" style="font-size:13.5px; color:#222; line-height:1.65; white-space:pre-wrap;"></div>
+            <div style="margin-top:8px; font-size:10.5px; color:#9e9e9e; text-align:center;">🔒 BS 交更系統真對話框</div>
             <div style="display:flex; gap:8px; margin-top:14px;">
                 <button id="bs-confirm-ok" type="button" style="flex:1; padding:11px; border:none; border-radius:8px; background:#1a73e8; color:#fff; font-size:13px; font-weight:bold; cursor:pointer;">確定</button>
                 <button id="bs-confirm-cancel" type="button" style="flex:1; padding:11px; border:none; border-radius:8px; background:#eceff1; color:#455a64; font-size:13px; font-weight:bold; cursor:pointer;">取消</button>
@@ -6584,18 +6585,45 @@ items: collectItems(),
             const mo = new MutationObserver(function (muts) {
                 muts.forEach(function (m) {
                     Array.prototype.forEach.call(m.addedNodes, function (n) {
-                        if (!n || n.tagName !== 'SCRIPT') return;
-                        const src = n.src || '';
-                        if (src && src.indexOf(location.origin + '/static/') !== 0) {
-                            try { n.remove(); } catch (e) { }
-                            secBanner('⚠️ 偵測到外來腳本被插入（' + src + '），已即時移除。請清除瀏覽器網站資料。');
-                            try {
-                                fetch('/api/security_report', {
-                                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ detail: 'MutationObserver 攔截 script：' + src + ' ; url=' + location.href })
-                                });
-                            } catch (e) { }
-                        }
+                        if (!n) return;
+                        try {
+                            if (n.id === 'bs-confirm-box' || n.id === 'sec-warn' || n.id === 'cm-toast') return;
+                            if (n.tagName === 'SCRIPT') {
+                                const src = n.src || '';
+                                if (src && src.indexOf(location.origin + '/static/') !== 0) {
+                                    try { n.remove(); } catch (e) { }
+                                    secBanner('⚠️ 偵測到外來腳本被插入（' + src + '），已即時移除。請清除瀏覽器網站資料。');
+                                    try {
+                                        fetch('/api/security_report', {
+                                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ detail: 'MutationObserver 攔截 script：' + src + ' ; url=' + location.href })
+                                        });
+                                    } catch (e) { }
+                                }
+                                return;
+                            }
+                            // 偵測被注入嘅偽冒對話框（提及外部伺服器等字眼）
+                            const _t = (n.textContent || '');
+                            if (_t && /外部伺服器|炒魷魚|很危險|掛載/.test(_t)) {
+                                let _fixed = false;
+                                try {
+                                    if (getComputedStyle(n).position === 'fixed') _fixed = true;
+                                    else if (n.querySelectorAll) _fixed = Array.prototype.some.call(n.querySelectorAll('*'), function (e) {
+                                        try { return getComputedStyle(e).position === 'fixed'; } catch (x) { return false; }
+                                    });
+                                } catch (e) { }
+                                if (_fixed) {
+                                    try { n.remove(); } catch (e) { }
+                                    secBanner('⚠️ 偵測到偽冒對話框（內容提及外部伺服器），已即時移除。請檢查瀏覽器擴充功能／清除網站資料。');
+                                    try {
+                                        fetch('/api/security_report', {
+                                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ detail: '偽冒對話框：' + _t.slice(0, 150) + ' ; tag=' + n.tagName + ' ; url=' + location.href })
+                                        });
+                                    } catch (e) { }
+                                }
+                            }
+                        } catch (e) { }
                     });
                 });
             });
