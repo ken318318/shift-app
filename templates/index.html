@@ -739,6 +739,10 @@
                 <span id="cm-event-count" style="font-size:12px; color:#6a1b9a; font-weight:bold;"></span>
             </div>
             <div id="cm-event-list" style="max-height:50vh; overflow:auto; border:1px solid #eee; border-radius:8px; padding:4px 6px;"></div>
+            <div style="display:flex; gap:8px; margin-top:10px;">
+                <button type="button" onclick="cmApplyPending()" id="cm-set-ok" style="flex:1; padding:11px; border:none; border-radius:8px; background:#2e7d32; color:#fff; font-size:13px; font-weight:bold;">✅ 確定（套用）</button>
+                <button type="button" onclick="cmResetDraft()" style="flex:1; padding:11px; border:none; border-radius:8px; background:#eceff1; color:#455a64; font-size:13px; font-weight:bold;">取消改動</button>
+            </div>
             <div id="cm-event-msg" style="font-size:12px; color:#d32f2f; margin-top:6px; min-height:16px;"></div>
         </div>
     </div>
@@ -4484,6 +4488,7 @@ items: collectItems(),
         if (ib) ib.style.display = isAdmin ? '' : 'none';
         const rb = document.getElementById('cm-b-reset');
         if (rb) rb.style.display = '';
+        if (cmData) { try { renderChairMap(); } catch (e) {} }
         bsLoading(true, '載入中…', true);
         loadChairMap();
     }
@@ -4920,8 +4925,10 @@ items: collectItems(),
 
     // ===== 台狀態／活動區設定（下拉打勾） =====
     let cmSetMode = 'event';
+    let cmDraft = {};
 
     function cmOpenEventPicker() {
+        cmDraft = {};
         const box = document.getElementById('cm-eventbox');
         if (box) box.style.display = 'block';
         const q = document.getElementById('cm-event-q');
@@ -4992,9 +4999,11 @@ items: collectItems(),
         const rows = all.filter(function (r) { return !q || r.code.toUpperCase().indexOf(q) >= 0; });
         const cntEl = document.getElementById('cm-event-count');
         if (cntEl) {
-            cntEl.textContent = q
+            const nDraft = Object.keys(cmDraft).length;
+            cntEl.textContent = (q
                 ? ('符合 ' + rows.length + ' 台（可設定 ' + all.length + ' 台）')
-                : ('可設定 ' + all.length + ' 台');
+                : ('可設定 ' + all.length + ' 台'))
+                + (nDraft ? ('　｜未確定改動 ' + nDraft + ' 項') : '');
         }
         if (!rows.length) {
             box.innerHTML = '<div style="padding:16px;text-align:center;color:#999;font-size:12px;">冇符合台號／已經全部完成</div>';
@@ -5003,224 +5012,85 @@ items: collectItems(),
         const shown = rows.slice(0, 400);
         box.innerHTML = shown.map(function (r) {
             const tag = r.tag || (r.on ? '活動區' : '');
+            const dk = cmSetMode + '|' + r.code;
+            const checked = Object.prototype.hasOwnProperty.call(cmDraft, dk) ? cmDraft[dk] : r.on;
             return '<label style="display:flex;align-items:center;gap:8px;padding:8px;border-bottom:1px solid #f2f2f2;font-size:13px;cursor:pointer;">'
-                + '<input type="checkbox" data-code="' + r.code + '"' + (r.on ? ' checked' : '') + ' onchange="cmApplySet(this)" style="width:18px;height:18px;">'
+                + '<input type="checkbox" data-code="' + r.code + '"' + (checked ? ' checked' : '') + ' onchange="cmApplySet(this)" style="width:18px;height:18px;">'
                 + '<span style="font-weight:bold;">' + r.code + '</span>'
                 + (tag ? '<span style="font-size:11px;color:#6a1b9a;margin-left:auto;">' + tag + '</span>' : '')
                 + '</label>';
         }).join('') + (rows.length > 400 ? '<div style="padding:8px;text-align:center;color:#999;font-size:11.5px;">（只顯示前 400 台，請用搜尋）</div>' : '');
     }
 
-    async function cmApplySet(el) {
+    function cmApplySet(el) {
         const code = el.getAttribute('data-code');
-        const on = el.checked;
-        const mode = cmSetMode;
+        cmDraft[cmSetMode + '|' + code] = !!el.checked;
+        cmRenderEventList();
+    }
+
+    function cmResetDraft() {
+        cmDraft = {};
+        cmRenderEventList();
+    }
+
+    function cmCellState(c) {
+        return {
+            event: !!c.event,
+            chair: c.chair || '',
+            stopped: c.status === '停運'
+        };
+    }
+
+    async function cmApplyPending() {
+        const keys = Object.keys(cmDraft);
         const msg = document.getElementById('cm-event-msg');
-        if (msg) msg.textContent = '儲存中…';
-        el.disabled = true;
+        if (!keys.length) { if (msg) msg.textContent = '未有改動。'; return; }
+        const groups = { eventOn: [], eventOff: [], new: [], old: [], none: [], operating: [], inactive: [] };
+        let bad = 0;
+        keys.forEach(function (k) {
+            const idx = k.indexOf('|');
+            const mode = k.slice(0, idx);
+            const code = k.slice(idx + 1);
+            const want = cmDraft[k];
+            const c = cmCellByCode(code);
+            if (!c) { bad++; return; }
+            const st = cmCellState(c);
+            let cur = false;
+            if (mode === 'event') cur = st.event;
+            else if (mode === 'new') cur = st.chair === 'new';
+            else if (mode === 'old') cur = st.chair === 'old';
+            else if (mode === 'none') cur = !st.chair;
+            else if (mode === 'operating') cur = !st.stopped;
+            else if (mode === 'inactive') cur = st.stopped;
+            if (want === cur) return;
+            if (mode === 'event') (want ? groups.eventOn : groups.eventOff).push(code);
+            else if (mode === 'none') { if (want) groups.none.push(code); }
+            else if (mode === 'new' || mode === 'old') { if (want) groups[mode].push(code); else groups.none.push(code); }
+            else groups[mode].push(code);
+        });
+        const ok = document.getElementById('cm-set-ok');
+        if (ok) ok.disabled = true;
+        if (msg) msg.textContent = '套用中…';
         try {
-            let url = '/api/chair_map/bulk';
-            let body = { action: mode, codes: [code] };
-            if (mode === 'event') {
-                url = '/api/chair_map/event';
-                body = { codes: [code], on: on };
-            } else if (mode === 'new' || mode === 'old') {
-                body = { action: on ? mode : 'none', codes: [code] };
-            } else if (mode === 'none') {
-                body = { action: 'none', codes: [code] };
+            const post = async function (url, body) {
+                const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                const d = await r.json();
+                if (!d || d.status !== 'success') throw new Error((d && d.message) || '失敗');
+            };
+            if (groups.eventOn.length) await post('/api/chair_map/event', { codes: groups.eventOn, on: true });
+            if (groups.eventOff.length) await post('/api/chair_map/event', { codes: groups.eventOff, on: false });
+            for (const act of ['new', 'old', 'none', 'operating', 'inactive']) {
+                if (groups[act].length) await post('/api/chair_map/bulk', { action: act, codes: groups[act] });
             }
-            const r = await fetch(url, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body)
-            });
-            const d = await r.json();
-            if (!d || d.status !== 'success') {
-                if (msg) msg.textContent = (d && d.message) || '❌ 儲存失敗';
-                el.checked = !on;
-                return;
-            }
-            if (msg) msg.textContent = '';
+            cmDraft = {};
             await loadChairMap();
             cmRenderEventList();
-            if ((mode === 'new' || mode === 'old' || mode === 'none') && cmMode === 'status') {
-                cmToast('✅ ' + code + ' 已更新（切去「新舊櫈」睇顏色）');
-            } else {
-                cmToast('✅ ' + code + ' 已更新');
-            }
+            if (msg) msg.textContent = '✅ 已套用 ' + keys.length + ' 項改動。';
+            cmToast('✅ 已套用改動');
         } catch (e) {
-            if (msg) msg.textContent = '❌ 連線失敗';
-            el.checked = !on;
+            if (msg) msg.textContent = '❌ ' + String(e.message || e);
         } finally {
-            el.disabled = false;
-        }
-    }
-
-    // ================= TG Layout 更換行程表 =================
-    const LAYOUT_SCHED = [
-        { cycle: 'Week 1', total: 66, pits: [['PIT02', 19, 'b'], ['PIT09', 23, 'b'], ['PIT13', 24, 'p']] },
-        { cycle: 'Week 2', total: 59, pits: [['PIT03', 16, 'b'], ['PIT11', 23, 'b'], ['PIT107', 20, 'v']] },
-        { cycle: 'Week 3', total: 65, pits: [['PIT05', 24, 'b'], ['PIT12', 32, 'b'], ['PIT105', 9, 'v']] },
-        { cycle: 'Week 4', total: 58, pits: [['PIT08', 15, 'b'], ['PIT15', 24, 'p'], ['PIT30', 19, 'b']] },
-        { cycle: 'Week 5', total: 64, pits: [['PIT16', 22, 'b'], ['PIT27', 17, 'b'], ['PIT106', 25, 'v']] },
-        { cycle: 'Week 6', total: 63, pits: [['PIT17', 19, 'v'], ['PIT26', 22, 'b'], ['PIT29', 22, 'b']] },
-        { cycle: 'Week 7', total: 62, pits: [['PIT19', 5, 'v'], ['PIT25', 34, 'b'], ['PIT28', 23, 'b']] },
-        { cycle: 'Week 8', total: 66, pits: [['PIT18', 22, 'v'], ['PIT32', 11, 'b'], ['PIT33', 12, 'b'], ['PIT35', 2, 'b'], ['PIT01', 0, 'o'], ['PIT31', 0, 'o'], ['PIT63', 0, 'o']] }
-    ];
-    const LAYOUT_COLORS = { b: '#99CCFF', v: '#CCCCFF', p: '#FF99CC', o: '#FFCC99' };
-    const LAYOUT_LEGEND = [
-        ['#FFCC99', 'No stand Betting Area & No pair+'],
-        ['#90EE90', 'Stand Betting Area & pair+'],
-        ['#99CCFF', 'Stand Betting Area & No pair+'],
-        ['#CCCCFF', 'No stand Betting Area / have pair+ and have Lucky6-7 stand Betting Area'],
-        ['#FF99CC', 'No stand Betting Area & No Lucky6-7 stand Betting Area / have pair+']
-    ];
-    let layoutDone = {};
-    let layoutLoaded = false;
-    let layoutRound = 1;
-    let layoutLast = null;
-    let layoutColors = {};
-    let layoutCodeColors = {};
-
-    function layoutPitCount() {
-        return LAYOUT_SCHED.reduce(function (n, w) { return n + w.pits.length; }, 0);
-    }
-
-    async function layoutLoadDone(force) {
-        if (layoutLoaded && !force) return layoutDone;
-        try {
-            const r = await fetch('/api/layout_schedule?_t=' + Date.now(), { cache: 'no-store' });
-            const d = await r.json();
-            if (d && d.status === 'success') {
-                layoutDone = d.done || {};
-                layoutRound = d.round || 1;
-                layoutLast = d.last || null;
-                layoutColors = d.colors || {};
-                layoutCodeColors = d.code_colors || {};
-                layoutLoaded = true;
-            }
-        } catch (e) { }
-        return layoutDone;
-    }
-
-    function schedCellHtml(pit) {
-        const d = layoutDone[pit] || '';
-        return '<label style="display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">'
-            + '<input type="checkbox" data-pit="' + pit + '"' + (d ? ' checked' : '') + ' onchange="schedToggle(this)" style="width:18px; height:18px;">'
-            + '<span id="sched-date-' + pit + '" style="font-size:11.5px; color:#c2185b; font-weight:bold;">' + (d ? d.slice(5) : '') + '</span>'
-            + '</label>';
-    }
-
-    // ===== 台號顏色手動設定 =====
-    const LC_NAMES = { b: '藍', v: '紫', p: '粉', o: '橙' };
-
-    function lcAllCodes() {
-        const codes = [];
-        const seen = {};
-        ((cmData && cmData.cells) || []).forEach(function (c) {
-            if (c.code && !seen[c.code]) { seen[c.code] = 1; codes.push({ key: c.code, pit: c.pit, status: c.status }); }
-        });
-        codes.sort(function (a, b) { return a.key < b.key ? -1 : (a.key > b.key ? 1 : 0); });
-        return codes;
-    }
-
-    function lcEffectiveName(r) {
-        const ov = layoutCodeColors[r.key];
-        if (ov) return '手動・' + (LC_NAMES[ov] || '');
-        if (r.status === '停運') return '預設・停運灰';
-        const key = 'PIT' + String(r.pit || '').padStart(2, '0');
-        const def = (layoutColors && layoutColors[key]) || '';
-        for (let i = 0; i < LAYOUT_SCHED.length; i++) {
-            const w = LAYOUT_SCHED[i];
-            for (let j = 0; j < w.pits.length; j++) {
-                if (w.pits[j][0] === key) return '預設・' + (LC_NAMES[def || w.pits[j][2]] || '');
-            }
-        }
-        return '預設・（不在行程）';
-    }
-
-    function lcEffColor(r) {
-        const ov = layoutCodeColors[r.key];
-        if (ov) return LAYOUT_COLORS[ov];
-        if (r.status === '停運') return '#cfd8dc';
-        const key = 'PIT' + String(r.pit || '').padStart(2, '0');
-        const c2 = (layoutColors && layoutColors[key]) || '';
-        if (c2) return LAYOUT_COLORS[c2];
-        for (let i = 0; i < LAYOUT_SCHED.length; i++) {
-            const w = LAYOUT_SCHED[i];
-            for (let j = 0; j < w.pits.length; j++) {
-                if (w.pits[j][0] === key) return LAYOUT_COLORS[w.pits[j][2]];
-            }
-        }
-        return '#ffffff';
-    }
-
-    async function lcOpen() {
-        const box = document.getElementById('lc-box');
-        const msg = document.getElementById('lc-msg');
-        if (msg) msg.textContent = '';
-        const q = document.getElementById('lc-q');
-        if (q) q.value = '';
-        if (box) box.style.display = 'flex';
-        if (!cmData) { try { await lsRenderMap(); } catch (e) { } }
-        lcRender();
-    }
-
-    function lcClose() {
-        const box = document.getElementById('lc-box');
-        if (box) box.style.display = 'none';
-    }
-
-    function lcRender() {
-        const box = document.getElementById('lc-list');
-        if (!box) return;
-        if (!cmData) { box.innerHTML = '<div style="padding:16px;text-align:center;color:#999;font-size:12px;">載入台號中…</div>'; return; }
-        const mode = document.getElementById('lc-mode').value;
-        const qEl = document.getElementById('lc-q');
-        const q = ((qEl && qEl.value) || '').trim().toUpperCase();
-        const rows = lcAllCodes().filter(function (r) { return !q || r.key.indexOf(q) >= 0; });
-        if (!rows.length) {
-            box.innerHTML = '<div style="padding:16px;text-align:center;color:#999;font-size:12px;">冇符合台號</div>';
-            return;
-        }
-        box.innerHTML = rows.map(function (r) {
-            const ov = layoutCodeColors[r.key] || '';
-            const checked = mode ? (ov === mode) : !!ov;
-            return '<label style="display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px solid #f2f2f2; font-size:13px; cursor:pointer;">'
-                + '<input type="checkbox" data-code="' + r.key + '"' + (checked ? ' checked' : '') + ' onchange="lcToggle(this)" style="width:18px; height:18px;">'
-                + '<span style="font-weight:bold;">' + r.key + '</span>'
-                + '<span style="display:inline-block; width:16px; height:12px; background:' + lcEffColor(r) + '; border:1px solid #999;"></span>'
-                + '<span style="font-size:11px; color:#666; margin-left:auto;">' + lcEffectiveName(r) + '</span>'
-                + '</label>';
-        }).join('');
-    }
-
-    async function lcToggle(el) {
-        const code = el.getAttribute('data-code');
-        const mode = document.getElementById('lc-mode').value;
-        const colour = el.checked ? (mode || '') : '';
-        const msg = document.getElementById('lc-msg');
-        el.disabled = true;
-        try {
-            const r = await fetch('/api/layout_colors', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code: code, colour: colour })
-            });
-            const d = await r.json();
-            if (!d || d.status !== 'success') {
-                if (msg) msg.textContent = (d && d.message) || '❌ 儲存失敗';
-                el.checked = !el.checked;
-                return;
-            }
-            layoutCodeColors = d.code_colors || {};
-            if (msg) msg.textContent = d.message || '';
-            await lsRenderMap();
-            lsApplyZoom();
-            lcRender();
-        } catch (e) {
-            if (msg) msg.textContent = '❌ 連線失敗';
-            el.checked = !el.checked;
-        } finally {
-            el.disabled = false;
+            if (ok) ok.disabled = false;
         }
     }
 
@@ -5860,7 +5730,7 @@ items: collectItems(),
                     '　<span style="color:#c2185b;font-weight:bold">活動區 ' + (c.event || 0) + ' 台</span>';
             } else {
                 html += '　新櫈 ' + (c.new || 0) + '、舊櫈 ' + (c.old || 0) + '、未設定 ' + Math.max(0, (c.chairs || 0) - (c.new || 0) - (c.old || 0))
-                    + '（共 ' + (c.chairs || 0) + ' 張；企位 ' + Math.max(0, (c.total_all || 0) - (c.chairs || 0)) + ' 唔計）';
+                    + '（共 ' + (c.chairs || 0) + ' 張；企位及活動區唔計）';
             }
             html += '　' + (cmMode === 'status'
                 ? '（紅字＝壞 DLR、藍底＝壞客櫈、綠字＝spare、灰底＝停運）'
