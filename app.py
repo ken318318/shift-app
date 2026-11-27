@@ -749,6 +749,31 @@ def member_set_password():
             except Exception: pass
 
 
+@app.route('/api/security_settings_audit', methods=['GET'])
+def security_settings_audit():
+    """審計 app_settings：只回 key／長度／有冇 HTML 標籤（唔回值）。限管理員。"""
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以使用。'}), 403
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT key, COALESCE(value,'') FROM app_settings ORDER BY key")
+        rows = c.fetchall()
+        out = []
+        for k, v in rows:
+            out.append({'key': k, 'len': len(v), 'has_html': bool(re.search(r'<[a-zA-Z/!]', v)),
+                        'has_js': bool(re.search(r'eval\(|new Function|javascript:', v, re.I))})
+        return jsonify({'status': 'success', 'count': len(out), 'settings': out,
+                        'flagged': [x for x in out if x['has_html'] or x['has_js']]})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+
 @app.route('/api/security_blocked', methods=['GET', 'POST'])
 def security_blocked():
     """查看／管理 IP 黑名單（app_settings: blocked_ips）。限管理員。"""
@@ -882,7 +907,7 @@ def security_clean_records():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-23", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-24", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
