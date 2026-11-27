@@ -1,0 +1,2886 @@
+{
+ "version": 1,
+ "source": "82倉庫記錄(2026-11-08) + CP物品擺放位置(2026-10-22)",
+ "items": [
+  {
+   "zone": "WH",
+   "loc": "A1",
+   "name": "文件架",
+   "qty": 10,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 1
+  },
+  {
+   "zone": "WH",
+   "loc": "A3",
+   "name": "聖誔、新年飾品",
+   "qty": 8,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 2
+  },
+  {
+   "zone": "WH",
+   "loc": "B1",
+   "name": "暖貼",
+   "qty": 26,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 3
+  },
+  {
+   "zone": "WH",
+   "loc": "B7",
+   "name": "Confidential",
+   "qty": 40,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 4
+  },
+  {
+   "zone": "WH",
+   "loc": "G1",
+   "name": "舊版會員卡座",
+   "qty": 4,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 5
+  },
+  {
+   "zone": "WH",
+   "loc": "A1",
+   "name": "魔術貼",
+   "qty": 1,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 6
+  },
+  {
+   "zone": "WH",
+   "loc": "A3",
+   "name": "萬聖節飾品",
+   "qty": 1,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 7
+  },
+  {
+   "zone": "WH",
+   "loc": "B7",
+   "name": "Pit Needs & Request",
+   "qty": 30,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 8
+  },
+  {
+   "zone": "WH",
+   "loc": "G1",
+   "name": "計時器",
+   "qty": 18,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 9
+  },
+  {
+   "zone": "WH",
+   "loc": "A1",
+   "name": "飛牌探路座（壞）",
+   "qty": 2,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 10
+  },
+  {
+   "zone": "WH",
+   "loc": "B7",
+   "name": "淺綠色A4硬卡紙",
+   "qty": 1,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 11
+  },
+  {
+   "zone": "WH",
+   "loc": "G1",
+   "name": "黑紅硬面記事簿（A4）",
+   "qty": 30,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 12
+  },
+  {
+   "zone": "WH",
+   "loc": "A1",
+   "name": "舊版「換牌進行中」",
+   "qty": 1,
+   "unit": "塊",
+   "detail": "",
+   "note": "",
+   "sort": 13
+  },
+  {
+   "zone": "WH",
+   "loc": "A4",
+   "name": "快赢百家樂擺件",
+   "qty": 37,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 14
+  },
+  {
+   "zone": "WH",
+   "loc": "B2",
+   "name": "公司雜誌",
+   "qty": 2,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 15
+  },
+  {
+   "zone": "WH",
+   "loc": "G1",
+   "name": "硬殼透明員工卡套",
+   "qty": 250,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 16
+  },
+  {
+   "zone": "WH",
+   "loc": "A1",
+   "name": "N95口罩",
+   "qty": 150,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 17
+  },
+  {
+   "zone": "WH",
+   "loc": "A4",
+   "name": "A5 Tend card（正常）",
+   "qty": 594,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 18
+  },
+  {
+   "zone": "WH",
+   "loc": "B2",
+   "name": "步數計算器",
+   "qty": 8,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 19
+  },
+  {
+   "zone": "WH",
+   "loc": "G1",
+   "name": "Label 貼紙",
+   "qty": 4,
+   "unit": "盒",
+   "detail": "",
+   "note": "",
+   "sort": 20
+  },
+  {
+   "zone": "WH",
+   "loc": "A1",
+   "name": "溫度計包裝盒",
+   "qty": 22,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 21
+  },
+  {
+   "zone": "WH",
+   "loc": "B2",
+   "name": "IPAD平板支架",
+   "qty": 4,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 22
+  },
+  {
+   "zone": "WH",
+   "loc": "B8",
+   "name": "Carribean Stud Poker Progressive Payout Log",
+   "qty": 90,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 23
+  },
+  {
+   "zone": "WH",
+   "loc": "G1",
+   "name": "File分層頁",
+   "qty": 5,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 24
+  },
+  {
+   "zone": "WH",
+   "loc": "A1",
+   "name": "紙杯（圓錐款）",
+   "qty": 20,
+   "unit": "條",
+   "detail": "",
+   "note": "",
+   "sort": 25
+  },
+  {
+   "zone": "WH",
+   "loc": "B2",
+   "name": "GPCQ CARD",
+   "qty": 2,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 26
+  },
+  {
+   "zone": "WH",
+   "loc": "G1",
+   "name": "燕尾夾",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：若干",
+   "sort": 27
+  },
+  {
+   "zone": "WH",
+   "loc": "A1",
+   "name": "電話繩",
+   "qty": 30,
+   "unit": "條",
+   "detail": "",
+   "note": "",
+   "sort": 28
+  },
+  {
+   "zone": "WH",
+   "loc": "A5",
+   "name": "枕頭",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 29
+  },
+  {
+   "zone": "WH",
+   "loc": "B2",
+   "name": "舊PEN紙（已用）",
+   "qty": 1,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 30
+  },
+  {
+   "zone": "WH",
+   "loc": "B8",
+   "name": "Carribean Stud Poker Progressive Payout Log (Cheek sheet)",
+   "qty": 40,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 31
+  },
+  {
+   "zone": "WH",
+   "loc": "G1",
+   "name": "員工胸章磁石貼",
+   "qty": 170,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 32
+  },
+  {
+   "zone": "WH",
+   "loc": "A1",
+   "name": "舊英文版卡座",
+   "qty": 8,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 33
+  },
+  {
+   "zone": "WH",
+   "loc": "A5",
+   "name": "高層電話盒",
+   "qty": 64,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 34
+  },
+  {
+   "zone": "WH",
+   "loc": "B2",
+   "name": "輪盤路紙",
+   "qty": 2000,
+   "unit": "張",
+   "detail": "",
+   "note": "",
+   "sort": 35
+  },
+  {
+   "zone": "WH",
+   "loc": "G1",
+   "name": "道具板",
+   "qty": 8,
+   "unit": "塊",
+   "detail": "",
+   "note": "",
+   "sort": 36
+  },
+  {
+   "zone": "WH",
+   "loc": "A1",
+   "name": "透明厚膠（長形）",
+   "qty": 50,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 37
+  },
+  {
+   "zone": "WH",
+   "loc": "A5",
+   "name": "ETE電話盒",
+   "qty": 15,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 38
+  },
+  {
+   "zone": "WH",
+   "loc": "B2",
+   "name": "銅掛鎖",
+   "qty": 1,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 39
+  },
+  {
+   "zone": "WH",
+   "loc": "B8",
+   "name": "Craps Dice - Pit Log",
+   "qty": 9,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 40
+  },
+  {
+   "zone": "WH",
+   "loc": "G1",
+   "name": "環保袋",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：若干",
+   "sort": 41
+  },
+  {
+   "zone": "WH",
+   "loc": "A1",
+   "name": "黑色獎勵板",
+   "qty": 50,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 42
+  },
+  {
+   "zone": "WH",
+   "loc": "A5",
+   "name": "珠盤大額籌碼蓋(壞)",
+   "qty": 37,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 43
+  },
+  {
+   "zone": "WH",
+   "loc": "B8",
+   "name": "Control Pit TM# Movement Log",
+   "qty": 20,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 44
+  },
+  {
+   "zone": "WH",
+   "loc": "G1",
+   "name": "微笑胸章",
+   "qty": 24,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 45
+  },
+  {
+   "zone": "WH",
+   "loc": "A1",
+   "name": "充電線",
+   "qty": 26,
+   "unit": "條",
+   "detail": "",
+   "note": "",
+   "sort": 46
+  },
+  {
+   "zone": "WH",
+   "loc": "A5",
+   "name": "珠仔路",
+   "qty": 13,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 47
+  },
+  {
+   "zone": "WH",
+   "loc": "B8",
+   "name": "Pit Equipment Control Log",
+   "qty": 110,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 48
+  },
+  {
+   "zone": "WH",
+   "loc": "G1",
+   "name": "綠色風褸",
+   "qty": 3,
+   "unit": "件",
+   "detail": "",
+   "note": "",
+   "sort": 49
+  },
+  {
+   "zone": "WH",
+   "loc": "A1",
+   "name": "散裝紙巾",
+   "qty": 25,
+   "unit": "條",
+   "detail": "",
+   "note": "",
+   "sort": 50
+  },
+  {
+   "zone": "WH",
+   "loc": "A5",
+   "name": "A5 Tend card (損壞)",
+   "qty": 80,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 51
+  },
+  {
+   "zone": "WH",
+   "loc": "B3",
+   "name": "籌碼綁定系列胸牌",
+   "qty": 5,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 52
+  },
+  {
+   "zone": "WH",
+   "loc": "A1",
+   "name": "毛巾",
+   "qty": 2,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 53
+  },
+  {
+   "zone": "WH",
+   "loc": "A5",
+   "name": "舊式切牌器",
+   "qty": 130,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 54
+  },
+  {
+   "zone": "WH",
+   "loc": "B3",
+   "name": "至尊花牌胸牌",
+   "qty": 4,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 55
+  },
+  {
+   "zone": "WH",
+   "loc": "A5",
+   "name": "計算器",
+   "qty": 40,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 56
+  },
+  {
+   "zone": "WH",
+   "loc": "B3",
+   "name": "(對子+)胸牌",
+   "qty": 2,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 57
+  },
+  {
+   "zone": "WH",
+   "loc": "B9",
+   "name": "道具板",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：若干",
+   "sort": 58
+  },
+  {
+   "zone": "WH",
+   "loc": "A5",
+   "name": "手寫板(正常)",
+   "qty": 51,
+   "unit": "塊",
+   "detail": "",
+   "note": "",
+   "sort": 59
+  },
+  {
+   "zone": "WH",
+   "loc": "B3",
+   "name": "全新會藉app(胸牌)",
+   "qty": 2,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 60
+  },
+  {
+   "zone": "WH",
+   "loc": "B9",
+   "name": "老細物品",
+   "qty": 3,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 61
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "娛樂資訊Poster",
+   "qty": 4,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 62
+  },
+  {
+   "zone": "WH",
+   "loc": "A5",
+   "name": "透明筆筒",
+   "qty": 21,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 63
+  },
+  {
+   "zone": "WH",
+   "loc": "F1",
+   "name": "A3過膠紙",
+   "qty": 2,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 64
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "幸運6 & 幸運7 廣告牌",
+   "qty": 3,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 65
+  },
+  {
+   "zone": "WH",
+   "loc": "A5",
+   "name": "氣氛手拍",
+   "qty": 14,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 66
+  },
+  {
+   "zone": "WH",
+   "loc": "F1",
+   "name": "火牛",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "",
+   "sort": 67
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "英文版Card stand",
+   "qty": 20,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 68
+  },
+  {
+   "zone": "WH",
+   "loc": "B10",
+   "name": "Rating Sheet (MASS)",
+   "qty": 230,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 69
+  },
+  {
+   "zone": "WH",
+   "loc": "F1",
+   "name": "排插蘇",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "",
+   "sort": 70
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "豬油膏擺件",
+   "qty": 341,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 71
+  },
+  {
+   "zone": "WH",
+   "loc": "B4",
+   "name": "舊款金屬珠盤",
+   "qty": 68,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 72
+  },
+  {
+   "zone": "WH",
+   "loc": "B10",
+   "name": "Card Sent To Surveillance/ For Sorting",
+   "qty": 260,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 73
+  },
+  {
+   "zone": "WH",
+   "loc": "F1",
+   "name": "透明膠袋",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "",
+   "sort": 74
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "lucky擺設公仔",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 75
+  },
+  {
+   "zone": "WH",
+   "loc": "A6",
+   "name": "打印機",
+   "qty": 1,
+   "unit": "部",
+   "detail": "",
+   "note": "",
+   "sort": 76
+  },
+  {
+   "zone": "WH",
+   "loc": "B4",
+   "name": "金屬路紙座",
+   "qty": 15,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 77
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "速赢百家樂",
+   "qty": 22,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 78
+  },
+  {
+   "zone": "WH",
+   "loc": "A6",
+   "name": "臺式電話",
+   "qty": 1,
+   "unit": "部",
+   "detail": "",
+   "note": "",
+   "sort": 79
+  },
+  {
+   "zone": "WH",
+   "loc": "B4",
+   "name": "賭枱暫停營運指示牌",
+   "qty": 21,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 80
+  },
+  {
+   "zone": "WH",
+   "loc": "B10",
+   "name": "Pit Hourly Update",
+   "qty": 130,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 81
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "A4 Tend Card Poker牌",
+   "qty": 2,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 82
+  },
+  {
+   "zone": "WH",
+   "loc": "A6",
+   "name": "藍色文件夾",
+   "qty": 29,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 83
+  },
+  {
+   "zone": "WH",
+   "loc": "B4",
+   "name": "FACE牌",
+   "qty": 9,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 84
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "甘油容器",
+   "qty": 9,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 85
+  },
+  {
+   "zone": "WH",
+   "loc": "A6",
+   "name": "藍色長形款文件夾",
+   "qty": 10,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 86
+  },
+  {
+   "zone": "WH",
+   "loc": "B4",
+   "name": "HK / MOP 牌",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 87
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "細鍵盤",
+   "qty": 7,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 88
+  },
+  {
+   "zone": "WH",
+   "loc": "B4",
+   "name": "暫停運作指示牌",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 89
+  },
+  {
+   "zone": "WH",
+   "loc": "B11",
+   "name": "Temporary Closing Sip",
+   "qty": 1200,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 90
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "消毒器具",
+   "qty": 7,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 91
+  },
+  {
+   "zone": "WH",
+   "loc": "B4",
+   "name": "尊卡優先入座指示牌",
+   "qty": 70,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 92
+  },
+  {
+   "zone": "WH",
+   "loc": "B11",
+   "name": "客人上落數簿",
+   "qty": 70,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 93
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "舊式錢箱插",
+   "qty": 8,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 94
+  },
+  {
+   "zone": "WH",
+   "loc": "A7",
+   "name": "火牛",
+   "qty": 191,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 95
+  },
+  {
+   "zone": "WH",
+   "loc": "B4",
+   "name": "紅繩（正常）",
+   "qty": 25,
+   "unit": "條",
+   "detail": "",
+   "note": "",
+   "sort": 96
+  },
+  {
+   "zone": "WH",
+   "loc": "B11",
+   "name": "Premium player turnover calculator",
+   "qty": 240,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 97
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "透明款會員卡",
+   "qty": 26,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 98
+  },
+  {
+   "zone": "WH",
+   "loc": "B4",
+   "name": "紅繩（損壞）",
+   "qty": 11,
+   "unit": "條",
+   "detail": "",
+   "note": "",
+   "sort": 99
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "手搖鈴鐺（大款）",
+   "qty": 3,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 100
+  },
+  {
+   "zone": "WH",
+   "loc": "B4",
+   "name": "5.1節日胸針飾物",
+   "qty": 1,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 101
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "手搖鈴鐺（細款）",
+   "qty": 72,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 102
+  },
+  {
+   "zone": "WH",
+   "loc": "A8",
+   "name": "籌碼透明隔片",
+   "qty": 6550,
+   "unit": "粒",
+   "detail": "",
+   "note": "",
+   "sort": 103
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "排插固定器",
+   "qty": 12,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 104
+  },
+  {
+   "zone": "WH",
+   "loc": "A8",
+   "name": "A5廣告牌（幸運六）",
+   "qty": 594,
+   "unit": "張",
+   "detail": "",
+   "note": "",
+   "sort": 105
+  },
+  {
+   "zone": "WH",
+   "loc": "B12",
+   "name": "Pit Card Handover Sheet",
+   "qty": 420,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 106
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "飛牌探路（正常）",
+   "qty": 21,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 107
+  },
+  {
+   "zone": "WH",
+   "loc": "A8",
+   "name": "A5廣告牌（智能計分）",
+   "qty": 948,
+   "unit": "張",
+   "detail": "",
+   "note": "",
+   "sort": 108
+  },
+  {
+   "zone": "WH",
+   "loc": "B5",
+   "name": "TIS登記本",
+   "qty": 450,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 109
+  },
+  {
+   "zone": "WH",
+   "loc": "B12",
+   "name": "Table Information Sheet - MGF",
+   "qty": 380,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 110
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "包枱指示牌（正常）",
+   "qty": 9,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 111
+  },
+  {
+   "zone": "WH",
+   "loc": "B5",
+   "name": "Pit Hourly Update",
+   "qty": 170,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 112
+  },
+  {
+   "zone": "WH",
+   "loc": "F1",
+   "name": "財神爺胸飾",
+   "qty": 7,
+   "unit": "箱",
+   "detail": "",
+   "note": "門口邊左手",
+   "sort": 113
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "包枱指示牌(壞)",
+   "qty": 15,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 114
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "排插",
+   "qty": 9,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 115
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "公司口罩",
+   "qty": 4,
+   "unit": "包",
+   "detail": "",
+   "note": "",
+   "sort": 116
+  },
+  {
+   "zone": "WH",
+   "loc": "B6",
+   "name": "Table Game Incident Report",
+   "qty": 140,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 117
+  },
+  {
+   "zone": "WH",
+   "loc": "B6",
+   "name": "舊款PEN紙",
+   "qty": 190,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 118
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "留座(銀色)",
+   "qty": 29,
+   "unit": "個",
+   "detail": "",
+   "note": "展示枱座",
+   "sort": 119
+  },
+  {
+   "zone": "WH",
+   "loc": "B6",
+   "name": "Pit Dice & Seal Log",
+   "qty": 9,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 120
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "尊卡優先入座（金色）",
+   "qty": 139,
+   "unit": "個",
+   "detail": "",
+   "note": "展示枱座",
+   "sort": 121
+  },
+  {
+   "zone": "WH",
+   "loc": "B6",
+   "name": "橡根",
+   "qty": 34,
+   "unit": "包",
+   "detail": "",
+   "note": "",
+   "sort": 122
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "禁止吸煙 + 圖示（銀色）",
+   "qty": 4,
+   "unit": "個",
+   "detail": "",
+   "note": "展示枱座",
+   "sort": 123
+  },
+  {
+   "zone": "WH",
+   "loc": "B6",
+   "name": "計步器",
+   "qty": 16,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 124
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "大禁止吸煙圖示（金色）",
+   "qty": 7,
+   "unit": "個",
+   "detail": "",
+   "note": "展示枱座",
+   "sort": 125
+  },
+  {
+   "zone": "WH",
+   "loc": "B6",
+   "name": "筆筒",
+   "qty": 18,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 126
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "小禁止吸煙圖示（銀色）",
+   "qty": 6,
+   "unit": "個",
+   "detail": "",
+   "note": "展示枱座",
+   "sort": 127
+  },
+  {
+   "zone": "WH",
+   "loc": "B6",
+   "name": "鉛筆",
+   "qty": 156,
+   "unit": "小盒",
+   "detail": "",
+   "note": "",
+   "sort": 128
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "小禁止吸煙圖示（金色）",
+   "qty": 216,
+   "unit": "個",
+   "detail": "",
+   "note": "展示枱座",
+   "sort": 129
+  },
+  {
+   "zone": "WH",
+   "loc": "B6",
+   "name": "印章： 「VOID」",
+   "qty": 2,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 130
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "小禁止吸煙圖示（紅色）",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "展示枱座",
+   "sort": 131
+  },
+  {
+   "zone": "WH",
+   "loc": "B6",
+   "name": "打孔機",
+   "qty": 11,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 132
+  },
+  {
+   "zone": "WH",
+   "loc": "A2",
+   "name": "USB充電頭",
+   "qty": 20,
+   "unit": "個",
+   "detail": "",
+   "note": "展示枱座",
+   "sort": 133
+  },
+  {
+   "zone": "WH",
+   "loc": "B6",
+   "name": "萬字夾",
+   "qty": 40,
+   "unit": "小盒",
+   "detail": "",
+   "note": "",
+   "sort": 134
+  },
+  {
+   "zone": "WH",
+   "loc": "B6",
+   "name": "黑紅硬面記事簿（B5）",
+   "qty": 18,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 135
+  },
+  {
+   "zone": "WH",
+   "loc": "B6",
+   "name": "print色帶",
+   "qty": 6,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 136
+  },
+  {
+   "zone": "WH",
+   "loc": "B6",
+   "name": "Paper Rasteners",
+   "qty": 150,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 137
+  },
+  {
+   "zone": "CP",
+   "loc": "CP1",
+   "name": "公司外出活動短袖衫",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：各碼少量",
+   "sort": 138
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "長形毛刷",
+   "qty": 5,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 139
+  },
+  {
+   "zone": "CP",
+   "loc": "CP10",
+   "name": "硬殼文件夾(厚薄size、雜色)",
+   "qty": 21,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 140
+  },
+  {
+   "zone": "CP",
+   "loc": "白板後",
+   "name": "NCR Paper",
+   "qty": 12,
+   "unit": "箱",
+   "detail": "",
+   "note": "大白板後面位置",
+   "sort": 141
+  },
+  {
+   "zone": "CP",
+   "loc": "CP1",
+   "name": "做勢道具板箱",
+   "qty": 13,
+   "unit": "塊",
+   "detail": "",
+   "note": "",
+   "sort": 142
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "Dolly(輪盤)",
+   "qty": 6,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 143
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "『第一方下注』牌",
+   "qty": 13,
+   "unit": "個",
+   "detail": "",
+   "note": "百家樂巔峰之戰",
+   "sort": 144
+  },
+  {
+   "zone": "CP",
+   "loc": "CP10",
+   "name": "暖包",
+   "qty": 33,
+   "unit": "大包",
+   "detail": "",
+   "note": "",
+   "sort": 145
+  },
+  {
+   "zone": "CP",
+   "loc": "白板後",
+   "name": "禮賓柱",
+   "qty": 1,
+   "unit": "支",
+   "detail": "",
+   "note": "大白板後面位置",
+   "sort": 146
+  },
+  {
+   "zone": "CP",
+   "loc": "CP1",
+   "name": "最新資訊工具",
+   "qty": 1,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 147
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "『全押』牌",
+   "qty": 12,
+   "unit": "個",
+   "detail": "",
+   "note": "百家樂巔峰之戰",
+   "sort": 148
+  },
+  {
+   "zone": "CP",
+   "loc": "白板後",
+   "name": "禮賓展示架",
+   "qty": 3,
+   "unit": "個",
+   "detail": "",
+   "note": "大白板後面位置",
+   "sort": 149
+  },
+  {
+   "zone": "CP",
+   "loc": "CP1",
+   "name": "資訊指示牌(A3尺寸)",
+   "qty": 15,
+   "unit": "塊",
+   "detail": "",
+   "note": "",
+   "sort": 150
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "面值標記碼(輪盤) $10",
+   "qty": 7,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 151
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "『复活』牌",
+   "qty": 12,
+   "unit": "個",
+   "detail": "",
+   "note": "百家樂巔峰之戰",
+   "sort": 152
+  },
+  {
+   "zone": "CP",
+   "loc": "白板後",
+   "name": "紅繩",
+   "qty": 1,
+   "unit": "條",
+   "detail": "",
+   "note": "大白板後面位置",
+   "sort": 153
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "面值標記碼(輪盤) $25",
+   "qty": 14,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 154
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "『雙倍』牌",
+   "qty": 12,
+   "unit": "個",
+   "detail": "",
+   "note": "百家樂巔峰之戰",
+   "sort": 155
+  },
+  {
+   "zone": "CP",
+   "loc": "CP11",
+   "name": "RFID機",
+   "qty": 6,
+   "unit": "部",
+   "detail": "",
+   "note": "",
+   "sort": 156
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "面值標記碼(輪盤) $50",
+   "qty": 14,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 157
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "長方形木面磁板",
+   "qty": 4,
+   "unit": "塊",
+   "detail": "",
+   "note": "百家樂巔峰之戰",
+   "sort": 158
+  },
+  {
+   "zone": "CP",
+   "loc": "CP2",
+   "name": "Premivm Player Turnover Calcvlator",
+   "qty": 72,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 159
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "面值標記碼(輪盤) $100",
+   "qty": 9,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 160
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "通風蓋（壞）",
+   "qty": 14,
+   "unit": "塊",
+   "detail": "",
+   "note": "百家樂巔峰之戰",
+   "sort": 161
+  },
+  {
+   "zone": "CP",
+   "loc": "CP2",
+   "name": "A3 紙",
+   "qty": 3,
+   "unit": "箱",
+   "detail": "",
+   "note": "化妝枱隔離",
+   "sort": 162
+  },
+  {
+   "zone": "CP",
+   "loc": "CP2",
+   "name": "Pit Hourly Update",
+   "qty": 8,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 163
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "藍紅雙頭拎筆",
+   "qty": 1000,
+   "unit": "支",
+   "detail": "",
+   "note": "",
+   "sort": 164
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "橙扣",
+   "qty": 75,
+   "unit": "個",
+   "detail": "",
+   "note": "百家樂巔峰之戰",
+   "sort": 165
+  },
+  {
+   "zone": "CP",
+   "loc": "CP12",
+   "name": "RFID機",
+   "qty": 7,
+   "unit": "部",
+   "detail": "",
+   "note": "",
+   "sort": 166
+  },
+  {
+   "zone": "CP",
+   "loc": "CP2",
+   "name": "$500K Table Loss Result Information",
+   "qty": 5,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 167
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "藍紅雙頭拎筆(金身)",
+   "qty": 25,
+   "unit": "支",
+   "detail": "",
+   "note": "",
+   "sort": 168
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "百家樂路紙",
+   "qty": 2500,
+   "unit": "張",
+   "detail": "",
+   "note": "百家樂巔峰之戰",
+   "sort": 169
+  },
+  {
+   "zone": "CP",
+   "loc": "CP2",
+   "name": "Table Game Incident Report",
+   "qty": 2,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 170
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "3M雙面膠",
+   "qty": 5,
+   "unit": "盒",
+   "detail": "",
+   "note": "",
+   "sort": 171
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "輪盤路紙",
+   "qty": 709,
+   "unit": "張",
+   "detail": "",
+   "note": "百家樂巔峰之戰",
+   "sort": 172
+  },
+  {
+   "zone": "CP",
+   "loc": "CP2",
+   "name": "Infernational player record slip",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：少量",
+   "sort": 173
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "推牌器",
+   "qty": 7,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 174
+  },
+  {
+   "zone": "CP",
+   "loc": "CP13",
+   "name": "藍色蝴蝶結",
+   "qty": 427,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 175
+  },
+  {
+   "zone": "CP",
+   "loc": "CP2",
+   "name": "客人上落數",
+   "qty": 1,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 176
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "ON/OFF圓形牌",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 177
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "WD-40",
+   "qty": 4,
+   "unit": "支",
+   "detail": "",
+   "note": "維護工具",
+   "sort": 178
+  },
+  {
+   "zone": "CP",
+   "loc": "CP13",
+   "name": "化妝品",
+   "qty": 1,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 179
+  },
+  {
+   "zone": "CP",
+   "loc": "CP2",
+   "name": "豆腐格",
+   "qty": 31,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 180
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "黃色雙面貼(4cm厚)",
+   "qty": 7,
+   "unit": "卷",
+   "detail": "",
+   "note": "",
+   "sort": 181
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "轉換插頭",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "維護工具",
+   "sort": 182
+  },
+  {
+   "zone": "CP",
+   "loc": "CP13",
+   "name": "化妝套裝",
+   "qty": 105,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 183
+  },
+  {
+   "zone": "CP",
+   "loc": "CP2",
+   "name": "財神爺胸針飾物",
+   "qty": 297,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 184
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "綠色封箱膠紙(4.5cm)",
+   "qty": 1,
+   "unit": "卷",
+   "detail": "",
+   "note": "",
+   "sort": 185
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "漏斗",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "維護工具",
+   "sort": 186
+  },
+  {
+   "zone": "CP",
+   "loc": "CP13",
+   "name": "口罩",
+   "qty": 90,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 187
+  },
+  {
+   "zone": "CP",
+   "loc": "CP2",
+   "name": "頒獎專用硬殼套（寶藍色）",
+   "qty": 26,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 188
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "透明封箱膠紙(4.5cm)",
+   "qty": 4,
+   "unit": "卷",
+   "detail": "",
+   "note": "",
+   "sort": 189
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "溫度測試機（壞）",
+   "qty": 1,
+   "unit": "部",
+   "detail": "",
+   "note": "維護工具",
+   "sort": 190
+  },
+  {
+   "zone": "CP",
+   "loc": "CP13",
+   "name": "散件小飾物",
+   "qty": 2,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 191
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "透明膠紙",
+   "qty": 12,
+   "unit": "卷",
+   "detail": "",
+   "note": "",
+   "sort": 192
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "除膠鏟",
+   "qty": 2,
+   "unit": "個",
+   "detail": "",
+   "note": "維護工具",
+   "sort": 193
+  },
+  {
+   "zone": "CP",
+   "loc": "CP13",
+   "name": "手工用毛毛條",
+   "qty": 5,
+   "unit": "包",
+   "detail": "",
+   "note": "",
+   "sort": 194
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "Cut牌器",
+   "qty": 11,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 195
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "六角扳手",
+   "qty": 1,
+   "unit": "套",
+   "detail": "",
+   "note": "維護工具",
+   "sort": 196
+  },
+  {
+   "zone": "CP",
+   "loc": "CP13",
+   "name": "汽球",
+   "qty": 4,
+   "unit": "包",
+   "detail": "",
+   "note": "",
+   "sort": 197
+  },
+  {
+   "zone": "CP",
+   "loc": "CP3",
+   "name": "記事板",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：49 大 3 小",
+   "sort": 198
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "打孔器",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 199
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "相機清潔泵",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "維護工具",
+   "sort": 200
+  },
+  {
+   "zone": "CP",
+   "loc": "CP13",
+   "name": "汽球光亮制",
+   "qty": 1,
+   "unit": "支",
+   "detail": "",
+   "note": "",
+   "sort": 201
+  },
+  {
+   "zone": "CP",
+   "loc": "CP3",
+   "name": "酒精消毒",
+   "qty": 8,
+   "unit": "支",
+   "detail": "",
+   "note": "",
+   "sort": 202
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "顏色水筆",
+   "qty": 1,
+   "unit": "盒",
+   "detail": "",
+   "note": "",
+   "sort": 203
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "固定調節器",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "維護工具",
+   "sort": 204
+  },
+  {
+   "zone": "CP",
+   "loc": "CP13",
+   "name": "化妝金色吉包",
+   "qty": 8,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 205
+  },
+  {
+   "zone": "CP",
+   "loc": "CP3",
+   "name": "甘油瓶",
+   "qty": 1,
+   "unit": "支",
+   "detail": "",
+   "note": "",
+   "sort": 206
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "有色㩒釘、珠針",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：少量",
+   "sort": 207
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "螺絲批",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "維護工具",
+   "sort": 208
+  },
+  {
+   "zone": "CP",
+   "loc": "CP3",
+   "name": "置物灰色格",
+   "qty": 13,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 209
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "手握式計算器",
+   "qty": 10,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 210
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "士巴拿",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "維護工具",
+   "sort": 211
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "黑色水筆",
+   "qty": 11,
+   "unit": "支",
+   "detail": "",
+   "note": "",
+   "sort": 212
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "梅花扳手",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "維護工具",
+   "sort": 213
+  },
+  {
+   "zone": "CP",
+   "loc": "CP14",
+   "name": "長形火牛",
+   "qty": 32,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 214
+  },
+  {
+   "zone": "CP",
+   "loc": "CP3",
+   "name": "輪盤 $25",
+   "qty": 84,
+   "unit": "張",
+   "detail": "",
+   "note": "遊戲限紅牌",
+   "sort": 215
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "燕尾夾",
+   "qty": 8,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 216
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "斜口鉗",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "維護工具",
+   "sort": 217
+  },
+  {
+   "zone": "CP",
+   "loc": "CP14",
+   "name": "RFID機線",
+   "qty": 48,
+   "unit": "條",
+   "detail": "",
+   "note": "",
+   "sort": 218
+  },
+  {
+   "zone": "CP",
+   "loc": "CP3",
+   "name": "面值標記碼(輪盤) $50",
+   "qty": 69,
+   "unit": "張",
+   "detail": "",
+   "note": "",
+   "sort": 219
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "萬字夾(大)",
+   "qty": 1900,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 220
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "SPACER",
+   "qty": 3589,
+   "unit": "pcs",
+   "detail": "",
+   "note": "維護工具",
+   "sort": 221
+  },
+  {
+   "zone": "CP",
+   "loc": "CP14",
+   "name": "滑鼠",
+   "qty": 31,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 222
+  },
+  {
+   "zone": "CP",
+   "loc": "CP3",
+   "name": "面值標記碼(輪盤) $100",
+   "qty": 51,
+   "unit": "張",
+   "detail": "",
+   "note": "",
+   "sort": 223
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "萬字夾(小)",
+   "qty": 2200,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 224
+  },
+  {
+   "zone": "CP",
+   "loc": "CP7",
+   "name": "大面額籌碼透明蓋",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "維護工具｜原數量：51 好 2 壞",
+   "sort": 225
+  },
+  {
+   "zone": "CP",
+   "loc": "CP14",
+   "name": "新牌櫃記號牌",
+   "qty": 77,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 226
+  },
+  {
+   "zone": "CP",
+   "loc": "CP3",
+   "name": "面值標記碼(輪盤) $200",
+   "qty": 2,
+   "unit": "張",
+   "detail": "",
+   "note": "",
+   "sort": 227
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "搶答鈴",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：2 好 1 壞",
+   "sort": 228
+  },
+  {
+   "zone": "CP",
+   "loc": "CP14",
+   "name": "溫度計吉盒",
+   "qty": 11,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 229
+  },
+  {
+   "zone": "CP",
+   "loc": "CP3",
+   "name": "骰寶 $300",
+   "qty": 29,
+   "unit": "張",
+   "detail": "",
+   "note": "",
+   "sort": 230
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "印章『VOID』",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 231
+  },
+  {
+   "zone": "CP",
+   "loc": "CP14",
+   "name": "Numeric Keypad",
+   "qty": 8,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 232
+  },
+  {
+   "zone": "CP",
+   "loc": "CP3",
+   "name": "CSP",
+   "qty": 13,
+   "unit": "張",
+   "detail": "",
+   "note": "",
+   "sort": 233
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "LED地腳燈搖控",
+   "qty": 13,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 234
+  },
+  {
+   "zone": "CP",
+   "loc": "CP8",
+   "name": "NCR Paper",
+   "qty": 8,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 235
+  },
+  {
+   "zone": "CP",
+   "loc": "CP14",
+   "name": "廢牌桶",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：3 好 9 壞",
+   "sort": 236
+  },
+  {
+   "zone": "CP",
+   "loc": "CP3",
+   "name": "國際語言卡",
+   "qty": 100,
+   "unit": "張",
+   "detail": "",
+   "note": "",
+   "sort": 237
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "『莊』豬油膏",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 238
+  },
+  {
+   "zone": "CP",
+   "loc": "CP3",
+   "name": "黑色防撞角",
+   "qty": 90,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 239
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "『閒』豬油膏",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 240
+  },
+  {
+   "zone": "CP",
+   "loc": "CP3",
+   "name": "記事簿",
+   "qty": 12,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 241
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "黑色cut牌卡",
+   "qty": 8,
+   "unit": "張",
+   "detail": "",
+   "note": "",
+   "sort": 242
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "有線耳機",
+   "qty": 19,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 243
+  },
+  {
+   "zone": "CP",
+   "loc": "CP15",
+   "name": "A4推廣卡紙牌",
+   "qty": 100,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 244
+  },
+  {
+   "zone": "CP",
+   "loc": "CP3",
+   "name": "麥克風（LT用）",
+   "qty": 2,
+   "unit": "支",
+   "detail": "",
+   "note": "",
+   "sort": 245
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "綠色椭圓形磁石",
+   "qty": 15,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 246
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "磁吸款圓形溫度計",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 247
+  },
+  {
+   "zone": "CP",
+   "loc": "CP15",
+   "name": "好好味餐紙巾",
+   "qty": 147,
+   "unit": "包",
+   "detail": "",
+   "note": "",
+   "sort": 248
+  },
+  {
+   "zone": "CP",
+   "loc": "CP3",
+   "name": "『機器故障』顯示牌",
+   "qty": 3,
+   "unit": "塊",
+   "detail": "",
+   "note": "",
+   "sort": 249
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "枱號金屬牌",
+   "qty": 5,
+   "unit": "塊",
+   "detail": "",
+   "note": "",
+   "sort": 250
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "高端綜合線纜",
+   "qty": 1,
+   "unit": "條",
+   "detail": "",
+   "note": "",
+   "sort": 251
+  },
+  {
+   "zone": "CP",
+   "loc": "CP15",
+   "name": "會員卡（舊）",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：若干",
+   "sort": 252
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "『這邊停止運作』牌",
+   "qty": 1,
+   "unit": "塊",
+   "detail": "",
+   "note": "",
+   "sort": 253
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "電腦線",
+   "qty": 3,
+   "unit": "條",
+   "detail": "",
+   "note": "",
+   "sort": 254
+  },
+  {
+   "zone": "CP",
+   "loc": "CP15",
+   "name": "BS功課（LG48）",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：若干",
+   "sort": 255
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "鈴噹",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 256
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "電腦螢幕線轉換頭",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 257
+  },
+  {
+   "zone": "CP",
+   "loc": "CP4",
+   "name": "A3空白紙",
+   "qty": 1,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 258
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "鐵圈",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：若干",
+   "sort": 259
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "HTMI線",
+   "qty": 1,
+   "unit": "條",
+   "detail": "",
+   "note": "",
+   "sort": 260
+  },
+  {
+   "zone": "CP",
+   "loc": "CP4",
+   "name": "NCR Paper",
+   "qty": 10,
+   "unit": "箱",
+   "detail": "",
+   "note": "",
+   "sort": 261
+  },
+  {
+   "zone": "CP",
+   "loc": "CP6",
+   "name": "藍色雙面魔術貼",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：若干",
+   "sort": 262
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "電話卡空殼",
+   "qty": 17,
+   "unit": "張",
+   "detail": "",
+   "note": "",
+   "sort": 263
+  },
+  {
+   "zone": "CP",
+   "loc": "CP16",
+   "name": "RFID機",
+   "qty": 7,
+   "unit": "部",
+   "detail": "",
+   "note": "",
+   "sort": 264
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "NOKIA 火牛",
+   "qty": 2,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 265
+  },
+  {
+   "zone": "CP",
+   "loc": "CP16",
+   "name": "電腦螢膜",
+   "qty": 4,
+   "unit": "部",
+   "detail": "",
+   "note": "",
+   "sort": 266
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "充電火牛(Micro-B)",
+   "qty": 29,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 267
+  },
+  {
+   "zone": "CP",
+   "loc": "CP5",
+   "name": "創可貼",
+   "qty": 43,
+   "unit": "盒",
+   "detail": "",
+   "note": "",
+   "sort": 268
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "充電線(Micro-B)",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：3 長 2 短",
+   "sort": 269
+  },
+  {
+   "zone": "CP",
+   "loc": "CP5",
+   "name": "飲品menu",
+   "qty": 16,
+   "unit": "本",
+   "detail": "",
+   "note": "",
+   "sort": 270
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "充電線(Type-C)",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：4 長 5 短",
+   "sort": 271
+  },
+  {
+   "zone": "CP",
+   "loc": "CP5",
+   "name": "安全大使胸針",
+   "qty": 14,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 272
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "長排拖蘇板",
+   "qty": 8,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 273
+  },
+  {
+   "zone": "CP",
+   "loc": "CP5",
+   "name": "A5廣告牌座",
+   "qty": 13,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 274
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "Ipad（壞）",
+   "qty": 14,
+   "unit": "部",
+   "detail": "",
+   "note": "",
+   "sort": 275
+  },
+  {
+   "zone": "CP",
+   "loc": "CP5",
+   "name": "不費時膠紙(細卷)",
+   "qty": 60,
+   "unit": "條",
+   "detail": "",
+   "note": "",
+   "sort": 276
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "NOKIA電池充電座",
+   "qty": 27,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 277
+  },
+  {
+   "zone": "CP",
+   "loc": "CP5",
+   "name": "工業用手套",
+   "qty": 6,
+   "unit": "對",
+   "detail": "",
+   "note": "",
+   "sort": 278
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "電話保護膜貼",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：若干",
+   "sort": 279
+  },
+  {
+   "zone": "CP",
+   "loc": "CP5",
+   "name": "一次性手套",
+   "qty": 1,
+   "unit": "盒",
+   "detail": "",
+   "note": "",
+   "sort": 280
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "NOKIA 225 4G 盒",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 281
+  },
+  {
+   "zone": "CP",
+   "loc": "CP5",
+   "name": "透明抽獎球",
+   "qty": 301,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 282
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "NOKIA 215 4G 盒",
+   "qty": 2,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 283
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "NOKIA電池",
+   "qty": 5,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 284
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "貼膜附助工具包",
+   "qty": 6,
+   "unit": "包",
+   "detail": "",
+   "note": "",
+   "sort": 285
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "鍵盤",
+   "qty": null,
+   "unit": "",
+   "detail": "",
+   "note": "原數量：大 3 細 2",
+   "sort": 286
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "Lenovo：SA10J20149 火牛",
+   "qty": 2,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 287
+  },
+  {
+   "zone": "CP",
+   "loc": "CP9",
+   "name": "變流器：HSTNN - LA01 - E",
+   "qty": 1,
+   "unit": "個",
+   "detail": "",
+   "note": "",
+   "sort": 288
+  }
+ ]
+}
