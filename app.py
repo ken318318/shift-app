@@ -582,7 +582,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-04", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-05", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1165,7 +1165,7 @@ def _si_set_status(c, record_id, key, status, who=''):
                  (record_id, source, item_key, type, code, category, problem, detail, side,
                   status, note, display, event_at, resolved_at, resolved_by)
                  VALUES (%s,'status',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW(),%s,%s)""",
-              (record_id, v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], status, v[8],
+              (record_id, v[0], v[1], v[2], v[3], v[4], v[5], v[6], status, v[7], v[8],
                (datetime.datetime.now() if _done else None), (who if _done else '')))
     return True
 
@@ -2382,7 +2382,9 @@ def mark_done():
 _MANUAL_PENDING_KEY = 'pending_manual'
 
 
-def _manual_pending():
+def _manual_pending(fresh=False):
+    if fresh:
+        _SET_CACHE.pop(_MANUAL_PENDING_KEY, None)
     raw = get_setting(_MANUAL_PENDING_KEY, '') or ''
     try:
         data = json.loads(raw) if raw.strip() else []
@@ -2486,7 +2488,7 @@ def api_pending_items():
     """黃框唯一資料來源：每個 item_key 取最新一筆，不用任何文字解析。"""
     before_id = request.args.get('before_id', type=int)
     _ck = 'pending_items:%s' % (before_id or 0)
-    _cached = cache_get(_ck)
+    _cached = None if request.args.get('_t') else cache_get(_ck)   # 帶 _t＝強制讀最新（避多 worker 快取不同步）
     if _cached is not None:
         return jsonify(_cached)
     conn = None
@@ -2524,7 +2526,7 @@ def api_pending_items():
                 pending.append(rec)
         try:
             _seen = set([x.get('key') for x in pending] + [x.get('key') for x in done])
-            for m in _manual_pending():
+            for m in _manual_pending(fresh=bool(request.args.get('_t'))):
                 st = (m.get('status') or '待處理')
                 if st == '已交更':
                     continue
@@ -2556,7 +2558,8 @@ def api_pending_items():
         except Exception as _e:
             print('manual merge failed:', _e)
         _payload = {"pending_items": pending, "done_items": done, "count": len(pending)}
-        cache_set(_ck, _payload, 20)
+        if not request.args.get('_t'):
+            cache_set(_ck, _payload, 20)
         resp = jsonify(_payload)
         resp.headers['Cache-Control'] = 'no-store, max-age=0'
         return resp
