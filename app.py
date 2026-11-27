@@ -121,6 +121,11 @@ def ensure_tables():
         c.execute("ALTER TABLE members ADD COLUMN IF NOT EXISTS account TEXT")
         c.execute("ALTER TABLE members ADD COLUMN IF NOT EXISTS password TEXT")
         c.execute("ALTER TABLE members ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'staff'")
+        c.execute("ALTER TABLE members ADD COLUMN IF NOT EXISTS pwd_changed BOOLEAN DEFAULT FALSE")
+        # 已自行改過密碼嘅帳號唔需要再強制改
+        c.execute("""UPDATE members SET pwd_changed = TRUE
+                     WHERE COALESCE(account,'') <> ''
+                       AND COALESCE(password,'') <> ('BS' || account)""")
         c.execute("SELECT id, name, COALESCE(mtype, 'staff') FROM members WHERE COALESCE(account, '') = ''")
         for mid, nm, mt in c.fetchall():
             mm = re.search(r"[(（](\d+)[)）]", nm or '')
@@ -764,7 +769,7 @@ def security_clean_records():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-17", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-18", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -780,6 +785,12 @@ def require_login():
             return Response('403 Forbidden', status=403, mimetype='text/plain')
     except Exception:
         pass
+
+    # 首次登入必須改密碼
+    if session.get('must_change') and endpoint not in ('set_password', 'logout', 'static', 'healthz', 'login'):
+        if request.path.startswith('/api/'):
+            return jsonify({'status': 'error', 'message': '請先修改密碼。'}), 403
+        return redirect(url_for('set_password'))
 
     if 'logged_in' not in session:
         if endpoint in allowed_routes:
@@ -841,12 +852,8 @@ def login():
             log_action('登入', '管理員登入｜UA=' + (request.headers.get('User-Agent') or '')[:160])
             return redirect(url_for('index'))
         elif pwd and pwd == staff_pwd:
-            session['logged_in'] = True
-            session['role'] = 'staff'
-            session['user_name'] = '同事'
-            session['epoch'] = get_epoch('staff', force=True)
-            log_action('登入', '同事登入｜UA=' + (request.headers.get('User-Agent') or '')[:160])
-            return redirect(url_for('index'))
+            # 安全事件後停用共用密碼，改用個人帳號
+            error = '⚠️ 共用密碼已停用，請用個人帳號登入（密碼 = 系統派給你嘅個人密碼）。'
         else:
             # 個人帳號（帳號＝員工ID，密碼＝BS＋員工ID）
             member = None
@@ -855,7 +862,7 @@ def login():
                 try:
                     conn = get_db_connection()
                     c = conn.cursor()
-                    c.execute("""SELECT name, COALESCE(role, 'staff')
+                    c.execute("""SELECT name, COALESCE(role, 'staff'), COALESCE(pwd_changed, FALSE)
                                  FROM members
                                  WHERE password = %s AND COALESCE(account, '') <> ''
                                  LIMIT 1""", (pwd,))
@@ -873,6 +880,13 @@ def login():
                 session['user_name'] = member[0]
                 session['epoch'] = get_epoch(role, force=True)
                 log_action('登入', '個人帳號：%s｜UA=%s' % (member[0], (request.headers.get('User-Agent') or '')[:160]))
+                if len(member) > 2 and not member[2]:
+                    session['must_change'] = True
+                    try:
+                        log_action('登入', '首次登入需改密碼：%s' % member[0])
+                    except Exception:
+                        pass
+                    return redirect(url_for('set_password'))
                 return redirect(url_for('index'))
             _fail_log()
             error = "密碼錯誤！"
@@ -882,6 +896,67 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for('login'))
+
+
+@app.route('/set_password', methods=['GET', 'POST'])
+def set_password():
+    """首次登入強制修改個人密碼。"""
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    if not session.get('must_change'):
+        return redirect(url_for('index'))
+    error = None
+    if request.method == 'POST':
+        p1 = (request.form.get('p1') or '').strip()
+        p2 = (request.form.get('p2') or '').strip()
+        if len(p1) < 8:
+            error = '新密碼最少 8 個字元'
+        elif p1 != p2:
+            error = '兩次輸入嘅新密碼不一致'
+        elif p1.upper().startswith('BS') or p1 == 'BS2026':
+            error = '唔可以再用「BS+員工編號」或舊共用密碼'
+        else:
+            conn = None
+            try:
+                conn = get_db_connection()
+                c = conn.cursor()
+                c.execute("UPDATE members SET password = %s, pwd_changed = TRUE WHERE name = %s",
+                          (p1, session.get('user_name')))
+                conn.commit()
+                try:
+                    log_action('更改密碼', '個人帳號首次改密碼：%s' % session.get('user_name'))
+                except Exception:
+                    pass
+                session.pop('must_change', None)
+                return redirect(url_for('index'))
+            except Exception as e:
+                error = '儲存失敗：%s' % e
+                if conn:
+                    try: conn.rollback()
+                    except Exception: pass
+            finally:
+                if conn:
+                    try: release_db_connection(conn)
+                    except Exception: pass
+    html = """<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>設定新密碼</title>
+<style>body{font-family:system-ui,-apple-system,sans-serif;background:#f6f7fb;margin:0;padding:24px;color:#222}
+.card{max-width:380px;margin:8vh auto;background:#fff;border-radius:14px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+h1{font-size:17px;margin:0 0 6px;color:#1a237e}p.muted{font-size:12px;color:#666;line-height:1.6;margin:0 0 14px}
+label{display:block;font-size:12px;color:#555;margin:10px 0 4px}input{width:100%;box-sizing:border-box;padding:11px;border:1px solid #ccc;border-radius:8px;font-size:14px}
+button{width:100%;margin-top:16px;padding:12px;border:none;border-radius:9px;background:#1a73e8;color:#fff;font-size:14px;font-weight:bold}
+.err{color:#c62828;font-size:12.5px;margin-top:10px;min-height:16px}</style></head><body>
+<div class="card"><h1>🔐 第一次登入，請設定新密碼</h1>
+<p class="muted">帳號：%(name)s<br>為了安全，唔可以再用「BS＋員工編號」做密碼。新密碼最少 8 個字元。</p>
+<form method="post">
+<label>新密碼</label><input type="password" name="p1" autocomplete="new-password" required>
+<label>再輸入一次</label><input type="password" name="p2" autocomplete="new-password" required>
+<button type="submit">儲存並繼續</button>
+<div class="err">%(err)s</div>
+</form>
+<p class="muted" style="margin-top:14px"><a href="/logout">登出</a></p>
+</div></body></html>""" % {'name': session.get('user_name') or '', 'err': error or ''}
+    return Response(html, mimetype='text/html')
 
 @app.route('/admin')
 def admin():
