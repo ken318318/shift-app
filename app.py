@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-51", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-52", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1936,7 +1936,11 @@ _BACKUP_COLUMNS = ['id', 'name', 'shift', 'lux', 'temp', 'bgm', 'checklist', 'st
                    'on_duty', 'note', 'lux_issue', 'temp_issue', 'db_issue', 'guest_feedback',
                    'dlr_feedback', 'layout_side', 'soundbar', 'firecheck', 'firecheck15', 'firecheck30',
                    'wifi1', 'wifi15', 'shift_day',
-                   'reviewed', 'reviewed_at', 'reviewed_by', 'created_at']
+                   'reviewed', 'reviewed_at', 'reviewed_by', 'created_at', 'items']
+
+_SHIFT_ITEM_COLUMNS = ['id', 'record_id', 'source', 'item_key', 'type', 'code', 'category',
+                       'problem', 'detail', 'side', 'status', 'note', 'display',
+                       'created_at', 'event_at', 'resolved_at', 'resolved_by']
 
 
 def _rows_as_dicts(cur):
@@ -1962,6 +1966,8 @@ def backup_export():
         halls = _rows_as_dicts(c)
         c.execute("SELECT * FROM app_settings")
         settings = _rows_as_dicts(c)
+        c.execute("SELECT * FROM shift_items ORDER BY id")
+        shift_items = _rows_as_dicts(c)
         c.execute("SELECT * FROM audit_logs ORDER BY id DESC LIMIT 2000")
         logs = _rows_as_dicts(c)
 
@@ -1971,8 +1977,10 @@ def backup_export():
             'version': 1,
             'exported_at': now.strftime('%Y-%m-%d %H:%M:%S'),
             'counts': {'records': len(records), 'configs': len(configs),
-                       'hall_tables': len(halls), 'settings': len(settings), 'audit_logs': len(logs)},
+                       'hall_tables': len(halls), 'settings': len(settings), 'audit_logs': len(logs),
+                       'shift_items': len(shift_items)},
             'records': records,
+            'shift_items': shift_items,
             'venue_configs': configs,
             'hall_tables': halls,
             'app_settings': settings,
@@ -2016,7 +2024,16 @@ def backup_import_records():
             if 'id' not in cols:
                 skipped += 1
                 continue
-            vals = [r[k] for k in cols]
+            vals = []
+            for k in cols:
+                v = r[k]
+                if k in ('reviewed_at', 'created_at') and (v is None or str(v).strip() == ''):
+                    v = None
+                if k == 'items':
+                    if not isinstance(v, list):
+                        v = []
+                    v = psycopg2.extras.Json(v)
+                vals.append(v)
             sql = 'INSERT INTO records (%s) VALUES (%s) ON CONFLICT (id) DO NOTHING RETURNING id' % (
                 ','.join(cols), ','.join(['%s'] * len(cols)))
             c.execute('SAVEPOINT sp')
@@ -2035,11 +2052,48 @@ def backup_import_records():
 
         c.execute("SELECT setval(pg_get_serial_sequence('records','id'), "
                   "COALESCE((SELECT MAX(id) FROM records), 1))")
+
+        si_added = si_skipped = 0
+        si_rows = data.get('shift_items') or []
+        if isinstance(si_rows, list) and si_rows:
+            for r in si_rows[:60000]:
+                if not isinstance(r, dict):
+                    si_skipped += 1
+                    continue
+                cols = [k for k in _SHIFT_ITEM_COLUMNS if k in r]
+                if 'id' not in cols or 'item_key' not in cols:
+                    si_skipped += 1
+                    continue
+                vals = []
+                for k in cols:
+                    v = r[k]
+                    if k in ('created_at', 'event_at', 'resolved_at') and (v is None or str(v).strip() == ''):
+                        v = None
+                    vals.append(v)
+                c.execute('SAVEPOINT spi')
+                try:
+                    c.execute('INSERT INTO shift_items (%s) VALUES (%s) ON CONFLICT (id) DO NOTHING RETURNING id' % (
+                        ','.join(cols), ','.join(['%s'] * len(cols))), vals)
+                    if c.fetchone():
+                        si_added += 1
+                    else:
+                        si_skipped += 1
+                    c.execute('RELEASE SAVEPOINT spi')
+                except Exception as e:
+                    print('還原問題項失敗:', e)
+                    c.execute('ROLLBACK TO SAVEPOINT spi')
+                    si_skipped += 1
+            c.execute("SELECT setval(pg_get_serial_sequence('shift_items','id'), "
+                      "COALESCE((SELECT MAX(id) FROM shift_items), 1))")
         conn.commit()
-        log_action('還原紀錄', '新增 %d 筆，略過 %d 筆' % (added, skipped))
+        try:
+            bust()
+        except Exception:
+            pass
+        log_action('還原紀錄', '新增 %d 筆，略過 %d 筆；問題項新增 %d／略過 %d' % (added, skipped, si_added, si_skipped))
         return jsonify({'status': 'success',
-                        'message': '✅ 還原完成：新增 %d 筆，略過 %d 筆（已存在或格式不符）。' % (added, skipped),
-                        'added': added, 'skipped': skipped})
+                        'message': '✅ 還原完成：新增 %d 筆，略過 %d 筆；問題項新增 %d、略過 %d。' % (added, skipped, si_added, si_skipped),
+                        'added': added, 'skipped': skipped, 'items_added': si_added, 'items_skipped': si_skipped})
     except Exception as e:
         print('Restore Error:', e)
         if conn: conn.rollback()
