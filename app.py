@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-53", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-54", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -5090,8 +5090,8 @@ def chair_map_get():
     for x in cells:
         if x.get('code'):
             cnt['total_all'] += 1
-        if not x.get('code') or x.get('stand'):
-            continue          # 企位（DS/RL/活動區）冇 DLR 櫈，唔計入新舊櫈
+        if not x.get('code') or x.get('stand') or x.get('event'):
+            continue          # 企位（DS/RL）同活動區都冇櫈，唔計入新舊櫈
         cnt['chairs'] += 1
         if x.get('chair') == 'new':
             cnt['new'] += 1
@@ -5125,7 +5125,7 @@ def chair_map_get():
                 'pits': layout.get('pits', []), 'extras': layout.get('extras', []),
                 'merges': layout.get('merges', []), 'cells': cells,
                 'edits': _chair_edits()}
-    cache_set('chair_map', _payload, 8)
+    cache_set('chair_map', _payload, 45)
     return jsonify(_payload)
 
 
