@@ -818,6 +818,17 @@
         </div>
     </div>
 
+    <!-- ===== 自家確認框（不用瀏覽器原生 confirm） ===== -->
+    <div id="bs-confirm-box" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10090; padding:16px; align-items:center; justify-content:center;">
+        <div style="max-width:400px; width:100%; background:#fff; border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);">
+            <div id="bs-confirm-msg" style="font-size:13.5px; color:#222; line-height:1.65; white-space:pre-wrap;"></div>
+            <div style="display:flex; gap:8px; margin-top:14px;">
+                <button id="bs-confirm-ok" type="button" style="flex:1; padding:11px; border:none; border-radius:8px; background:#1a73e8; color:#fff; font-size:13px; font-weight:bold; cursor:pointer;">確定</button>
+                <button id="bs-confirm-cancel" type="button" style="flex:1; padding:11px; border:none; border-radius:8px; background:#eceff1; color:#455a64; font-size:13px; font-weight:bold; cursor:pointer;">取消</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ===== 存貨記錄 ===== -->
     <div id="inv-modal" class="lr-modal">
         <div class="lr-wrap" style="max-width:900px;">
@@ -3203,7 +3214,7 @@ async function loadPendingIssues() {
         const oldVal = el.getAttribute('data-old') || '';
         const name = el.getAttribute('data-name') || key;
         if (status === oldVal) return;
-        if (!confirm('確定將「' + name + '」嘅狀態改為「' + status + '」？\n\n（改做非「待處理」會移去主頁黃框）')) {
+        if (!(await bsConfirm('確定將「' + name + '」嘅狀態改為「' + status + '」？\n\n（改做非「待處理」會移去主頁黃框）', '確定更改'))) {
             el.value = oldVal;
             return;
         }
@@ -3251,7 +3262,7 @@ async function loadPendingIssues() {
     }
 
     async function plistDelete(mid) {
-        if (!confirm('確定刪除此手動項目？')) return;
+        if (!(await bsConfirm('確定刪除此手動項目？', '刪除'))) return;
         try {
             const r = await fetch('/api/manual_pending/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: mid }) });
             const d = await r.json();
@@ -6166,7 +6177,7 @@ items: collectItems(),
     async function invDelete(id) {
         const it = invFind(id);
         if (!it) return;
-        if (!confirm('確定刪除「' + it.name + '」（' + (it.loc || '未分類') + '）？\n刪除後仍可喺稽核紀錄追查。')) return;
+        if (!(await bsConfirm('確定刪除「' + it.name + '」（' + (it.loc || '未分類') + '）？\n\n刪除後仍可喺稽核紀錄追查。', '刪除'))) return;
         try {
             const r = await fetch('/api/inventory/delete', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id })
@@ -6219,7 +6230,7 @@ items: collectItems(),
         const msg = take === ''
             ? ('確定將「' + nm + '」全部搬去 ' + loc + '？')
             : ('確定將「' + nm + '」搬 ' + take + ' ' + (it && it.unit ? it.unit : '') + ' 去 ' + loc + '？（原本位置會扣減）');
-        if (!confirm(msg)) { invCloseMove(); return; }
+        if (!(await bsConfirm(msg, '確定搬位'))) { invCloseMove(); return; }
         try {
             const r = await fetch('/api/inventory/move', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -6325,7 +6336,7 @@ items: collectItems(),
     }
 
     async function lsUndoRound() {
-        if (!confirm('還原上一次「開始新一輪」？\n會恢復上一輪嘅完成日期，並取消目前呢一輪。')) return;
+        if (!(await bsConfirm('還原上一次「開始新一輪」？\n\n會恢復上一輪嘅完成日期，並取消目前呢一輪。', '還原'))) return;
         try {
             const r = await fetch('/api/layout_schedule/undo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
             const d = await r.json();
@@ -6390,7 +6401,7 @@ items: collectItems(),
     async function schedToggle(el) {
         const pit = el.getAttribute('data-pit');
         const on = el.checked;
-        if (!confirm((on ? '✅ 確定標記 ' : '↩️ 確定取消 ') + pit + (on ? ' 已完成更換？' : ' 嘅完成標記？'))) {
+        if (!(await bsConfirm((on ? '✅ 確定標記 ' : '↩️ 確定取消 ') + pit + (on ? ' 已完成更換？' : ' 嘅完成標記？'), on ? '確定標記' : '確定取消'))) {
             el.checked = !on;
             return;
         }
@@ -6475,6 +6486,28 @@ items: collectItems(),
         if (!cmEditMode) cmSel = null;
         renderChairMap();
         cmRefreshTools();
+    }
+
+    // ===== 自家確認框（避免瀏覽器原生 confirm／alert 被攔截或替換） =====
+    function bsConfirm(msg, okText) {
+        return new Promise(function (resolve) {
+            const box = document.getElementById('bs-confirm-box');
+            const m = document.getElementById('bs-confirm-msg');
+            const ok = document.getElementById('bs-confirm-ok');
+            const cancel = document.getElementById('bs-confirm-cancel');
+            if (!box || !m || !ok || !cancel) { resolve(window.confirm(msg)); return; }
+            m.textContent = msg;
+            ok.textContent = okText || '確定';
+            box.style.display = 'flex';
+            const done = function (v) {
+                box.style.display = 'none';
+                ok.onclick = null;
+                cancel.onclick = null;
+                resolve(v);
+            };
+            ok.onclick = function () { done(true); };
+            cancel.onclick = function () { done(false); };
+        });
     }
 
     let cmToastTimer = null;
