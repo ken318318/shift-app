@@ -582,7 +582,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-03", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-04", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1143,6 +1143,30 @@ def _si_resolve(c, record_id, key, who=''):
                   status, note, display, event_at, resolved_at, resolved_by)
                  VALUES (%s,'resolve',%s,%s,%s,%s,%s,%s,%s,'已處理',%s,%s,NOW(),NOW(),%s)""",
               (record_id, v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], who or ''))
+    return True
+
+
+def _si_set_status(c, record_id, key, status, who=''):
+    """把某個問題項改成指定狀態（append-only，寫一筆 source='status'）。"""
+    key = (key or '').strip()
+    if not key or '|' not in key:
+        return False
+    c.execute("""SELECT item_key, type, code, category, problem, detail, side, note, display
+                 FROM shift_items WHERE item_key = %s ORDER BY id DESC LIMIT 1""", (key,))
+    row = c.fetchone()
+    if row:
+        v = list(row)
+    else:
+        t, code, detail = _split_key(key)
+        v = [key, t, code, '', '', detail, '', '',
+             _item_display({'type': t, 'code': code, 'detail': detail})]
+    _done = any(x in status for x in ('已處理', '已完成', '已解決'))
+    c.execute("""INSERT INTO shift_items
+                 (record_id, source, item_key, type, code, category, problem, detail, side,
+                  status, note, display, event_at, resolved_at, resolved_by)
+                 VALUES (%s,'status',%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW(),%s,%s)""",
+              (record_id, v[0], v[1], v[2], v[3], v[4], v[5], v[6], v[7], status, v[8],
+               (datetime.datetime.now() if _done else None), (who if _done else '')))
     return True
 
 
@@ -2611,6 +2635,58 @@ def pending_item_complete():
     finally:
         if conn:
             release_db_connection(conn)
+
+
+@app.route('/api/pending_items/status', methods=['POST'])
+def pending_item_status():
+    """待處理清單：直接把項目改成指定狀態（待處理／觀察中／已通知…／已 Send mail／已處理）。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    data = request.json or {}
+    key = (data.get('key') or '').strip()
+    status = (data.get('status') or '').strip()
+    mid = str(data.get('manual_id') or '')
+    _allowed = ('待處理', '觀察中', '已通知相關部門跟進', '已 Send mail', '已處理')
+    if status not in _allowed:
+        return jsonify({'status': 'error', 'message': '❌ 狀態不正確。'})
+    has_key = bool(key) and ('|' in key)
+    if not has_key and not mid:
+        return jsonify({'status': 'error', 'message': '❌ 缺少項目資料。'})
+    conn = None
+    try:
+        who = session.get('user_name') or '同事'
+        if has_key:
+            conn = get_db_connection()
+            c = conn.cursor()
+            if not _si_set_status(c, None, key, status, who):
+                return jsonify({'status': 'error', 'message': '❌ 更新失敗。'})
+            conn.commit()
+        lst = _manual_pending()
+        changed = False
+        for m in lst:
+            if (mid and str(m.get('id')) == mid) or (has_key and m.get('key') == key and (m.get('status') or '') != '已交更'):
+                m['status'] = status
+                changed = True
+                if mid:
+                    break
+        if changed:
+            _manual_save(lst)
+        bust()
+        try:
+            log_action('待處理清單', '改狀態 %s → %s' % (key or mid, status))
+        except Exception:
+            pass
+        return jsonify({'status': 'success', 'message': '✅ 已改為「%s」' % status})
+    except Exception as e:
+        print('pending status error:', e)
+        if conn:
+            try: conn.rollback()
+            except Exception: pass
+        return jsonify({'status': 'error', 'message': '❌ 操作失敗，請稍後再試。'})
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
 
 
 @app.route('/api/record_items/<int:rid>', methods=['GET'])
