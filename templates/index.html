@@ -7618,10 +7618,8 @@ items: collectItems(),
         const go = function () { urCapture(); };
         if (window.html2canvas) { go(); return; }
         urMsg('⏳ 準備圖片中…');
-        urLoadScript('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js', go, function () {
-            urLoadScript('https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js', go, function () {
-                urMsg('❌ 無法載入圖片組件（可能被網絡攔截）。可先儲存，再用手機截圖。');
-            });
+        urLoadScript('/static/html2canvas.min.js', go, function () {
+            urMsg('❌ 無法載入圖片組件（請重新整理再試）。可先儲存，再用手機截圖。');
         });
     }
 
