@@ -702,6 +702,45 @@ def security_report():
         return jsonify({'status': 'error', 'message': str(e)})
 
 
+@app.route('/api/security_rotate_passwords', methods=['POST'])
+def security_rotate_passwords():
+    """一次性將所有個人帳號密碼重置為隨機 10 字（只回一次清單）。限管理員。"""
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以使用。'}), 403
+    import secrets as _secrets
+    alpha = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT id, name, COALESCE(account,'') FROM members WHERE COALESCE(account,'') <> '' ORDER BY id")
+        rows = c.fetchall()
+        out = []
+        for mid, name, acc in rows:
+            pwd = ''.join(_secrets.choice(alpha) for _ in range(10))
+            c.execute("UPDATE members SET password=%s, pwd_changed=TRUE WHERE id=%s", (pwd, mid))
+            out.append({'name': name, 'account': acc, 'password': pwd})
+        conn.commit()
+        try:
+            bump_epoch('staff')
+        except Exception:
+            pass
+        try:
+            log_action('安全重置', '已重置 %d 個個人帳號密碼' % len(out))
+        except Exception:
+            pass
+        return jsonify({'status': 'success', 'count': len(out), 'accounts': out})
+    except Exception as e:
+        if conn:
+            try: conn.rollback()
+            except Exception: pass
+        return jsonify({'status': 'error', 'message': str(e)})
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+
 @app.route('/api/security_weak_accounts', methods=['GET'])
 def security_weak_accounts():
     """列出仍用「BS+員工ID」預設密碼或過短密碼嘅帳號（只回名與長度，不回密碼）。限管理員。"""
@@ -769,7 +808,7 @@ def security_clean_records():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-19", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-20", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
