@@ -199,7 +199,7 @@
                 <button onclick="openLayoutSchedule()" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#1a237e; background:#e8eaf6; padding:8px 4px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:bold;">🔄 換Layout行程</button>
                 <button onclick="toggleHomeSearch()" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#00695c; background:#e0f2f1; padding:8px 4px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:bold;">🔍 搜尋</button>
                 <button onclick="plistOpen()" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#6a1b9a; background:#f3e5f5; padding:8px 4px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:bold;">📋 待處理清單</button>
-                <button disabled style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#9e9e9e; background:#f5f5f5; padding:8px 4px; border-radius:6px; border:1px dashed #e0e0e0; font-size:12px; font-weight:bold;">➕ 待定</button>
+                <button onclick="openInventory()" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#6d4c41; background:#efebe9; padding:8px 4px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:bold;">📦 存貨</button>
             </div>
         </div>
         <button class="submit-btn" onclick="openNewRecordChoice()" style="margin-top: 0; margin-bottom: 10px; background-color: #2ecc71;">📝 新增BS交更紀錄</button>
@@ -805,6 +805,98 @@
             <h3 style="font-size:13.5px; margin:14px 0 8px; color:#444;">📡 NFC 異常台號（Top 5）</h3>
             <div id="stat-nfc"></div>
             <div id="stat-msg" style="font-size:12px; color:#d32f2f; margin-top:8px; min-height:16px;"></div>
+        </div>
+    </div>
+
+    <!-- ===== 存貨記錄 ===== -->
+    <div id="inv-modal" class="lr-modal">
+        <div class="lr-wrap" style="max-width:900px;">
+            <div class="lr-bar">
+                <button class="lr-b-close" onclick="closeInventory()">✖ 返回</button>
+                <b class="ls-bar-title">📦 存貨記錄</b>
+                <div class="ls-bar-tools">
+                    <button class="lr-b-gray" onclick="invExportCsv()">⬇️ CSV</button>
+                    <button class="lr-b-gray" onclick="invLoad(true)">🔄 重載</button>
+                </div>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+                <button id="inv-tab-WH" onclick="invSetZone('WH')" style="flex:1 1 120px; padding:9px; border:none; border-radius:8px; font-size:12.5px; font-weight:bold; cursor:pointer;">🏢 82 倉庫</button>
+                <button id="inv-tab-CP" onclick="invSetZone('CP')" style="flex:1 1 120px; padding:9px; border:none; border-radius:8px; font-size:12.5px; font-weight:bold; cursor:pointer;">🎯 CP</button>
+                <span id="inv-summary" style="font-size:11.5px; color:#666; flex:1 1 100%;"></span>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <input id="inv-q" type="text" placeholder="搜尋物品／位置／備註" oninput="invRender()" style="flex:1; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
+                <button onclick="invOpenAdd()" style="padding:9px 12px; border:none; border-radius:8px; background:#2e7d32; color:#fff; font-size:13px; font-weight:bold; cursor:pointer; white-space:nowrap;">➕ 新增</button>
+            </div>
+            <div id="inv-locs" style="display:flex; flex-wrap:wrap; gap:5px; margin:8px 0;"></div>
+            <div id="inv-list" style="margin-top:2px;"></div>
+            <div id="inv-msg" style="font-size:12px; color:#2e7d32; margin-top:8px; min-height:16px;"></div>
+        </div>
+    </div>
+
+    <!-- ===== 存貨：新增／編輯 ===== -->
+    <div id="inv-edit-box" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10040; padding:16px; align-items:flex-start; justify-content:center; overflow:auto;">
+        <div style="max-width:430px; width:100%; background:#fff; border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25); margin:16px auto;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px;">
+                <b id="inv-edit-title" style="font-size:15px; color:#1a237e;">➕ 新增物品</b>
+                <button onclick="invCloseEdit()" style="border:none; background:#eee; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer;">✖ 關閉</button>
+            </div>
+            <div style="font-size:11.5px; color:#666; margin-bottom:4px;">物品名稱</div>
+            <input id="inv-f-name" type="text" placeholder="例如 文件架" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <div style="flex:0 0 120px;">
+                    <div style="font-size:11.5px; color:#666; margin-bottom:4px;">倉庫</div>
+                    <select id="inv-f-zone" onchange="invFillLocOptions()" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; background:#fff;">
+                        <option value="WH">82 倉庫</option>
+                        <option value="CP">CP</option>
+                    </select>
+                </div>
+                <div style="flex:1; min-width:0;">
+                    <div style="font-size:11.5px; color:#666; margin-bottom:4px;">位置（可自己打新位置）</div>
+                    <input id="inv-f-loc" type="text" list="inv-loc-options" placeholder="例如 A1" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
+                    <datalist id="inv-loc-options"></datalist>
+                </div>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <div style="flex:1; min-width:0;">
+                    <div style="font-size:11.5px; color:#666; margin-bottom:4px;">數量</div>
+                    <input id="inv-f-qty" type="number" min="0" placeholder="留空＝未點算" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
+                </div>
+                <div style="flex:0 0 100px;">
+                    <div style="font-size:11.5px; color:#666; margin-bottom:4px;">單位</div>
+                    <input id="inv-f-unit" type="text" placeholder="個／箱／本" list="inv-unit-options" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
+                    <datalist id="inv-unit-options">
+                        <option>個</option><option>箱</option><option>本</option><option>張</option><option>條</option>
+                        <option>粒</option><option>塊</option><option>包</option><option>盒</option><option>卷</option>
+                        <option>部</option><option>支</option><option>件</option><option>套</option><option>對</option><option>排</option>
+                    </datalist>
+                </div>
+            </div>
+            <div style="font-size:11.5px; color:#666; margin:8px 0 4px;">附加數量（例如 1 箱 = 8 卷時嘅「8卷」）</div>
+            <input id="inv-f-detail" type="text" placeholder="可留空，例如 624包" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
+            <div style="font-size:11.5px; color:#666; margin:8px 0 4px;">備註（可留空，例如：詳細位置／損壞數量等等）</div>
+            <input id="inv-f-note" type="text" placeholder="例如：損壞 2 個／櫃頂" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
+            <div style="display:flex; gap:8px; margin-top:12px;">
+                <button onclick="invSaveForm()" id="inv-f-save" style="flex:1; padding:11px; border:none; border-radius:8px; background:#1a73e8; color:#fff; font-size:13px; font-weight:bold; cursor:pointer;">💾 儲存</button>
+                <button onclick="invCloseEdit()" style="flex:1; padding:11px; border:none; border-radius:8px; background:#eceff1; color:#455a64; font-size:13px; font-weight:bold; cursor:pointer;">取消</button>
+            </div>
+            <div id="inv-f-msg" style="font-size:12px; color:#d32f2f; margin-top:6px; min-height:16px;"></div>
+        </div>
+    </div>
+
+    <!-- ===== 存貨：搬移位置 ===== -->
+    <div id="inv-move-box" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10045; padding:16px; align-items:center; justify-content:center;">
+        <div style="max-width:400px; width:100%; background:#fff; border-radius:14px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25);">
+            <b style="font-size:14.5px; color:#1a237e;">↔️ 搬去邊個位置？</b>
+            <div id="inv-move-name" style="font-size:12px; color:#666; margin:6px 0 10px;"></div>
+            <div id="inv-move-list" style="display:flex; flex-wrap:wrap; gap:6px; max-height:50vh; overflow:auto;"></div>
+            <div style="margin-top:10px;">
+                <input id="inv-move-new" type="text" placeholder="或輸入新位置，例如 B13" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
+            </div>
+            <div style="display:flex; gap:8px; margin-top:10px;">
+                <button onclick="invMoveConfirmNew()" style="flex:1; padding:10px; border:none; border-radius:8px; background:#2e7d32; color:#fff; font-size:13px; font-weight:bold; cursor:pointer;">✅ 用新位置</button>
+                <button onclick="invCloseMove()" style="flex:1; padding:10px; border:none; border-radius:8px; background:#eceff1; color:#455a64; font-size:13px; font-weight:bold; cursor:pointer;">取消</button>
+            </div>
         </div>
     </div>
 
@@ -5605,6 +5697,368 @@ items: collectItems(),
         const maxNfc = nfcSorted.length ? nfcCount[nfcSorted[0]] : 1;
         const elN = document.getElementById('stat-nfc');
         if (elN) elN.innerHTML = nfcSorted.length ? nfcSorted.map(n => statsBar(n, nfcCount[n], maxNfc, '#7b1fa2')).join('') : statsEmpty('暫時未有 NFC 異常資料');
+    }
+
+    // ===== 存貨記錄（82倉庫 / CP） =====
+    let invItems = [];
+    let invLogs = [];
+    let invLoaded = false;
+    let invZone = 'WH';
+    let invLoc = '';
+    let invEditId = 0;
+    let invMoveId = 0;
+
+    function invEsc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+            return c === '&' ? '&amp;' : (c === '<' ? '&lt;' : (c === '>' ? '&gt;' : '&quot;'));
+        });
+    }
+
+    function invLocSort(a, b) {
+        return String(a).localeCompare(String(b), 'en', { numeric: true });
+    }
+
+    function openInventory() {
+        const m = document.getElementById('inv-modal');
+        if (!m) return;
+        m.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        invLoad();
+    }
+
+    function closeInventory() {
+        const m = document.getElementById('inv-modal');
+        if (m) m.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    async function invLoad(force) {
+        const msg = document.getElementById('inv-msg');
+        if (msg && !invLoaded) msg.textContent = '載入中…';
+        try {
+            const r = await fetch('/api/inventory?_t=' + Date.now(), { cache: 'no-store' });
+            const d = await r.json();
+            if (!d || d.status !== 'success') {
+                if (msg) msg.textContent = (d && d.message) || '❌ 載入失敗';
+                return;
+            }
+            invItems = d.items || [];
+            invLogs = d.logs || [];
+            invLoaded = true;
+            if (msg) msg.textContent = '';
+            invRender();
+        } catch (e) {
+            if (msg) msg.textContent = '❌ 連線失敗';
+        }
+    }
+
+    function invSetZone(z) {
+        invZone = z;
+        invLoc = '';
+        invRender();
+    }
+
+    function invLocTap(l) {
+        invLoc = (invLoc === l) ? '' : l;
+        invRender();
+    }
+
+    function invZoneItems() {
+        return invItems.filter(function (it) { return it.zone === invZone; });
+    }
+
+    function invRender() {
+        const tabW = document.getElementById('inv-tab-WH');
+        const tabC = document.getElementById('inv-tab-CP');
+        if (tabW) {
+            tabW.style.background = invZone === 'WH' ? '#3949ab' : '#eceff1';
+            tabW.style.color = invZone === 'WH' ? '#fff' : '#455a64';
+        }
+        if (tabC) {
+            tabC.style.background = invZone === 'CP' ? '#3949ab' : '#eceff1';
+            tabC.style.color = invZone === 'CP' ? '#fff' : '#455a64';
+        }
+
+        const all = invZoneItems();
+        const locSet = {};
+        all.forEach(function (it) { locSet[it.loc || '未分類'] = 1; });
+        const locs = Object.keys(locSet).sort(invLocSort);
+
+        const chips = document.getElementById('inv-locs');
+        if (chips) {
+            let h = '<button onclick="invLocTap(\'\')" style="padding:6px 10px; border-radius:999px; font-size:11.5px; font-weight:bold; cursor:pointer; border:1px solid ' + (invLoc === '' ? '#3949ab' : '#ddd') + '; background:' + (invLoc === '' ? '#e8eaf6' : '#fff') + '; color:' + (invLoc === '' ? '#283593' : '#555') + ';">全部 ' + all.length + '</button>';
+            locs.forEach(function (l) {
+                const n = all.filter(function (it) { return (it.loc || '未分類') === l; }).length;
+                const on = invLoc === l;
+                h += '<button onclick="invLocTap(' + JSON.stringify(l).replace(/"/g, '&quot;') + ')" style="padding:6px 10px; border-radius:999px; font-size:11.5px; font-weight:bold; cursor:pointer; border:1px solid ' + (on ? '#3949ab' : '#ddd') + '; background:' + (on ? '#e8eaf6' : '#fff') + '; color:' + (on ? '#283593' : '#555') + ';">' + invEsc(l) + ' ' + n + '</button>';
+            });
+            chips.innerHTML = h;
+        }
+
+        const q = ((document.getElementById('inv-q') || {}).value || '').trim().toUpperCase();
+        let rows = all.filter(function (it) {
+            if (invLoc && (it.loc || '未分類') !== invLoc) return false;
+            if (!q) return true;
+            const hay = (it.name + ' ' + it.loc + ' ' + it.note + ' ' + it.unit + ' ' + it.detail).toUpperCase();
+            return hay.indexOf(q) >= 0;
+        });
+        rows.sort(function (a, b) {
+            const c = invLocSort(a.loc || '', b.loc || '');
+            if (c) return c;
+            return (a.id - b.id);
+        });
+
+        const noQty = all.filter(function (it) { return it.qty === null || it.qty === undefined; }).length;
+        const lastUp = invItems.reduce(function (m, it) { return (it.updated_at || '') > m ? (it.updated_at || '') : m; }, '');
+        const sum = document.getElementById('inv-summary');
+        if (sum) {
+            sum.textContent = '共 ' + all.length + ' 項｜位置 ' + locs.length + ' 個｜未填數量 ' + noQty + (lastUp ? '｜最後更新 ' + lastUp : '');
+        }
+
+        const list = document.getElementById('inv-list');
+        if (!list) return;
+        if (!rows.length) {
+            list.innerHTML = '<div style="padding:24px 10px; text-align:center; color:#999; font-size:13px;">冇符合嘅物品</div>';
+            return;
+        }
+        let h = '';
+        let curLoc = null;
+        rows.forEach(function (it) {
+            const loc = it.loc || '未分類';
+            if (loc !== curLoc) {
+                curLoc = loc;
+                const n = all.filter(function (x) { return (x.loc || '未分類') === loc; }).length;
+                h += '<div style="display:flex; align-items:center; gap:8px; margin:14px 0 6px; padding:6px 10px; background:#e8eaf6; border-radius:8px;">'
+                    + '<b style="font-size:12.5px; color:#283593;">📍 ' + invEsc(loc) + '</b>'
+                    + '<span style="font-size:11px; color:#5c6bc0;">' + n + ' 項</span></div>';
+            }
+            const qtyTxt = (it.qty === null || it.qty === undefined) ? '—' : it.qty;
+            const meta = [it.unit, it.detail ? '(' + it.detail + ')' : ''].filter(Boolean).join(' ');
+            h += '<div style="display:flex; align-items:center; gap:6px; padding:8px 6px; border-bottom:1px solid #f2f2f2;">'
+                + '<div style="flex:1; min-width:0;">'
+                + '<div style="font-size:13px; font-weight:bold; color:#222; word-break:break-word;">' + invEsc(it.name) + '</div>'
+                + '<div style="font-size:11px; color:#888; margin-top:2px;">' + (meta ? invEsc(meta) : '') + (it.note ? (meta ? ' · ' : '') + invEsc(it.note) : '') + '</div>'
+                + '</div>'
+                + '<div style="display:flex; align-items:center; gap:2px; flex:0 0 auto;">'
+                + '<button onclick="invAdjust(' + it.id + ',-1)" style="width:26px; height:26px; border:none; border-radius:6px; background:#eceff1; color:#455a64; font-size:15px; font-weight:bold; cursor:pointer;">−</button>'
+                + '<b onclick="invEditQty(' + it.id + ')" title="點一下直接改數量" style="min-width:44px; text-align:center; font-size:13.5px; color:#1a73e8; cursor:pointer; padding:0 2px;">' + qtyTxt + '</b>'
+                + '<button onclick="invAdjust(' + it.id + ',1)" style="width:26px; height:26px; border:none; border-radius:6px; background:#e8f5e9; color:#2e7d32; font-size:15px; font-weight:bold; cursor:pointer;">+</button>'
+                + '</div>'
+                + '<div style="display:flex; gap:2px; flex:0 0 auto;">'
+                + '<button onclick="invEdit(' + it.id + ')" title="編輯" style="width:26px; height:26px; border:none; border-radius:6px; background:#f5f5f5; font-size:12px; cursor:pointer;">✏️</button>'
+                + '<button onclick="invMoveOpen(' + it.id + ')" title="搬位置" style="width:26px; height:26px; border:none; border-radius:6px; background:#f5f5f5; font-size:12px; cursor:pointer;">↔️</button>'
+                + '<button onclick="invDelete(' + it.id + ')" title="刪除" style="width:26px; height:26px; border:none; border-radius:6px; background:#fff5f5; font-size:12px; cursor:pointer;">🗑️</button>'
+                + '</div></div>';
+        });
+        if (invLogs.length) {
+            h += '<details style="margin-top:14px;"><summary style="cursor:pointer; font-size:12px; color:#666;">🕘 最近改動（' + invLogs.length + '）</summary>'
+                + '<div style="margin-top:6px; font-size:11.5px; color:#666; line-height:1.8;">'
+                + invLogs.slice(0, 20).map(function (g) {
+                    return '<div>' + invEsc(g.at) + '　' + invEsc(g.actor) + '　' + invEsc(g.detail) + '</div>';
+                }).join('')
+                + '</div></details>';
+        }
+        list.innerHTML = h;
+    }
+
+    function invFind(id) {
+        for (let i = 0; i < invItems.length; i++) { if (invItems[i].id === id) return invItems[i]; }
+        return null;
+    }
+
+    function invNote(text) {
+        const el = document.getElementById('inv-msg');
+        if (el) el.textContent = text || '';
+    }
+
+    async function invAdjust(id, delta) {
+        try {
+            const r = await fetch('/api/inventory/adjust', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id, delta: delta })
+            });
+            const d = await r.json();
+            if (!d || d.status !== 'success') { invNote((d && d.message) || '❌ 更新失敗'); return; }
+            const it = invFind(id);
+            if (it) it.qty = d.qty;
+            invNote(d.message || '');
+            invRender();
+        } catch (e) { invNote('❌ 連線失敗'); }
+    }
+
+    function invEditQty(id) {
+        const it = invFind(id);
+        if (!it) return;
+        const v = prompt('輸入「' + it.name + '」新數量（可留空＝未點算）：', (it.qty === null || it.qty === undefined) ? '' : String(it.qty));
+        if (v === null) return;
+        invSaveQuick(id, { qty: v.trim() === '' ? null : v });
+    }
+
+    async function invSaveQuick(id, patch) {
+        patch.id = id;
+        try {
+            const r = await fetch('/api/inventory/update', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch)
+            });
+            const d = await r.json();
+            invNote((d && d.message) || '');
+            await invLoad(true);
+        } catch (e) { invNote('❌ 連線失敗'); }
+    }
+
+    function invFillLocOptions() {
+        const zone = (document.getElementById('inv-f-zone') || {}).value || 'WH';
+        const locs = [];
+        invItems.forEach(function (it) {
+            if (it.zone === zone && it.loc && locs.indexOf(it.loc) < 0) locs.push(it.loc);
+        });
+        locs.sort(invLocSort);
+        const dl = document.getElementById('inv-loc-options');
+        if (dl) dl.innerHTML = locs.map(function (l) { return '<option value="' + invEsc(l) + '"></option>'; }).join('');
+    }
+
+    function invOpenAdd() {
+        invEditId = 0;
+        document.getElementById('inv-edit-title').textContent = '➕ 新增物品';
+        document.getElementById('inv-f-name').value = '';
+        document.getElementById('inv-f-zone').value = invZone;
+        document.getElementById('inv-f-loc').value = invLoc || '';
+        document.getElementById('inv-f-qty').value = '';
+        document.getElementById('inv-f-unit').value = '';
+        document.getElementById('inv-f-detail').value = '';
+        document.getElementById('inv-f-note').value = '';
+        document.getElementById('inv-f-msg').textContent = '';
+        invFillLocOptions();
+        document.getElementById('inv-edit-box').style.display = 'flex';
+        setTimeout(function () { document.getElementById('inv-f-name').focus(); }, 60);
+    }
+
+    function invEdit(id) {
+        const it = invFind(id);
+        if (!it) return;
+        invEditId = id;
+        document.getElementById('inv-edit-title').textContent = '✏️ 編輯物品';
+        document.getElementById('inv-f-name').value = it.name || '';
+        document.getElementById('inv-f-zone').value = it.zone || invZone;
+        document.getElementById('inv-f-loc').value = it.loc || '';
+        document.getElementById('inv-f-qty').value = (it.qty === null || it.qty === undefined) ? '' : it.qty;
+        document.getElementById('inv-f-unit').value = it.unit || '';
+        document.getElementById('inv-f-detail').value = it.detail || '';
+        document.getElementById('inv-f-note').value = it.note || '';
+        document.getElementById('inv-f-msg').textContent = '';
+        invFillLocOptions();
+        document.getElementById('inv-edit-box').style.display = 'flex';
+    }
+
+    function invCloseEdit() {
+        document.getElementById('inv-edit-box').style.display = 'none';
+    }
+
+    async function invSaveForm() {
+        const name = (document.getElementById('inv-f-name').value || '').trim();
+        const zone = document.getElementById('inv-f-zone').value;
+        const loc = (document.getElementById('inv-f-loc').value || '').trim() || '未分類';
+        const qtyRaw = (document.getElementById('inv-f-qty').value || '').trim();
+        const unit = (document.getElementById('inv-f-unit').value || '').trim();
+        const detail = (document.getElementById('inv-f-detail').value || '').trim();
+        const note = (document.getElementById('inv-f-note').value || '').trim();
+        const msg = document.getElementById('inv-f-msg');
+        if (!name) { if (msg) msg.textContent = '⚠️ 請輸入物品名稱'; return; }
+        const payload = { name: name, zone: zone, loc: loc, qty: qtyRaw === '' ? null : qtyRaw, unit: unit, detail: detail, note: note };
+        if (!invEditId) {
+            const dup = invItems.filter(function (it) { return it.zone === zone && it.name.replace(/\s+/g, '') === name.replace(/\s+/g, ''); });
+            if (dup.length && !confirm('「' + name + '」喺 ' + zoneName(zone) + ' 已經有 ' + dup.length + ' 項（位置：' + dup.map(function (x) { return x.loc; }).join('、') + '）。\n\n仍然要新增？')) return;
+        }
+        const btn = document.getElementById('inv-f-save');
+        if (btn) btn.disabled = true;
+        try {
+            const url = invEditId ? '/api/inventory/update' : '/api/inventory/add';
+            if (invEditId) payload.id = invEditId;
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            const d = await r.json();
+            if (!d || d.status !== 'success') { if (msg) msg.textContent = (d && d.message) || '❌ 儲存失敗'; return; }
+            invCloseEdit();
+            invNote(d.message || '✅ 已儲存');
+            await invLoad(true);
+        } catch (e) {
+            if (msg) msg.textContent = '❌ 連線失敗';
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    function zoneName(z) { return z === 'CP' ? 'CP' : '82 倉庫'; }
+
+    async function invDelete(id) {
+        const it = invFind(id);
+        if (!it) return;
+        if (!confirm('確定刪除「' + it.name + '」（' + (it.loc || '未分類') + '）？\n刪除後仍可喺稽核紀錄追查。')) return;
+        try {
+            const r = await fetch('/api/inventory/delete', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id })
+            });
+            const d = await r.json();
+            invNote((d && d.message) || '');
+            await invLoad(true);
+        } catch (e) { invNote('❌ 連線失敗'); }
+    }
+
+    function invMoveOpen(id) {
+        const it = invFind(id);
+        if (!it) return;
+        invMoveId = id;
+        document.getElementById('inv-move-name').textContent = it.name + '（現時：' + (it.loc || '未分類') + '）';
+        const locSet = {};
+        invItems.forEach(function (x) { if (x.zone === it.zone && x.loc) locSet[x.loc] = 1; });
+        const locs = Object.keys(locSet).sort(invLocSort);
+        const box = document.getElementById('inv-move-list');
+        box.innerHTML = locs.map(function (l) {
+            const on = l === it.loc;
+            return '<button onclick="invMoveTo(' + JSON.stringify(l).replace(/"/g, '&quot;') + ')" style="padding:8px 12px; border-radius:8px; border:1px solid ' + (on ? '#3949ab' : '#ddd') + '; background:' + (on ? '#e8eaf6' : '#fff') + '; font-size:12.5px; font-weight:bold; cursor:pointer; color:#37474f;">' + invEsc(l) + (on ? ' ✓' : '') + '</button>';
+        }).join('') || '<span style="font-size:12px; color:#999;">未有其他位置</span>';
+        document.getElementById('inv-move-new').value = '';
+        document.getElementById('inv-move-box').style.display = 'flex';
+    }
+
+    function invCloseMove() {
+        document.getElementById('inv-move-box').style.display = 'none';
+    }
+
+    async function invMoveTo(loc) {
+        if (!invMoveId) return;
+        try {
+            const r = await fetch('/api/inventory/move', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: invMoveId, loc: loc })
+            });
+            const d = await r.json();
+            invCloseMove();
+            invNote((d && d.message) || '');
+            await invLoad(true);
+        } catch (e) { invNote('❌ 連線失敗'); }
+    }
+
+    function invMoveConfirmNew() {
+        const v = (document.getElementById('inv-move-new').value || '').trim();
+        if (!v) { alert('請輸入位置'); return; }
+        invMoveTo(v);
+    }
+
+    function invExportCsv() {
+        if (!invItems.length) { invNote('未有資料可匯出'); return; }
+        const esc = function (v) { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? ('"' + s.replace(/"/g, '""') + '"') : s; };
+        const lines = ['倉庫,位置,物品名稱,數量,單位,附加數量,備註,最後更新,更新人'];
+        invItems.forEach(function (it) {
+            lines.push([zoneName(it.zone), it.loc, it.name, (it.qty === null || it.qty === undefined) ? '' : it.qty,
+                it.unit, it.detail, it.note, it.updated_at, it.updated_by].map(esc).join(','));
+        });
+        const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = '存貨記錄_' + new Date().toISOString().slice(0, 10) + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+        invNote('⬇️ CSV 已匯出');
     }
 
     let lsZoom = 1;
