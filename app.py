@@ -48,6 +48,7 @@ def release_db_connection(conn):
 _SET_CACHE = {}      # app_settings 讀取快取：key -> (時間, 值)
 _SET_TTL = 8         # 秒；寫入時會即時清掉該 key
 _LOGIN_FAIL = {}     # 登入失敗紀錄：IP -> {'ts': [時間...]}（防暴力破解）
+_BLOCK_IPS = {'60.246.67.123'}   # 已確認攻擊來源 IP（可直接加／删）
 
 
 def ensure_tables():
@@ -363,6 +364,17 @@ def _clean_text(v, maxlen=8000):
     s = re.sub(r'<[^>]*>', '', s)
     s = s.replace('\x00', '')
     return s[:maxlen]
+
+
+def _strip_tags(v):
+    """遞歸剔除字串內嘅 HTML 標籤（讀取時第二層防線）。"""
+    if isinstance(v, str):
+        return re.sub(r'<[^>]*>', '', v)
+    if isinstance(v, list):
+        return [_strip_tags(x) for x in v]
+    if isinstance(v, dict):
+        return {k: _strip_tags(x) for k, x in v.items()}
+    return v
 
 
 def _norm_code(s):
@@ -752,13 +764,22 @@ def security_clean_records():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-16", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-17", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
 def require_login():
     allowed_routes = ['login', 'static', 'verify_wechat', 'catch_all_txt', 'healthz']
     endpoint = request.endpoint
+    # 已知攻擊來源 IP：全站直接拒絕
+    try:
+        _cip = (request.headers.get('X-Forwarded-For') or request.remote_addr or '').split(',')[0].strip()
+        if _cip in _BLOCK_IPS and endpoint != 'healthz':
+            if request.path.startswith('/api/'):
+                return jsonify({'status': 'error', 'message': '❌ 拒絕存取。'}), 403
+            return Response('403 Forbidden', status=403, mimetype='text/plain')
+    except Exception:
+        pass
 
     if 'logged_in' not in session:
         if endpoint in allowed_routes:
@@ -1694,7 +1715,7 @@ def get_records():
             "shift_day": row[28] or 0,
             "age_sec": row[29] if len(row) > 29 else None
         })
-    return jsonify(records)
+    return jsonify(_strip_tags(records))
 
 # ---------- 匯出（伺服器端產生檔案，手機／微信都可下載） ----------
 def _csv_bytes(rows):
