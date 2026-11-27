@@ -582,7 +582,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-06", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-07", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -5752,6 +5752,12 @@ def inventory_move():
     ids = d.get('ids')
     if not isinstance(ids, list):
         ids = [d.get('id')]
+    try:
+        qty_take = int(d.get('qty')) if d.get('qty') not in (None, '') else None
+    except Exception:
+        qty_take = None
+    if qty_take is not None and qty_take <= 0:
+        qty_take = None
     clean = []
     for x in ids:
         try: clean.append(int(x))
@@ -5763,20 +5769,43 @@ def inventory_move():
         conn = get_db_connection()
         c = conn.cursor()
         moved = 0
+        split = 0
         for iid in clean:
-            c.execute("""SELECT name, loc, zone FROM inventory_items
+            c.execute("""SELECT name, loc, zone, qty FROM inventory_items
                          WHERE id=%s AND COALESCE(deleted, FALSE)=FALSE""", (iid,))
             row = c.fetchone()
             if not row:
                 continue
-            _zone = _inv_zone_for_loc(loc, row[2] or 'WH')
+            _name, _cur_loc, _cur_zone, _cur_qty = row[0], row[1], row[2], row[3]
+            _zone = _inv_zone_for_loc(loc, _cur_zone or 'WH')
+            if qty_take is not None and _cur_qty is not None and 0 < qty_take < _cur_qty:
+                # 只搬部分：新增一項去新位置，原本位置扣減
+                c.execute("""INSERT INTO inventory_items
+                             (zone, loc, name, qty, unit, detail, note, sort, updated_by)
+                             SELECT %s, %s, name, %s, COALESCE(unit,''), COALESCE(detail,''), COALESCE(note,''),
+                                    COALESCE((SELECT MAX(sort) FROM inventory_items), 0) + 1, %s
+                             FROM inventory_items WHERE id=%s RETURNING id""",
+                          (_zone, loc, qty_take, _inv_actor(), iid))
+                _new_id = c.fetchone()[0]
+                c.execute("UPDATE inventory_items SET qty=%s, updated_at=NOW(), updated_by=%s WHERE id=%s",
+                          (_cur_qty - qty_take, _inv_actor(), iid))
+                c.execute("INSERT INTO inventory_logs (item_id, action, detail, actor) VALUES (%s,'move_part',%s,%s)",
+                          (iid, '%s：%s 共 %d，搬 %d 去 %s（剩 %d）' % (_name, _cur_loc or '未分類', _cur_qty, qty_take, loc, _cur_qty - qty_take), _inv_actor()))
+                c.execute("INSERT INTO inventory_logs (item_id, action, detail, actor) VALUES (%s,'move_part',%s,%s)",
+                          (_new_id, '%s：由 %s 搬入 %d' % (_name, _cur_loc or '未分類', qty_take), _inv_actor()))
+                split += 1
+                moved += 1
+                continue
             c.execute("""UPDATE inventory_items SET loc=%s, zone=%s, updated_at=NOW(), updated_by=%s
                          WHERE id=%s""", (loc, _zone, _inv_actor(), iid))
             c.execute("INSERT INTO inventory_logs (item_id, action, detail, actor) VALUES (%s, %s, %s, %s)",
-                      (iid, 'move', '%s：%s → %s' % (row[0], row[1] or '未分類', loc), _inv_actor()))
+                      (iid, 'move', '%s：%s → %s' % (_name, _cur_loc or '未分類', loc), _inv_actor()))
             moved += 1
         conn.commit()
         bust()
+        if split:
+            return jsonify({'status': 'success', 'moved': moved, 'split': split,
+                            'message': '✅ 已搬 %d 項去 %s（其中 %d 項只搬部分數量）' % (moved, loc, split)})
         return jsonify({'status': 'success', 'moved': moved, 'message': '✅ 已搬 %d 項去 %s' % (moved, loc)})
     except Exception as e:
         if conn:
