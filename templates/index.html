@@ -2973,12 +2973,12 @@ async function loadPendingIssues() {
             const canEdit = !!it.manual;
             const date = String(it.first_at || it.created_at || '').slice(0, 10);
             return '<div style="display:flex; align-items:center; gap:8px; background:' + (isDone ? '#e8f5e9' : '#ffebee') + '; border:1px solid ' + (isDone ? '#c8e6c9' : '#ffcdd2') + '; border-radius:8px; padding:8px; margin:6px 0;">'
-                + '<input type="checkbox" data-key="' + htmlEsc(it.key) + '"' + (isDone ? ' checked' : '') + (canEdit ? '' : ' disabled') + ' onchange="plistToggle(this)" style="width:19px; height:19px;">'
+                + '<input type="checkbox" data-key="' + htmlEsc(it.key) + '"' + (isDone ? ' checked' : '') + ' onchange="plistToggle(this)" style="width:19px; height:19px;">'
                 + '<div style="flex:1; min-width:0; font-size:12.5px; color:#333;">'
                 + '<b>' + htmlEsc(it.display || it.key) + '</b>'
                 + '<div style="font-size:11px; color:#777; margin-top:2px;">' + (date ? '📅 ' + date + '　' : '') + htmlEsc(it.status || '待處理') + (it.manual ? '　｜手動' : '') + '</div>'
                 + '</div>'
-                + (canEdit ? '<button onclick="plistDelete(\'' + it.manual_id + '\')" style="border:none; background:#ffcdd2; color:#b71c1c; border-radius:6px; padding:6px 8px; font-size:11px; font-weight:bold;">🗑</button>' : '')
+                + ((it.manual && it.manual_id && !it.from_list) ? '<button onclick="plistDelete(\'' + it.manual_id + '\')" style="border:none; background:#ffcdd2; color:#b71c1c; border-radius:6px; padding:6px 8px; font-size:11px; font-weight:bold;">🗑</button>' : '')
                 + '</div>';
         };
         box.innerHTML = '<div style="font-size:12px; font-weight:bold; color:#c62828; margin:8px 2px;">⚠️ 待處理項目（' + open.length + '）</div>'
@@ -2994,21 +2994,26 @@ async function loadPendingIssues() {
     }
 
     async function plistApply() {
-        const manual = PLIST_ITEMS.filter(function (it) { return it.manual; });
-        let changed = 0;
-        for (const it of manual) {
+        let changed = 0, failed = 0;
+        for (const it of PLIST_ITEMS) {
             const wantDone = !PLIST_OPEN[it.key];
             const isDone = (String(it.status || '').indexOf('已處理') >= 0);
             if (wantDone === isDone) continue;
             try {
-                const r = await fetch('/api/manual_pending/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: it.manual_id, done: wantDone }) });
+                let url = '/api/pending_items/complete';
+                let body = { key: it.key, done: wantDone };
+                if (it.manual && it.manual_id) {
+                    url = '/api/manual_pending/update';
+                    body = { id: it.manual_id, done: wantDone };
+                }
+                const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
                 const d = await r.json();
-                if (d && d.status === 'success') changed++;
-            } catch (e) {}
+                if (d && d.status === 'success') changed++; else failed++;
+            } catch (e) { failed++; }
         }
         await plistReload();
         if (typeof loadPendingIssues === 'function') { try { await loadPendingIssues(); } catch (e) {} }
-        alert(changed ? ('✅ 已更新 ' + changed + ' 個手動項目。') : '✅ 已套用（冇手動項目改動）。');
+        alert(changed ? ('✅ 已更新 ' + changed + ' 個項目' + (failed ? '（' + failed + ' 個失敗）' : '') + '。') : ('✅ 已套用（冇項目改動' + (failed ? '，' + failed + ' 個失敗' : '') + '）。'));
     }
 
     async function plistDelete(mid) {
