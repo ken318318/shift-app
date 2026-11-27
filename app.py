@@ -769,7 +769,7 @@ def security_clean_records():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-18", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-19", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -943,8 +943,8 @@ def set_password():
 <style>body{font-family:system-ui,-apple-system,sans-serif;background:#f6f7fb;margin:0;padding:24px;color:#222}
 .card{max-width:380px;margin:8vh auto;background:#fff;border-radius:14px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
 h1{font-size:17px;margin:0 0 6px;color:#1a237e}p.muted{font-size:12px;color:#666;line-height:1.6;margin:0 0 14px}
-label{display:block;font-size:12px;color:#555;margin:10px 0 4px}input{width:100%;box-sizing:border-box;padding:11px;border:1px solid #ccc;border-radius:8px;font-size:14px}
-button{width:100%;margin-top:16px;padding:12px;border:none;border-radius:9px;background:#1a73e8;color:#fff;font-size:14px;font-weight:bold}
+label{display:block;font-size:12px;color:#555;margin:10px 0 4px}input{width:100%%;box-sizing:border-box;padding:11px;border:1px solid #ccc;border-radius:8px;font-size:14px}
+button{width:100%%;margin-top:16px;padding:12px;border:none;border-radius:9px;background:#1a73e8;color:#fff;font-size:14px;font-weight:bold}
 .err{color:#c62828;font-size:12.5px;margin-top:10px;min-height:16px}</style></head><body>
 <div class="card"><h1>🔐 第一次登入，請設定新密碼</h1>
 <p class="muted">帳號：%(name)s<br>為了安全，唔可以再用「BS＋員工編號」做密碼。新密碼最少 8 個字元。</p>
