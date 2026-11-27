@@ -727,7 +727,7 @@ def security_clean_records():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-14", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-15", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1456,6 +1456,13 @@ def submit():
         _si_write_reopen(c, _new_rid, data.get('reopen_keys'))
         conn.commit()
         bust()
+        try:
+            _ip = (request.headers.get('X-Forwarded-For') or request.remote_addr or '').split(',')[0].strip()
+            log_action('提交交更', 'ID=%s｜角色=%s｜名稱=%s｜班=%s｜UA=%s｜IP=%s'
+                       % (_new_rid, session.get('role'), data.get('name'), data.get('shift'),
+                          (request.headers.get('User-Agent') or '')[:110], _ip[:40]))
+        except Exception:
+            pass
         return jsonify({"message": "交更成功！", "status": "success", "record_id": _new_rid})
     except Exception as e:
         print("Submit Error:", e)
