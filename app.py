@@ -835,7 +835,7 @@ def security_clean_records():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-21", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-22", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -904,6 +904,7 @@ def login():
                 _wait = int(600 - (_now - _LFAIL['ts'][0]))
                 return render_template('login.html', error='❌ 嘗試次數太多，請等 %d 分鐘後再試。' % max(1, _wait // 60))
         pwd = (request.form.get('password') or '').strip()
+        acct = (request.form.get('account') or '').strip().upper().replace(' ', '')
         staff_pwd = get_setting('staff_password', STAFF_PASSWORD) or STAFF_PASSWORD
         admin_pwd = get_setting('admin_password', ADMIN_PASSWORD) or ADMIN_PASSWORD
 
@@ -916,6 +917,50 @@ def login():
             except Exception:
                 pass
 
+        # ===== 有填帳號：先驗帳號，再驗密碼 =====
+        if acct:
+            if acct in ('ADMIN', 'ADMIN888', '管理員'):
+                if pwd and pwd == admin_pwd:
+                    session['logged_in'] = True
+                    session['role'] = 'admin'
+                    session['user_name'] = '管理員'
+                    session['epoch'] = get_epoch('admin', force=True)
+                    log_action('登入', '管理員登入｜UA=' + (request.headers.get('User-Agent') or '')[:160])
+                    return redirect(url_for('index'))
+                _fail_log()
+                return render_template('login.html', error='❌ 管理員帳號或密碼錯誤。')
+            _norm = acct[2:] if acct.startswith('BS') else acct
+            member = None
+            conn = None
+            try:
+                conn = get_db_connection()
+                c = conn.cursor()
+                c.execute("""SELECT name, COALESCE(role,'staff'), COALESCE(pwd_changed, FALSE), COALESCE(password,'')
+                             FROM members
+                             WHERE UPPER(account) = %s OR UPPER(account) = %s
+                             LIMIT 1""", (_norm, 'BS' + _norm))
+                member = c.fetchone()
+            except Exception as e:
+                print('帳號登入檢查失敗:', e)
+            finally:
+                if conn:
+                    try: release_db_connection(conn)
+                    except Exception: pass
+            if member and pwd and pwd == member[3]:
+                role = 'admin' if member[1] == 'admin' else 'staff'
+                session['logged_in'] = True
+                session['role'] = role
+                session['user_name'] = member[0]
+                session['epoch'] = get_epoch(role, force=True)
+                log_action('登入', '帳號登入：%s｜UA=%s' % (member[0], (request.headers.get('User-Agent') or '')[:160]))
+                if not member[2]:
+                    session['must_change'] = True
+                    return redirect(url_for('set_password'))
+                return redirect(url_for('index'))
+            _fail_log()
+            return render_template('login.html', error='❌ 帳號或密碼錯誤。')
+
+        # ===== 冇填帳號（舊式）：靠密碼本身辨別 =====
         if pwd and pwd == admin_pwd:
             session['logged_in'] = True
             session['role'] = 'admin'
@@ -925,7 +970,7 @@ def login():
             return redirect(url_for('index'))
         elif pwd and pwd == staff_pwd:
             # 安全事件後停用共用密碼，改用個人帳號
-            error = '⚠️ 共用密碼已停用，請用個人帳號登入（密碼 = 系統派給你嘅個人密碼）。'
+            error = '⚠️ 共用密碼已停用，請用「帳號 ＋ 個人密碼」登入。'
         else:
             # 個人帳號（帳號＝員工ID，密碼＝BS＋員工ID）
             member = None
