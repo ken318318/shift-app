@@ -961,8 +961,7 @@
         (function () {
             const inner = window.fetch.bind(window);
             let pending = 0;
-            const SKIP = [/\/api\/pending_items/, /\/api\/record_items\//,
-                          /\/api\/records_home/, /\/api\/get_auth_status/, /healthz/];
+            const SKIP = [/\/api\/record_items\//, /\/api\/get_auth_status/, /healthz/];
             function shouldShow(url, method) {
                 if (method !== 'GET') return true;
                 for (let i = 0; i < SKIP.length; i++) { if (SKIP[i].test(url)) return false; }
@@ -3117,11 +3116,17 @@ async function loadPendingIssues() {
                 + '<div style="flex:1; min-width:0; font-size:12.5px; color:#333;">'
                 + '<b>' + htmlEsc(it.display || it.key) + '</b>'
                 + '<div style="font-size:11px; color:#777; margin-top:2px;">' + (date ? '📅 ' + date + '　' : '') + htmlEsc(it.status || '待處理') + (it.manual ? '　｜手動' : '') + '</div>'
+                + '<div style="margin-top:5px;"><select data-key="' + htmlEsc(it.key) + '" data-mid="' + htmlEsc(it.manual_id || '') + '" onchange="plistSetStatus(this)" style="font-size:11.5px; padding:5px 6px; border:1px solid #ccc; border-radius:6px; background:#fff; max-width:190px;">'
+                + ['待處理', '觀察中', '已通知相關部門跟進', '已 Send mail', '已處理'].map(function (s) {
+                    return '<option value="' + htmlEsc(s) + '"' + ((String(it.status || '待處理') === s) ? ' selected' : '') + '>' + htmlEsc(s) + '</option>';
+                }).join('')
+                + '</select></div>'
                 + '</div>'
                 + ((it.manual && it.manual_id && !it.from_list) ? '<button onclick="plistDelete(\'' + it.manual_id + '\')" style="border:none; background:#ffcdd2; color:#b71c1c; border-radius:6px; padding:6px 8px; font-size:11px; font-weight:bold;">🗑</button>' : '')
                 + '</div>';
         };
         box.innerHTML = '<div style="font-size:12px; font-weight:bold; color:#c62828; margin:8px 2px;">⚠️ 待處理項目（' + open.length + '）</div>'
+            + '<div style="font-size:11px; color:#888; margin:0 2px 6px;">用下面下拉改狀態；改做「觀察中／已通知／已 Send mail」後會移去黃框</div>'
             + (open.length ? open.map(row).join('') : '<div style="font-size:12px; color:#777; padding:6px;">冇待處理項目</div>')
             + '<div style="font-size:12px; font-weight:bold; color:#2e7d32; margin:14px 2px 0;">✅ 已處理（' + done.length + '）</div>'
             + (done.length ? done.map(row).join('') : '<div style="font-size:12px; color:#777; padding:6px;">冇已處理項目</div>');
@@ -3131,6 +3136,31 @@ async function loadPendingIssues() {
         const key = el.getAttribute('data-key');
         PLIST_OPEN[key] = !el.checked;   // 勾選＝已完成
         plistRender();
+    }
+
+    // 直接改狀態（待處理／觀察中／已通知／已 Send mail／已處理）
+    async function plistSetStatus(el) {
+        const key = el.getAttribute('data-key') || '';
+        const mid = el.getAttribute('data-mid') || '';
+        const status = el.value;
+        el.disabled = true;
+        try {
+            const r = await fetch('/api/pending_items/status', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: key, status: status, manual_id: mid })
+            });
+            const d = await r.json();
+            if (!d || d.status !== 'success') {
+                alert((d && d.message) || '❌ 更新失敗');
+                el.disabled = false;
+                return;
+            }
+            if (typeof cmToast === 'function') cmToast(d.message || ('✅ 已改為「' + status + '」'));
+            await plistReload();
+        } catch (e) {
+            alert('❌ 連線失敗');
+            el.disabled = false;
+        }
     }
 
     async function plistApply() {
@@ -6664,9 +6694,9 @@ items: collectItems(),
                 const _unset = Math.max(0, (c.chairs || 0) - (c.new || 0) - (c.old || 0));
                 const _stand = Math.max(0, (c.total || 0) - (c.chairs || 0));
                 html += '　新櫈 <b>' + (c.new || 0) + '</b>、舊櫈 <b>' + (c.old || 0) + '</b>、未設定 <b>' + _unset + '</b>'
-                    + '（可計椅 <b>' + (c.chairs || 0) + '</b> 張）'
+                    + '（可計櫈 <b>' + (c.chairs || 0) + '</b> 張）'
                     + '<div style="font-size:11.5px;color:#666;margin-top:3px;">台號共 ' + (c.total_all || 0)
-                    + ' ＝ 可計椅 ' + (c.chairs || 0) + ' ＋ 企位 ' + _stand + ' ＋ 活動區 ' + (c.event || 0)
+                    + ' ＝ 可計櫈 ' + (c.chairs || 0) + ' ＋ 企位 ' + _stand + ' ＋ 活動區 ' + (c.event || 0)
                     + '（企位同活動區唔計入新舊櫈；紫＝新、橙＝舊）</div>';
             }
             if (cmMode === 'status') {
