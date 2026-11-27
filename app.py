@@ -685,6 +685,31 @@ def security_report():
         return jsonify({'status': 'error', 'message': str(e)})
 
 
+@app.route('/api/security_weak_accounts', methods=['GET'])
+def security_weak_accounts():
+    """列出仍用「BS+員工ID」預設密碼或過短密碼嘅帳號（只回名與長度，不回密碼）。限管理員。"""
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以使用。'}), 403
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT name, COALESCE(account,''), COALESCE(password,'') FROM members WHERE COALESCE(account,'') <> ''")
+        rows = c.fetchall()
+        weak = []
+        for nm, acc, pwd in rows:
+            if pwd == ('BS' + acc) or len(pwd) < 6:
+                weak.append({'name': nm, 'account': acc, 'pwd_len': len(pwd),
+                             'is_default': pwd == ('BS' + acc)})
+        return jsonify({'status': 'success', 'total': len(rows), 'weak_count': len(weak), 'weak': weak})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+
 @app.route('/api/security_clean_records', methods=['POST'])
 def security_clean_records():
     """一次性清洗：剔除 records／shift_items 內所有 HTML 標籤（修 stored XSS）。限管理員。"""
@@ -727,7 +752,7 @@ def security_clean_records():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-15", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-16", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
