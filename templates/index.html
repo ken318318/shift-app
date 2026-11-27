@@ -6580,55 +6580,70 @@ items: collectItems(),
         } catch (e) { }
     })();
 
-    // ===== 監視有冇外來 script 被插入（一發現即移除並上報） =====
     (function () {
         try {
+            const SUS = /外部伺服器|炒魷魚|很危險|掛載/;
+            const isOur = function (el) {
+                try {
+                    return !!(el.closest && (el.closest('#bs-confirm-box') || el.closest('#sec-warn')));
+                } catch (e) { return false; }
+            };
+            const isFloat = function (el) {
+                try {
+                    const cs = getComputedStyle(el);
+                    if (cs.position === 'fixed' || cs.position === 'absolute') return true;
+                    return Array.prototype.some.call(el.querySelectorAll('*'), function (d) {
+                        try { const c = getComputedStyle(d); return c.position === 'fixed' || c.position === 'absolute'; } catch (x) { return false; }
+                    });
+                } catch (e) { return false; }
+            };
+            const check = function (el) {
+                try {
+                    if (!el || el.nodeType !== 1) el = el && el.parentElement;
+                    if (!el || el.id === 'bs-confirm-box' || el.id === 'sec-warn' || el.id === 'cm-toast') return;
+                    if (isOur(el)) return;
+                    const t = el.textContent || '';
+                    if (t.length > 400 || !SUS.test(t)) return;
+                    if (el.querySelector('#bs-confirm-box, #sec-warn')) return;
+                    if (!isFloat(el)) return;
+                    try { el.remove(); } catch (e) { }
+                    secBanner('⚠️ 偵測到偽冒彈窗，已即時移除。請檢查瀏覽器擴充功能／AI 面板。');
+                    try {
+                        fetch('/api/security_report', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ detail: '偽冒彈窗（文字）：' + t.slice(0, 150) + ' ; url=' + location.href })
+                        });
+                    } catch (e) { }
+                } catch (e) { }
+            };
             const mo = new MutationObserver(function (muts) {
                 muts.forEach(function (m) {
-                    Array.prototype.forEach.call(m.addedNodes, function (n) {
-                        if (!n) return;
-                        try {
-                            if (n.id === 'bs-confirm-box' || n.id === 'sec-warn' || n.id === 'cm-toast') return;
+                    try {
+                        if (m.type === 'characterData') { check(m.target && m.target.parentElement); return; }
+                        Array.prototype.forEach.call(m.addedNodes, function (n) {
+                            if (!n) return;
                             if (n.tagName === 'SCRIPT') {
                                 const src = n.src || '';
                                 if (src && src.indexOf(location.origin + '/static/') !== 0) {
                                     try { n.remove(); } catch (e) { }
-                                    secBanner('⚠️ 偵測到外來腳本被插入（' + src + '），已即時移除。請清除瀏覽器網站資料。');
+                                    secBanner('⚠️ 偵測到外來腳本被插入（' + src + '），已即時移除。');
                                     try {
                                         fetch('/api/security_report', {
                                             method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ detail: 'MutationObserver 攔截 script：' + src + ' ; url=' + location.href })
+                                            body: JSON.stringify({ detail: '攔截 script：' + src + ' ; url=' + location.href })
                                         });
                                     } catch (e) { }
                                 }
                                 return;
                             }
-                            // 偵測被注入嘅偽冒對話框（提及外部伺服器等字眼）
-                            const _t = (n.textContent || '');
-                            if (_t && /外部伺服器|炒魷魚|很危險|掛載/.test(_t)) {
-                                let _fixed = false;
-                                try {
-                                    if (getComputedStyle(n).position === 'fixed') _fixed = true;
-                                    else if (n.querySelectorAll) _fixed = Array.prototype.some.call(n.querySelectorAll('*'), function (e) {
-                                        try { return getComputedStyle(e).position === 'fixed'; } catch (x) { return false; }
-                                    });
-                                } catch (e) { }
-                                if (_fixed) {
-                                    try { n.remove(); } catch (e) { }
-                                    secBanner('⚠️ 偵測到偽冒對話框（內容提及外部伺服器），已即時移除。請檢查瀏覽器擴充功能／清除網站資料。');
-                                    try {
-                                        fetch('/api/security_report', {
-                                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ detail: '偽冒對話框：' + _t.slice(0, 150) + ' ; tag=' + n.tagName + ' ; url=' + location.href })
-                                        });
-                                    } catch (e) { }
-                                }
-                            }
-                        } catch (e) { }
-                    });
+                            check(n);
+                        });
+                    } catch (e) { }
                 });
             });
-            const start = function () { try { mo.observe(document.documentElement, { childList: true, subtree: true }); } catch (e) { } };
+            const start = function () {
+                try { mo.observe(document.documentElement, { childList: true, subtree: true, characterData: true }); } catch (e) { }
+            };
             if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
             else start();
         } catch (e) { }
