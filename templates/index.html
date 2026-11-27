@@ -191,6 +191,7 @@
             <div style="display: flex; gap: 6px; align-items: center;">
                 <button onclick="openChairMap()" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#6a1b9a; background:#f3e5f5; padding:8px 4px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:bold;">🪑 櫈況圖</button>
                 <button onclick="openUpdateReport()" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#1565c0; background:#e3f2fd; padding:8px 4px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:bold;">📋 生成表格</button>
+                <button onclick="openStats()" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#00695c; background:#e0f2f1; padding:8px 4px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:bold;">📊 統計</button>
                 <button id="btn-admin" onclick="window.location.href='/admin';" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: #1a73e8; background: #e3f2fd; padding: 8px 4px; border-radius: 6px; border: none; cursor: pointer; font-size:12px; font-weight:bold;">⚙️ 設定</button>
                 <button onclick="window.location.href='/logout';" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: #e74c3c; background: #ffebee; padding: 8px 4px; border-radius: 6px; border: none; cursor: pointer; font-size:12px; font-weight:bold;">🚪 登出</button>
             </div>
@@ -784,6 +785,26 @@
                 <button type="button" onclick="lcResetDraft()" style="flex:1; padding:11px; border:none; border-radius:8px; background:#eceff1; color:#455a64; font-size:13px; font-weight:bold; cursor:pointer;">取消改動</button>
             </div>
             <div id="lc-msg" style="font-size:12px; color:#d32f2f; margin-top:6px; min-height:16px;"></div>
+        </div>
+    </div>
+
+    <!-- ===== 統計表（同事頁） ===== -->
+    <div id="stat-box" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10030; padding:16px; align-items:flex-start; justify-content:center; overflow:auto;">
+        <div style="max-width:460px; width:100%; background:#fff; border-radius:14px; padding:14px; box-shadow:0 10px 30px rgba(0,0,0,.25); margin:16px auto;">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:10px;">
+                <b style="font-size:15px; color:#1a237e;">📊 統計表</b>
+                <button onclick="closeStats()" style="border:none; background:#eee; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold; cursor:pointer;">✖ 關閉</button>
+            </div>
+            <div id="stat-top" style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px;"></div>
+            <h3 style="font-size:13.5px; margin:14px 0 8px; color:#444;">📈 近 6 個月異常項目數</h3>
+            <div id="stat-months"></div>
+            <h3 style="font-size:13.5px; margin:14px 0 8px; color:#444;">👥 交更次數（Top 8）</h3>
+            <div id="stat-staff"></div>
+            <h3 style="font-size:13.5px; margin:14px 0 8px; color:#444;">🛠️ 最常出現問題類別（Top 5）</h3>
+            <div id="stat-cats"></div>
+            <h3 style="font-size:13.5px; margin:14px 0 8px; color:#444;">📡 NFC 異常台號（Top 5）</h3>
+            <div id="stat-nfc"></div>
+            <div id="stat-msg" style="font-size:12px; color:#d32f2f; margin-top:8px; min-height:16px;"></div>
         </div>
     </div>
 
@@ -5438,6 +5459,152 @@ items: collectItems(),
         const m = document.getElementById('ls-modal');
         if (m) m.style.display = 'none';
         document.body.style.overflow = '';
+    }
+
+    // ===== 統計表（同事頁；跟 admin 統計一致） =====
+    function statsEsc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+            return c === '&' ? '&amp;' : (c === '<' ? '&lt;' : (c === '>' ? '&gt;' : '&quot;'));
+        });
+    }
+
+    function statsIssueItems(r) {
+        if (Array.isArray(r.items) && r.items.length) {
+            return r.items.filter(function (it) { return it && it.key; }).map(function (it) { return it.key; });
+        }
+        let items = [];
+        const push = (txt) => {
+            if (!txt) return;
+            String(txt).split(/\s\|\s/).forEach(p => { if (p.trim()) items.push(p.trim()); });
+        };
+        push(r.lux_issue); push(r.temp_issue); push(r.db_issue);
+        if (r.checklist) {
+            String(r.checklist).split(' | ').forEach(seg => {
+                if (!seg.includes('NFC異常')) return;
+                let body = seg.replace(/^NFC異常[:：]\s*/, '');
+                body.split(/,\s*(?=[A-Za-z]{0,6}\d{1,6}\s*\()/).forEach(x => { if (x.trim()) items.push(x.trim()); });
+            });
+        }
+        return items;
+    }
+
+    function statsBar(label, value, max, color) {
+        const pct = max > 0 ? Math.round(value / max * 100) : 0;
+        return '<div style="margin-bottom:9px;">'
+            + '<div style="display:flex; justify-content:space-between; font-size:12px; color:#555; margin-bottom:3px; gap:8px;">'
+            + '<span style="word-break:break-word;">' + statsEsc(label) + '</span>'
+            + '<b style="color:#1a73e8; white-space:nowrap;">' + value + '</b></div>'
+            + '<div style="background:#eef1f5; border-radius:6px; height:8px; overflow:hidden;">'
+            + '<div style="width:' + pct + '%; height:8px; background:' + (color || '#1a73e8') + ';"></div></div></div>';
+    }
+
+    function statsEmpty(text) {
+        return '<div style="padding:10px 0; text-align:center; color:#999; font-size:12px;">' + text + '</div>';
+    }
+
+    function closeStats() {
+        const box = document.getElementById('stat-box');
+        if (box) box.style.display = 'none';
+    }
+
+    async function openStats() {
+        const box = document.getElementById('stat-box');
+        if (!box) return;
+        box.style.display = 'flex';
+        const msg = document.getElementById('stat-msg');
+        if (msg) msg.textContent = '載入中…';
+        try {
+            const recRes = await fetch('/api/records', { cache: 'no-store' });
+            const recs = await recRes.json();
+            let cfg = {};
+            try { cfg = await (await fetch('/api/get_configs?_t=' + Date.now(), { cache: 'no-store' })).json(); } catch (e) { cfg = {}; }
+            const list = Array.isArray(recs) ? recs : ((recs && recs.records) || []);
+            statsRender(list, cfg || {});
+            if (msg) msg.textContent = '';
+        } catch (e) {
+            if (msg) msg.textContent = '❌ 載入失敗';
+        }
+    }
+
+    function statsRender(allRecords, configs) {
+        const top = document.getElementById('stat-top');
+        if (!allRecords || !allRecords.length) {
+            if (top) top.innerHTML = '';
+            ['stat-months', 'stat-staff', 'stat-cats', 'stat-nfc'].forEach(function (id) {
+                const el = document.getElementById(id);
+                if (el) el.innerHTML = statsEmpty('暫時未有資料');
+            });
+            return;
+        }
+        const now = new Date();
+        const thisMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+        let totalIssues = 0, thisMonthRecords = 0;
+        allRecords.forEach(function (r) {
+            totalIssues += statsIssueItems(r).length;
+            if ((r.created_at || '').slice(0, 7) === thisMonth) thisMonthRecords++;
+        });
+        function card(n, label) {
+            return '<div style="background:#f4f6f8; border-radius:10px; padding:10px 4px; text-align:center;">'
+                + '<b style="display:block; font-size:20px; color:#1a73e8; line-height:1.2;">' + n + '</b>'
+                + '<span style="font-size:11px; color:#666;">' + label + '</span></div>';
+        }
+        if (top) top.innerHTML = card(allRecords.length, '總紀錄') + card(thisMonthRecords, '本月紀錄') + card(totalIssues, '異常項目總數');
+
+        const months = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            months.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'));
+        }
+        const monthCount = {};
+        months.forEach(m => monthCount[m] = 0);
+        const staffCount = {}, catCount = {}, nfcCount = {};
+        allRecords.forEach(function (r) {
+            const mk = (r.created_at || '').slice(0, 7);
+            if (mk in monthCount) monthCount[mk] += statsIssueItems(r).length;
+            const who = r.name || '未填';
+            staffCount[who] = (staffCount[who] || 0) + 1;
+            if (r.note) {
+                const catKeys = Object.keys(configs || {}).sort((a, b) => b.length - a.length);
+                String(r.note).split('\n').forEach(function (line) {
+                    const m = line.match(/\[([^\]]+)\]/);
+                    if (!m) return;
+                    const content = m[1].trim();
+                    if (!content) return;
+                    let cat = '';
+                    for (const k of catKeys) { if (content.indexOf(k) === 0) { cat = k; break; } }
+                    if (!cat) { const pos = content.lastIndexOf(' - '); cat = pos > 0 ? content.slice(0, pos).trim() : content; }
+                    catCount[cat] = (catCount[cat] || 0) + 1;
+                });
+            }
+            if (r.checklist) {
+                String(r.checklist).split(' | ').forEach(function (seg) {
+                    if (!seg.includes('NFC異常')) return;
+                    const body = seg.replace(/^NFC異常[:：]\s*/, '');
+                    body.split(/,\s*(?=[A-Za-z]{0,6}\d{1,6}\s*\()/).forEach(function (x) {
+                        const t = x.replace(/\(.*$/, '').trim();
+                        if (t) nfcCount[t] = (nfcCount[t] || 0) + 1;
+                    });
+                });
+            }
+        });
+        const maxMonth = Math.max.apply(null, [1].concat(months.map(m => monthCount[m])));
+        const elM = document.getElementById('stat-months');
+        if (elM) elM.innerHTML = months.map(m => statsBar(m, monthCount[m], maxMonth, '#e67c73')).join('');
+
+        const staffSorted = Object.keys(staffCount).sort((a, b) => staffCount[b] - staffCount[a]).slice(0, 8);
+        const maxStaff = staffSorted.length ? staffCount[staffSorted[0]] : 1;
+        const elS = document.getElementById('stat-staff');
+        if (elS) elS.innerHTML = staffSorted.length ? staffSorted.map(s => statsBar(s, staffCount[s], maxStaff, '#2ecc71')).join('') : statsEmpty('暫時未有資料');
+
+        const catSorted = Object.keys(catCount).sort((a, b) => catCount[b] - catCount[a]).slice(0, 5);
+        const maxCat = catSorted.length ? catCount[catSorted[0]] : 1;
+        const elC = document.getElementById('stat-cats');
+        if (elC) elC.innerHTML = catSorted.length ? catSorted.map(c => statsBar(c, catCount[c], maxCat, '#f5b041')).join('') : statsEmpty('暫時未有場面問題資料');
+
+        const nfcSorted = Object.keys(nfcCount).sort((a, b) => nfcCount[b] - nfcCount[a]).slice(0, 5);
+        const maxNfc = nfcSorted.length ? nfcCount[nfcSorted[0]] : 1;
+        const elN = document.getElementById('stat-nfc');
+        if (elN) elN.innerHTML = nfcSorted.length ? nfcSorted.map(n => statsBar(n, nfcCount[n], maxNfc, '#7b1fa2')).join('') : statsEmpty('暫時未有 NFC 異常資料');
     }
 
     let lsZoom = 1;
