@@ -3121,7 +3121,7 @@ async function loadPendingIssues() {
                 + '<div style="flex:1; min-width:0; font-size:12.5px; color:#333;">'
                 + '<b>' + htmlEsc(it.display || it.key) + '</b>'
                 + '<div style="font-size:11px; color:#777; margin-top:2px;">' + (date ? '📅 ' + date + '　' : '') + htmlEsc(it.status || '待處理') + (it.manual ? '　｜手動' : '') + '</div>'
-                + '<div style="margin-top:5px;"><select data-key="' + htmlEsc(it.key) + '" data-mid="' + htmlEsc(it.manual_id || '') + '" onchange="plistSetStatus(this)" style="font-size:11.5px; padding:5px 6px; border:1px solid #ccc; border-radius:6px; background:#fff; max-width:190px;">'
+                + '<div style="margin-top:5px;"><select data-key="' + htmlEsc(it.key) + '" data-mid="' + htmlEsc(it.manual_id || '') + '" data-old="' + htmlEsc(String(it.status || '待處理')) + '" data-name="' + htmlEsc(it.display || it.key) + '" onchange="plistSetStatus(this)" style="font-size:11.5px; padding:5px 6px; border:1px solid #ccc; border-radius:6px; background:#fff; max-width:190px;">'
                 + ['待處理', '觀察中', '已通知相關部門跟進', '已 Send mail', '已處理'].map(function (s) {
                     return '<option value="' + htmlEsc(s) + '"' + ((String(it.status || '待處理') === s) ? ' selected' : '') + '>' + htmlEsc(s) + '</option>';
                 }).join('')
@@ -3148,6 +3148,13 @@ async function loadPendingIssues() {
         const key = el.getAttribute('data-key') || '';
         const mid = el.getAttribute('data-mid') || '';
         const status = el.value;
+        const oldVal = el.getAttribute('data-old') || '';
+        const name = el.getAttribute('data-name') || key;
+        if (status === oldVal) return;
+        if (!confirm('確定將「' + name + '」嘅狀態改為「' + status + '」？\n\n（改做非「待處理」會移去主頁黃框）')) {
+            el.value = oldVal;
+            return;
+        }
         el.disabled = true;
         try {
             const r = await fetch('/api/pending_items/status', {
@@ -5756,6 +5763,7 @@ items: collectItems(),
     let invZone = 'WH';
     let invLoc = '';
     let invEditId = 0;
+    let invDraftQty = {};
     let invMoveId = 0;
 
     function invEsc(s) {
@@ -5794,6 +5802,7 @@ items: collectItems(),
             }
             invItems = d.items || [];
             invLogs = d.logs || [];
+            invDraftQty = {};
             invLoaded = true;
             if (msg) msg.textContent = '';
             invRender();
@@ -5884,6 +5893,8 @@ items: collectItems(),
                     + '<span style="font-size:11px; color:#5c6bc0;">' + n + ' 項</span></div>';
             }
             const qtyTxt = (it.qty === null || it.qty === undefined) ? '—' : it.qty;
+            const _dq = (invDraftQty && invDraftQty[it.id] !== undefined) ? invDraftQty[it.id] : undefined;
+            const _shownQty = (_dq === undefined) ? qtyTxt : _dq;
             const meta = [it.unit, it.detail ? '(' + it.detail + ')' : ''].filter(Boolean).join(' ');
             h += '<div style="display:flex; align-items:center; gap:6px; padding:8px 6px; border-bottom:1px solid #f2f2f2;">'
                 + '<div style="flex:1; min-width:0;">'
@@ -5892,8 +5903,11 @@ items: collectItems(),
                 + '</div>'
                 + '<div style="display:flex; align-items:center; gap:2px; flex:0 0 auto;">'
                 + '<button onclick="invAdjust(' + it.id + ',-1)" style="width:26px; height:26px; border:none; border-radius:6px; background:#eceff1; color:#455a64; font-size:15px; font-weight:bold; cursor:pointer;">−</button>'
-                + '<b onclick="invEditQty(' + it.id + ')" title="點一下直接改數量" style="min-width:44px; text-align:center; font-size:13.5px; color:#1a73e8; cursor:pointer; padding:0 2px;">' + qtyTxt + '</b>'
+                + '<b onclick="invEditQty(' + it.id + ')" title="點一下直接改數量" style="min-width:44px; text-align:center; font-size:13.5px; color:' + (_dq === undefined ? '#1a73e8' : '#e65100') + '; cursor:pointer; padding:0 2px;">' + _shownQty + '</b>'
                 + '<button onclick="invAdjust(' + it.id + ',1)" style="width:26px; height:26px; border:none; border-radius:6px; background:#e8f5e9; color:#2e7d32; font-size:15px; font-weight:bold; cursor:pointer;">+</button>'
+                + (_dq === undefined ? '' :
+                    '<button onclick="invQtyOk(' + it.id + ')" title="確定寫入" style="height:26px; padding:0 6px; border:none; border-radius:6px; background:#2e7d32; color:#fff; font-size:12px; font-weight:bold; cursor:pointer;">✓</button>'
+                    + '<button onclick="invQtyCancel(' + it.id + ')" title="取消改動" style="height:26px; padding:0 6px; border:none; border-radius:6px; background:#eceff1; color:#455a64; font-size:12px; font-weight:bold; cursor:pointer;">✗</button>')
                 + '</div>'
                 + '<div style="display:flex; gap:2px; flex:0 0 auto;">'
                 + '<button onclick="invEdit(' + it.id + ')" title="編輯" style="width:26px; height:26px; border:none; border-radius:6px; background:#f5f5f5; font-size:12px; cursor:pointer;">✏️</button>'
@@ -5922,19 +5936,37 @@ items: collectItems(),
         if (el) el.textContent = text || '';
     }
 
-    async function invAdjust(id, delta) {
+    // 改數量：先入草稿，按 ✓ 才寫入
+    function invAdjust(id, delta) {
+        const it = invFind(id);
+        if (!it) return;
+        const base = (invDraftQty[id] !== undefined) ? invDraftQty[id] : (it.qty === null || it.qty === undefined ? 0 : Number(it.qty));
+        invDraftQty[id] = Math.max(0, base + delta);
+        invNote('數量未套用：按 ✓ 寫入，按 ✗ 取消');
+        invRender();
+    }
+
+    async function invQtyOk(id) {
+        const v = invDraftQty[id];
+        if (v === undefined) return;
+        const it = invFind(id);
         try {
-            const r = await fetch('/api/inventory/adjust', {
+            const r = await fetch('/api/inventory/update', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: id, delta: delta })
+                body: JSON.stringify({ id: id, qty: v })
             });
             const d = await r.json();
             if (!d || d.status !== 'success') { invNote((d && d.message) || '❌ 更新失敗'); return; }
-            const it = invFind(id);
-            if (it) it.qty = d.qty;
-            invNote(d.message || '');
-            invRender();
+            delete invDraftQty[id];
+            invNote('✅ ' + (it ? it.name : '') + '：' + (v === null ? '未點算' : v));
+            await invLoad(true);
         } catch (e) { invNote('❌ 連線失敗'); }
+    }
+
+    function invQtyCancel(id) {
+        delete invDraftQty[id];
+        invNote('已取消數量改動');
+        invRender();
     }
 
     function invEditQty(id) {
@@ -6130,6 +6162,12 @@ items: collectItems(),
         if (!invMoveId) return;
         const qEl = document.getElementById('inv-move-qty');
         const take = qEl ? String(qEl.value || '').trim() : '';
+        const it = invFind(invMoveId);
+        const nm = it ? it.name : '此物品';
+        const msg = take === ''
+            ? ('確定將「' + nm + '」全部搬去 ' + loc + '？')
+            : ('確定將「' + nm + '」搬 ' + take + ' ' + (it && it.unit ? it.unit : '') + ' 去 ' + loc + '？（原本位置會扣減）');
+        if (!confirm(msg)) { invCloseMove(); return; }
         try {
             const r = await fetch('/api/inventory/move', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -6300,6 +6338,10 @@ items: collectItems(),
     async function schedToggle(el) {
         const pit = el.getAttribute('data-pit');
         const on = el.checked;
+        if (!confirm((on ? '✅ 確定標記 ' : '↩️ 確定取消 ') + pit + (on ? ' 已完成更換？' : ' 嘅完成標記？'))) {
+            el.checked = !on;
+            return;
+        }
         el.disabled = true;
         try {
             const r = await fetch('/api/layout_schedule', {
