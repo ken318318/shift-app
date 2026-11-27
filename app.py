@@ -634,7 +634,7 @@ h1{font-size:18px;margin:0 0 10px}code{background:#eef1f5;padding:2px 6px;border
 .warn{color:#c62828;font-weight:bold}</style></head><body>
 <div class="card"><h1>🔍 安全診斷頁</h1>
 <div><b>本頁完全冇 JavaScript</b>（冇任何 script 標籤、冇 onclick）。</div>
-<div style="margin-top:8px">如果喺呢頁都彈「將公司數據掛載在外部伺服器…」或者其他怪彈窗，<span class="warn">就 100% 證明唔係網站發出</span>，而係手機／瀏覽器／其他 App 層面。</div>
+<div style="margin-top:8px">如果喺呢頁都彈「將公司數據掛載在外部伺服器…」或者其他怪彈窗，<span class="warn">就 100%% 證明唔係網站發出</span>，而係手機／瀏覽器／其他 App 層面。</div>
 </div>
 <div class="card">
 <div>伺服器版本：<code>%(ver)s</code></div>
@@ -649,7 +649,7 @@ h1{font-size:18px;margin:0 0 10px}code{background:#eef1f5;padding:2px 6px;border
 <div style="margin-top:8px"><a href="/">← 返回主頁</a></div>
 </div>
 </body></html>""" % {
-        'ver': 'v20261127-09',
+        'ver': 'v20261127-10',
         'sha': _sha,
         'now': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'ua': (request.headers.get('User-Agent') or '')[:160],
@@ -673,7 +673,7 @@ def security_report():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-09", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-10", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
