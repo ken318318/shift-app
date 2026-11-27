@@ -582,7 +582,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-05", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-06", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -5546,6 +5546,18 @@ def _inv_str(v, maxlen=200):
     return (str(v) if v is not None else '').strip()[:maxlen]
 
 
+def _inv_zone_for_loc(loc, current='WH'):
+    """由位置名推算倉庫：CP##／白板後 → CP；A1／B12 等 → WH；其它保留原本。"""
+    s = (loc or '').strip()
+    if not s:
+        return current
+    if re.match(r'^CP\s*\d{1,2}$', s, re.I) or s.startswith('白板後'):
+        return 'CP'
+    if re.match(r'^[A-Z]\s*\d{1,2}$', s, re.I):
+        return 'WH'
+    return current
+
+
 @app.route('/api/inventory', methods=['GET'])
 def inventory_list():
     """存貨清單（已登入同事均可讀）。"""
@@ -5602,6 +5614,7 @@ def inventory_add():
     if not name:
         return jsonify({'status': 'error', 'message': '❌ 請輸入物品名稱'})
     loc = _inv_str(d.get('loc'), 20) or '未分類'
+    zone = _inv_zone_for_loc(loc, zone)
     conn = None
     try:
         conn = get_db_connection()
@@ -5646,30 +5659,31 @@ def inventory_update():
     try:
         conn = get_db_connection()
         c = conn.cursor()
-        c.execute("""SELECT name, loc, qty, COALESCE(unit,''), COALESCE(detail,''), COALESCE(note,'')
+        c.execute("""SELECT zone, name, loc, qty, COALESCE(unit,''), COALESCE(detail,''), COALESCE(note,'')
                      FROM inventory_items WHERE id = %s AND COALESCE(deleted, FALSE) = FALSE""", (iid,))
         row = c.fetchone()
         if not row:
             return jsonify({'status': 'error', 'message': '❌ 找不到該物品（可能已刪除）'})
-        name = _inv_str(d['name'], 120) if 'name' in d else row[0]
-        loc = _inv_str(d['loc'], 20) if 'loc' in d else row[1]
-        qty = _inv_int(d['qty']) if 'qty' in d else row[2]
-        unit = _inv_str(d['unit'], 20) if 'unit' in d else row[3]
-        detail = _inv_str(d['detail'], 120) if 'detail' in d else row[4]
-        note = _inv_str(d['note'], 300) if 'note' in d else row[5]
+        name = _inv_str(d['name'], 120) if 'name' in d else row[1]
+        loc = _inv_str(d['loc'], 20) if 'loc' in d else row[2]
+        qty = _inv_int(d['qty']) if 'qty' in d else row[3]
+        unit = _inv_str(d['unit'], 20) if 'unit' in d else row[4]
+        detail = _inv_str(d['detail'], 120) if 'detail' in d else row[5]
+        note = _inv_str(d['note'], 300) if 'note' in d else row[6]
         if not name:
-            name = row[0]
+            name = row[1]
         if not loc:
-            loc = row[1] or '未分類'
+            loc = row[2] or '未分類'
+        zone = _inv_zone_for_loc(loc, row[0] or 'WH')
         c.execute("""UPDATE inventory_items
-                     SET name=%s, loc=%s, qty=%s, unit=%s, detail=%s, note=%s,
+                     SET name=%s, loc=%s, zone=%s, qty=%s, unit=%s, detail=%s, note=%s,
                          updated_at=NOW(), updated_by=%s
-                     WHERE id=%s""", (name, loc, qty, unit, detail, note, _inv_actor(), iid))
+                     WHERE id=%s""", (name, loc, zone, qty, unit, detail, note, _inv_actor(), iid))
         parts = []
-        if name != row[0]: parts.append('名稱 %s→%s' % (row[0], name))
-        if loc != row[1]: parts.append('位置 %s→%s' % (row[1], loc))
-        if qty != row[2]: parts.append('數量 %s→%s' % (row[2], qty))
-        if note != row[5]: parts.append('備註更新')
+        if name != row[1]: parts.append('名稱 %s→%s' % (row[1], name))
+        if loc != row[2]: parts.append('位置 %s→%s' % (row[2], loc))
+        if qty != row[3]: parts.append('數量 %s→%s' % (row[3], qty))
+        if note != row[6]: parts.append('備註更新')
         c.execute("INSERT INTO inventory_logs (item_id, action, detail, actor) VALUES (%s, %s, %s, %s)",
                   (iid, 'update', '%s：%s' % (name, '、'.join(parts) or '資料更新'), _inv_actor()))
         conn.commit()
@@ -5750,13 +5764,14 @@ def inventory_move():
         c = conn.cursor()
         moved = 0
         for iid in clean:
-            c.execute("""SELECT name, loc FROM inventory_items
+            c.execute("""SELECT name, loc, zone FROM inventory_items
                          WHERE id=%s AND COALESCE(deleted, FALSE)=FALSE""", (iid,))
             row = c.fetchone()
             if not row:
                 continue
-            c.execute("""UPDATE inventory_items SET loc=%s, updated_at=NOW(), updated_by=%s
-                         WHERE id=%s""", (loc, _inv_actor(), iid))
+            _zone = _inv_zone_for_loc(loc, row[2] or 'WH')
+            c.execute("""UPDATE inventory_items SET loc=%s, zone=%s, updated_at=NOW(), updated_by=%s
+                         WHERE id=%s""", (loc, _zone, _inv_actor(), iid))
             c.execute("INSERT INTO inventory_logs (item_id, action, detail, actor) VALUES (%s, %s, %s, %s)",
                       (iid, 'move', '%s：%s → %s' % (row[0], row[1] or '未分類', loc), _inv_actor()))
             moved += 1
