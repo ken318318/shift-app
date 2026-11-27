@@ -187,12 +187,14 @@
     </script>
     <div class="card" id="list-container">
         <div style="margin-bottom: 15px;">
-            <h2 style="margin: 0 0 10px 0; font-size: 22px; text-align: center;">📋 BS歷史交更紀錄</h2>
+            <div style="position: relative;">
+                <h2 style="margin: 0 0 10px 0; font-size: 22px; text-align: center; padding: 0 42px;">📋 BS歷史交更紀錄</h2>
+                <button id="btn-admin" onclick="window.location.href='/admin';" title="管理員設定" style="position: absolute; top: 0; right: 0; width: 34px; height: 34px; border: none; border-radius: 10px; background: #e3f2fd; color: #1565c0; font-size: 16px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;">⚙️</button>
+            </div>
             <div style="display: flex; gap: 6px; align-items: center;">
                 <button onclick="openChairMap()" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#6a1b9a; background:#f3e5f5; padding:8px 4px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:bold;">🪑 櫈況圖</button>
                 <button onclick="openUpdateReport()" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#1565c0; background:#e3f2fd; padding:8px 4px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:bold;">📋 生成表格</button>
                 <button onclick="openStats()" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#00695c; background:#e0f2f1; padding:8px 4px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:bold;">📊 統計</button>
-                <button id="btn-admin" onclick="window.location.href='/admin';" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: #1a73e8; background: #e3f2fd; padding: 8px 4px; border-radius: 6px; border: none; cursor: pointer; font-size:12px; font-weight:bold;">⚙️ 設定</button>
                 <button onclick="window.location.href='/logout';" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color: #e74c3c; background: #ffebee; padding: 8px 4px; border-radius: 6px; border: none; cursor: pointer; font-size:12px; font-weight:bold;">🚪 登出</button>
             </div>
             <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px;">
