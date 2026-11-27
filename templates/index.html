@@ -796,13 +796,13 @@
                 <button id="ls-b-newround" class="lr-b-blue" onclick="lsNewRound()">🔄 開始新一輪</button>
             </div>
             <div class="lr-tip" style="font-size:11.5px;">
-                地圖顏色＝該台所屬 PIT 喺下面「TG Layout Replacement Schedule」嘅分類顏色；停運台顯示灰色，不在行程嘅 PIT 顯示白色。表格打勾＝該 PIT 更換完成（只作記錄，不影響櫈況圖自動顏色同交更邏輯）。
+                地圖顏色＝該台所屬 PIT 喺下面「TG Layout Replacement Schedule」嘅分類顏色；停運台顯示灰色。表格打勾＝該 PIT 更換完成（只作記錄，不影響櫈況圖自動顏色同交更邏輯）。
             </div>
             <div id="ls-msg" style="font-size:11px; color:#555; margin:2px 2px 4px;"></div>
             <div id="ls-mapbox" style="overflow:auto; background:#fff; border:1px solid #e0e0e0; border-radius:10px; max-height:58vh; margin-top:6px;">
                 <div id="ls-map" style="position:relative; width:1px; height:1px; margin:8px;"></div>
             </div>
-            <div id="ls-legend" style="margin-top:6px; font-size:10.5px; color:#444; line-height:1.6; display:flex; flex-wrap:wrap; gap:4px 12px;"></div>
+            <div id="ls-legend" style="margin-top:8px; padding:8px 10px; background:#fafafa; border:1px solid #eee; border-radius:8px; font-size:10.5px; color:#444; line-height:1.5; display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:5px 14px;"></div>
             <div id="ls-sched" style="margin-top:12px; overflow:auto;"></div>
         </div>
     </div>
@@ -5123,6 +5123,204 @@ items: collectItems(),
         return h;
     }
 
+    // ================= TG Layout 更換行程表 =================
+    const LAYOUT_SCHED = [
+        { cycle: 'Week 1', total: 66, pits: [['PIT02', 19, 'b'], ['PIT09', 23, 'b'], ['PIT13', 24, 'p']] },
+        { cycle: 'Week 2', total: 59, pits: [['PIT03', 16, 'b'], ['PIT11', 23, 'b'], ['PIT107', 20, 'v']] },
+        { cycle: 'Week 3', total: 65, pits: [['PIT05', 24, 'b'], ['PIT12', 32, 'b'], ['PIT105', 9, 'v']] },
+        { cycle: 'Week 4', total: 58, pits: [['PIT08', 15, 'b'], ['PIT15', 24, 'p'], ['PIT30', 19, 'b']] },
+        { cycle: 'Week 5', total: 64, pits: [['PIT16', 22, 'b'], ['PIT27', 17, 'b'], ['PIT106', 25, 'v']] },
+        { cycle: 'Week 6', total: 63, pits: [['PIT17', 19, 'v'], ['PIT26', 22, 'b'], ['PIT29', 22, 'b']] },
+        { cycle: 'Week 7', total: 62, pits: [['PIT19', 5, 'v'], ['PIT25', 34, 'b'], ['PIT28', 23, 'b']] },
+        { cycle: 'Week 8', total: 66, pits: [['PIT18', 22, 'v'], ['PIT32', 11, 'b'], ['PIT33', 12, 'b'], ['PIT35', 2, 'b'], ['PIT01', 0, 'o'], ['PIT31', 0, 'o'], ['PIT63', 0, 'o']] }
+    ];
+    const LAYOUT_COLORS = { b: '#99CCFF', v: '#CCCCFF', p: '#FF99CC', o: '#FFCC99' };
+    const LAYOUT_LEGEND = [
+        ['#FFCC99', 'No stand Betting Area & No pair+'],
+        ['#90EE90', 'Stand Betting Area & pair+'],
+        ['#99CCFF', 'Stand Betting Area & No pair+'],
+        ['#CCCCFF', 'No stand Betting Area / have pair+ and have Lucky6-7 stand Betting Area'],
+        ['#FF99CC', 'No stand Betting Area & No Lucky6-7 stand Betting Area / have pair+']
+    ];
+    let layoutDone = {};
+    let layoutLoaded = false;
+    let layoutRound = 1;
+    let layoutLast = null;
+    let layoutColors = {};
+    let layoutCodeColors = {};
+
+    function layoutPitCount() {
+        return LAYOUT_SCHED.reduce(function (n, w) { return n + w.pits.length; }, 0);
+    }
+
+    async function layoutLoadDone(force) {
+        if (layoutLoaded && !force) return layoutDone;
+        try {
+            const r = await fetch('/api/layout_schedule?_t=' + Date.now(), { cache: 'no-store' });
+            const d = await r.json();
+            if (d && d.status === 'success') {
+                layoutDone = d.done || {};
+                layoutRound = d.round || 1;
+                layoutLast = d.last || null;
+                layoutColors = d.colors || {};
+                layoutCodeColors = d.code_colors || {};
+                layoutLoaded = true;
+            }
+        } catch (e) { }
+        return layoutDone;
+    }
+
+    function schedCellHtml(pit) {
+        const d = layoutDone[pit] || '';
+        return '<label style="display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">'
+            + '<input type="checkbox" data-pit="' + pit + '"' + (d ? ' checked' : '') + ' onchange="schedToggle(this)" style="width:18px; height:18px;">'
+            + '<span id="sched-date-' + pit + '" style="font-size:11.5px; color:#c2185b; font-weight:bold;">' + (d ? d.slice(5) : '') + '</span>'
+            + '</label>';
+    }
+
+    // ===== 台號顏色手動設定 =====
+    const LC_NAMES = { b: '藍', v: '紫', p: '粉', o: '橙' };
+
+    function lcAllCodes() {
+        const codes = [];
+        const seen = {};
+        ((cmData && cmData.cells) || []).forEach(function (c) {
+            if (c.code && !seen[c.code]) { seen[c.code] = 1; codes.push({ key: c.code, pit: c.pit, status: c.status }); }
+        });
+        codes.sort(function (a, b) { return a.key < b.key ? -1 : (a.key > b.key ? 1 : 0); });
+        return codes;
+    }
+
+    function lcEffectiveName(r) {
+        const ov = layoutCodeColors[r.key];
+        if (ov) return '手動・' + (LC_NAMES[ov] || '');
+        if (r.status === '停運') return '預設・停運灰';
+        const key = 'PIT' + String(r.pit || '').padStart(2, '0');
+        const def = (layoutColors && layoutColors[key]) || '';
+        for (let i = 0; i < LAYOUT_SCHED.length; i++) {
+            const w = LAYOUT_SCHED[i];
+            for (let j = 0; j < w.pits.length; j++) {
+                if (w.pits[j][0] === key) return '預設・' + (LC_NAMES[def || w.pits[j][2]] || '');
+            }
+        }
+        return '預設・（不在行程）';
+    }
+
+    function lcEffColor(r) {
+        const ov = layoutCodeColors[r.key];
+        if (ov) return LAYOUT_COLORS[ov];
+        if (r.status === '停運') return '#cfd8dc';
+        const key = 'PIT' + String(r.pit || '').padStart(2, '0');
+        const c2 = (layoutColors && layoutColors[key]) || '';
+        if (c2) return LAYOUT_COLORS[c2];
+        for (let i = 0; i < LAYOUT_SCHED.length; i++) {
+            const w = LAYOUT_SCHED[i];
+            for (let j = 0; j < w.pits.length; j++) {
+                if (w.pits[j][0] === key) return LAYOUT_COLORS[w.pits[j][2]];
+            }
+        }
+        return '#ffffff';
+    }
+
+    async function lcOpen() {
+        const box = document.getElementById('lc-box');
+        const msg = document.getElementById('lc-msg');
+        if (msg) msg.textContent = '';
+        const q = document.getElementById('lc-q');
+        if (q) q.value = '';
+        if (box) box.style.display = 'flex';
+        if (!cmData) { try { await lsRenderMap(); } catch (e) { } }
+        lcRender();
+    }
+
+    function lcClose() {
+        const box = document.getElementById('lc-box');
+        if (box) box.style.display = 'none';
+    }
+
+    function lcRender() {
+        const box = document.getElementById('lc-list');
+        if (!box) return;
+        if (!cmData) { box.innerHTML = '<div style="padding:16px;text-align:center;color:#999;font-size:12px;">載入台號中…</div>'; return; }
+        const mode = document.getElementById('lc-mode').value;
+        const qEl = document.getElementById('lc-q');
+        const q = ((qEl && qEl.value) || '').trim().toUpperCase();
+        const rows = lcAllCodes().filter(function (r) { return !q || r.key.indexOf(q) >= 0; });
+        if (!rows.length) {
+            box.innerHTML = '<div style="padding:16px;text-align:center;color:#999;font-size:12px;">冇符合台號</div>';
+            return;
+        }
+        box.innerHTML = rows.map(function (r) {
+            const ov = layoutCodeColors[r.key] || '';
+            const checked = mode ? (ov === mode) : !!ov;
+            return '<label style="display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px solid #f2f2f2; font-size:13px; cursor:pointer;">'
+                + '<input type="checkbox" data-code="' + r.key + '"' + (checked ? ' checked' : '') + ' onchange="lcToggle(this)" style="width:18px; height:18px;">'
+                + '<span style="font-weight:bold;">' + r.key + '</span>'
+                + '<span style="display:inline-block; width:16px; height:12px; background:' + lcEffColor(r) + '; border:1px solid #999;"></span>'
+                + '<span style="font-size:11px; color:#666; margin-left:auto;">' + lcEffectiveName(r) + '</span>'
+                + '</label>';
+        }).join('');
+    }
+
+    async function lcToggle(el) {
+        const code = el.getAttribute('data-code');
+        const mode = document.getElementById('lc-mode').value;
+        const colour = el.checked ? (mode || '') : '';
+        const msg = document.getElementById('lc-msg');
+        el.disabled = true;
+        try {
+            const r = await fetch('/api/layout_colors', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: code, colour: colour })
+            });
+            const d = await r.json();
+            if (!d || d.status !== 'success') {
+                if (msg) msg.textContent = (d && d.message) || '❌ 儲存失敗';
+                el.checked = !el.checked;
+                return;
+            }
+            layoutCodeColors = d.code_colors || {};
+            if (msg) msg.textContent = d.message || '';
+            await lsRenderMap();
+            lsApplyZoom();
+            lcRender();
+        } catch (e) {
+            if (msg) msg.textContent = '❌ 連線失敗';
+            el.checked = !el.checked;
+        } finally {
+            el.disabled = false;
+        }
+    }
+
+    function schedTableHtml() {
+        let h = '<table style="border-collapse:collapse; width:100%; font-size:10.5px; text-align:center; table-layout:fixed;">';
+        h += '<colgroup><col style="width:13%"><col style="width:16%"><col style="width:17%"><col style="width:40%"><col style="width:14%"></colgroup>';
+        h += '<tr style="background:#ffe9a8; font-weight:bold;"><td colspan="5" style="border:1px solid #b8a45a; padding:7px 4px; font-size:13px;">TG Layout Replacement Schedule</td></tr>';
+        h += '<tr style="background:#fff6cc; font-size:10px;"><td colspan="3" style="border:1px solid #b8a45a; padding:3px 4px; text-align:left;">更新 2026 / NOV / 17</td><td colspan="2" style="border:1px solid #b8a45a; padding:3px 4px;">8 WEEKS　503 TOTAL LAYOUT</td></tr>';
+        h += '<tr style="background:#111; color:#fff; font-weight:bold;"><td style="border:1px solid #000; padding:5px 2px;">CYCLE</td><td style="border:1px solid #000; padding:5px 2px;">PIT</td><td style="border:1px solid #000; padding:5px 2px;">ST LAYOUT</td><td style="border:1px solid #000; padding:5px 2px;">MONOR GAME</td><td style="border:1px solid #000; padding:5px 2px;">TOTAL</td></tr>';
+        LAYOUT_SCHED.forEach(function (w) {
+            w.pits.forEach(function (p, i) {
+                h += '<tr>';
+                if (i === 0) h += '<td rowspan="' + w.pits.length + '" style="border:1px solid #b8a45a; padding:4px 2px; font-weight:bold; background:#fff;">' + w.cycle + '</td>';
+                h += '<td style="border:1px solid #b8a45a; padding:4px 2px; font-weight:bold; background:' + (layoutPitColor(parseInt(String(p[0]).replace('PIT', ''), 10)) || LAYOUT_COLORS[p[2]]) + ';">' + p[0] + '</td>';
+                h += '<td style="border:1px solid #b8a45a; padding:4px 2px; background:#ffffcc;">' + (p[1] || '') + '</td>';
+                let monor = schedCellHtml(p[0]);
+                if (p[0] === 'PIT01') monor = '<div style="font-size:9.5px; color:#555; margin-bottom:2px;">8 BJ · 5 CS · 6FP</div>' + monor;
+                h += '<td style="border:1px solid #b8a45a; padding:3px 2px; background:#ffd9e8;">' + monor + '</td>';
+                if (i === 0) h += '<td rowspan="' + w.pits.length + '" style="border:1px solid #b8a45a; padding:4px 2px; font-weight:bold; background:#ffffcc;">' + w.total + '</td>';
+                h += '</tr>';
+            });
+        });
+        h += '<tr style="background:#111; color:#fff; font-weight:bold;"><td style="border:1px solid #000; padding:5px 2px;">Total</td><td style="border:1px solid #000; padding:5px 2px;"></td><td style="border:1px solid #000; padding:5px 2px;">484</td><td style="border:1px solid #000; padding:5px 2px;">19</td><td style="border:1px solid #000; padding:5px 2px;">503</td></tr>';
+        h += '</table>';
+        h += '<div style="margin-top:8px; font-size:11.5px; color:#444; line-height:1.7;">';
+        LAYOUT_LEGEND.forEach(function (x) {
+            h += '<div style="display:flex; align-items:center; gap:6px;"><span style="display:inline-block; width:16px; height:14px; background:' + x[0] + '; border:1px solid #999;"></span><span>' + x[1] + '</span></div>';
+        });
+        h += '</div>';
+        return h;
+    }
+
     // ===== 換 Layout 行程（獨立頁面） =====
     function layoutPitKey(pit) { return 'PIT' + String(pit).padStart(2, '0'); }
 
@@ -5166,10 +5364,12 @@ items: collectItems(),
         if (lg && !lg.innerHTML) {
             let h = '';
             LAYOUT_LEGEND.forEach(function (x) {
-                h += '<span style="display:inline-flex; align-items:center; gap:4px;"><span style="display:inline-block; width:14px; height:12px; background:' + x[0] + '; border:1px solid #999;"></span>' + x[1] + '</span>';
+                h += '<span style="display:flex; align-items:flex-start; gap:6px;"><span style="flex:0 0 auto; display:inline-block; width:14px; height:12px; margin-top:1px; background:' + x[0] + '; border:1px solid #999; border-radius:2px;"></span><span>' + x[1] + '</span></span>';
             });
-            lg.innerHTML = h + '<span style="display:inline-flex; align-items:center; gap:4px;"><span style="display:inline-block; width:14px; height:12px; background:#cfd8dc; border:1px solid #999;"></span>停運（唔計入PIT顏色）</span>'
-                + '<span style="display:inline-flex; align-items:center; gap:4px;"><span style="display:inline-block; width:14px; height:12px; background:#ffffff; border:1px solid #999;"></span>不在行程嘅 PIT</span>';
+            h += '<span style="display:flex; align-items:flex-start; gap:6px;">'
+                + '<span style="flex:0 0 auto; display:inline-block; width:14px; height:12px; margin-top:1px; background:#cfd8dc; border:1px solid #999; border-radius:2px;"></span>'
+                + '<span>停運（不計入 Layout 類型）</span></span>';
+            lg.innerHTML = h;
         }
         updateLsMsg();
         await lsRenderMap();
