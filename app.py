@@ -39,6 +39,10 @@ def release_db_connection(conn):
 
 
 # ---------- 系統設定 / 稽核（自動建表，無須手動修改資料庫） ----------
+_SET_CACHE = {}      # app_settings 讀取快取：key -> (時間, 值)
+_SET_TTL = 8         # 秒；寫入時會即時清掉該 key
+
+
 def ensure_tables():
     conn = None
     try:
@@ -179,13 +183,19 @@ def ensure_tables():
 
 
 def get_setting(key, default=None):
+    _now = time.time()
+    _hit = _SET_CACHE.get(key)
+    if _hit is not None and (_now - _hit[0]) < _SET_TTL:
+        return default if _hit[1] is None else _hit[1]
     conn = None
     try:
         conn = get_db_connection()
         c = conn.cursor()
         c.execute("SELECT value FROM app_settings WHERE key = %s", (key,))
         row = c.fetchone()
-        return row[0] if row else default
+        _val = row[0] if row else None
+        _SET_CACHE[key] = (_now, _val)
+        return default if _val is None else _val
     except Exception as e:
         print("讀取設定失敗:", e)
         return default
@@ -204,6 +214,7 @@ def set_setting(key, value):
                      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()""",
                   (key, value))
         conn.commit()
+        _SET_CACHE.pop(key, None)
         return True
     except Exception as e:
         print("寫入設定失敗:", e)
@@ -284,7 +295,7 @@ def cache_set(key, val, ttl=60):
 
 def bust():
     """任何寫入（交更／完成／刪除／櫈況）後，清走相關快取。"""
-    cache_clear('pending', 'pending_items', 'table_codes', 'monthly_checks', 'chair_map')
+    cache_clear('pending', 'pending_items', 'table_codes', 'monthly_checks', 'chair_map', 'layout_schedule', 'inventory')
     for _k in list(_RESULT_CACHE.keys()):
         if _k.startswith('pending_items:'):
             _RESULT_CACHE.pop(_k, None)
@@ -571,7 +582,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-02", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-03", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -4115,6 +4126,7 @@ def layout_colors_set():
             log_action('Layout 顏色', '%s → %s' % (code, colour or '預設'))
         except Exception:
             pass
+        cache_clear('layout_schedule', 'chair_map')
         return jsonify({'status': 'success', 'code_colors': cur, 'colors': _layout_colors_override(),
                         'message': ('✅ %s 顏色已手動設定。' % code) if colour else ('✅ %s 已還原預設顏色。' % code)})
     if not re.match(r'^PIT\d{1,3}$', pit):
@@ -4130,6 +4142,7 @@ def layout_colors_set():
         log_action('Layout 顏色', '%s → %s' % (pit, colour or '預設'))
     except Exception:
         pass
+    cache_clear('layout_schedule', 'chair_map')
     return jsonify({'status': 'success', 'colors': cur, 'code_colors': _layout_code_colors(),
                     'message': ('✅ %s 顏色已改為手動設定。' % pit) if colour else ('✅ %s 已還原預設顏色。' % pit)})
 
@@ -4138,10 +4151,15 @@ def layout_colors_set():
 def layout_schedule_get():
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
-    return jsonify({'status': 'success', 'done': _layout_sched_done(), 'today': _up_today(),
-                    'round': _layout_round_no(), 'last': _layout_last_summary(),
-                    'rounds_done': len(_layout_history()), 'total_pits': _LAYOUT_PIT_TOTAL,
-                    'colors': _layout_colors_override(), 'code_colors': _layout_code_colors()})
+    _cached = cache_get('layout_schedule')
+    if _cached is not None:
+        return jsonify(_cached)
+    _payload = {'status': 'success', 'done': _layout_sched_done(), 'today': _up_today(),
+                'round': _layout_round_no(), 'last': _layout_last_summary(),
+                'rounds_done': len(_layout_history()), 'total_pits': _LAYOUT_PIT_TOTAL,
+                'colors': _layout_colors_override(), 'code_colors': _layout_code_colors()}
+    cache_set('layout_schedule', _payload, 20)
+    return jsonify(_payload)
 
 
 @app.route('/api/layout_schedule/reset', methods=['POST'])
@@ -4165,6 +4183,7 @@ def layout_schedule_reset():
         log_action('Layout 更換', '第 %d 輪完成（%d／%d），開始第 %d 輪' % (rnd, len(done), _LAYOUT_PIT_TOTAL, rnd + 1))
     except Exception:
         pass
+    cache_clear('layout_schedule')
     return jsonify({'status': 'success', 'round': rnd + 1, 'done': {}, 'last': _layout_last_summary(),
                     'message': '✅ 第 %d 輪已存檔（%d 個 PIT），已開始第 %d 輪。' % (rnd, len(done), rnd + 1)})
 
@@ -4189,6 +4208,7 @@ def layout_schedule_undo():
         log_action('Layout 更換', '還原第 %d 輪（%d 個 PIT）' % (rnd, len(items)))
     except Exception:
         pass
+    cache_clear('layout_schedule')
     return jsonify({'status': 'success', 'round': rnd, 'done': items, 'last': _layout_last_summary(),
                     'message': '✅ 已還原第 %d 輪（%d 個 PIT）。' % (rnd, len(items))})
 
@@ -4222,6 +4242,7 @@ def layout_schedule_set():
         log_action('Layout 更換', ('完成 ' if data.get('done') else '取消 ') + pit)
     except Exception:
         pass
+    cache_clear('layout_schedule')
     return jsonify({'status': 'success', 'done': done, 'message': msg})
 
 
@@ -5169,7 +5190,7 @@ def chair_map_get():
                 'pits': layout.get('pits', []), 'extras': layout.get('extras', []),
                 'merges': layout.get('merges', []), 'cells': cells,
                 'edits': _chair_edits()}
-    cache_set('chair_map', _payload, 15)
+    cache_set('chair_map', _payload, 30)
     return jsonify(_payload)
 
 
@@ -5451,6 +5472,9 @@ def inventory_list():
     """存貨清單（已登入同事均可讀）。"""
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    _cached = cache_get('inventory')
+    if _cached is not None:
+        return jsonify(_cached)
     conn = None
     try:
         conn = get_db_connection()
@@ -5476,8 +5500,9 @@ def inventory_list():
                      FROM inventory_logs ORDER BY id DESC LIMIT 40""")
         logs = [{'item_id': x[0], 'action': x[1], 'detail': x[2], 'actor': x[3], 'at': x[4]}
                 for x in c.fetchall()]
-        return jsonify({'status': 'success', 'items': items, 'logs': logs,
-                        'total': len(items)})
+        _payload = {'status': 'success', 'items': items, 'logs': logs, 'total': len(items)}
+        cache_set('inventory', _payload, 15)
+        return jsonify(_payload)
     except Exception as e:
         return jsonify({'status': 'error', 'message': '❌ 讀取存貨失敗：%s' % e})
     finally:
@@ -5513,6 +5538,7 @@ def inventory_add():
         c.execute("INSERT INTO inventory_logs (item_id, action, detail, actor) VALUES (%s, %s, %s, %s)",
                   (new_id, 'add', '%s %s／%s' % (zone, loc, name), _inv_actor()))
         conn.commit()
+        bust()
         try: log_action('存貨新增', '%s %s／%s' % (zone, loc, name))
         except Exception: pass
         return jsonify({'status': 'success', 'id': new_id, 'message': '✅ 已新增 %s' % name})
@@ -5568,6 +5594,7 @@ def inventory_update():
         c.execute("INSERT INTO inventory_logs (item_id, action, detail, actor) VALUES (%s, %s, %s, %s)",
                   (iid, 'update', '%s：%s' % (name, '、'.join(parts) or '資料更新'), _inv_actor()))
         conn.commit()
+        bust()
         return jsonify({'status': 'success', 'message': '✅ 已更新 %s' % name})
     except Exception as e:
         if conn:
@@ -5607,6 +5634,7 @@ def inventory_adjust():
         c.execute("INSERT INTO inventory_logs (item_id, action, detail, actor) VALUES (%s, %s, %s, %s)",
                   (iid, 'adjust', '%s：%d → %d（%+d）' % (row[0], before, after, delta), _inv_actor()))
         conn.commit()
+        bust()
         return jsonify({'status': 'success', 'qty': after, 'message': '✅ %s：%d' % (row[0], after)})
     except Exception as e:
         if conn:
@@ -5654,6 +5682,7 @@ def inventory_move():
                       (iid, 'move', '%s：%s → %s' % (row[0], row[1] or '未分類', loc), _inv_actor()))
             moved += 1
         conn.commit()
+        bust()
         return jsonify({'status': 'success', 'moved': moved, 'message': '✅ 已搬 %d 項去 %s' % (moved, loc)})
     except Exception as e:
         if conn:
@@ -5689,6 +5718,7 @@ def inventory_delete():
         c.execute("INSERT INTO inventory_logs (item_id, action, detail, actor) VALUES (%s, %s, %s, %s)",
                   (iid, 'delete', '%s（%s）' % (row[0], row[1] or '未分類'), _inv_actor()))
         conn.commit()
+        bust()
         return jsonify({'status': 'success', 'message': '🗑️ 已刪除 %s' % row[0]})
     except Exception as e:
         if conn:
