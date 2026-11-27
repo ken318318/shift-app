@@ -18,7 +18,7 @@
         body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
         .login-card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 350px; text-align: center; }
         h2 { color: #333; margin-bottom: 20px; }
-        input[type="password"] { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         button { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: bold; }
         button:active { background: #1557b0; }
         button:disabled { background: #9bbcf0; cursor: default; }
@@ -43,10 +43,12 @@
         <div class="error">{{ error }}</div>
         {% endif %}
         <form method="POST" id="login-form">
-            <input type="password" name="password" placeholder="請輸入系統密碼" required autofocus>
+            <input type="text" name="account" placeholder="帳號，例如 BS80571" autocomplete="username" autocapitalize="characters" style="text-transform:uppercase;">
+            <input type="password" name="password" placeholder="請輸入密碼" autocomplete="current-password" required autofocus>
             <button type="submit" id="login-btn">登入</button>
         </form>
         <div style="margin-top: 14px; font-size: 12px; color: #888; line-height: 1.6;">
+            帳號＝BS＋員工編號（例如 BS80571）；管理員帳號＝ADMIN<br>
             如忘記密碼，請向主管查詢。<br>
             注意！系統所有資訊嚴禁對外泄露
         </div>
