@@ -355,6 +355,16 @@ _HW = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 _FW_TABLE = str.maketrans(_FW, _HW)
 
 
+def _clean_text(v, maxlen=8000):
+    """清洗用戶輸入：剔除 HTML 標籤（防 stored XSS）。"""
+    if v is None:
+        return None
+    s = str(v)
+    s = re.sub(r'<[^>]*>', '', s)
+    s = s.replace('\x00', '')
+    return s[:maxlen]
+
+
 def _norm_code(s):
     """台號正規化：全形轉半形、去空白、轉大寫。"""
     s = (s or '').strip().translate(_FW_TABLE)
@@ -675,9 +685,49 @@ def security_report():
         return jsonify({'status': 'error', 'message': str(e)})
 
 
+@app.route('/api/security_clean_records', methods=['POST'])
+def security_clean_records():
+    """一次性清洗：剔除 records／shift_items 內所有 HTML 標籤（修 stored XSS）。限管理員。"""
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以使用。'}), 403
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        rcols = ['name', 'shift', 'lux', 'temp', 'bgm', 'checklist', 'on_duty', 'follower', 'note',
+                 'guest_feedback', 'dlr_feedback', 'layout_side', 'soundbar', 'firecheck15', 'firecheck30',
+                 'wifi1', 'wifi15']
+        fixed = 0
+        for col in rcols:
+            c.execute("UPDATE records SET " + col + " = regexp_replace(" + col + ", '<[^>]*>', '', 'g') WHERE " + col + " LIKE '%%<%%'")
+            fixed += c.rowcount or 0
+        scols = ['type', 'code', 'category', 'problem', 'detail', 'side', 'note', 'display']
+        for col in scols:
+            c.execute("UPDATE shift_items SET " + col + " = regexp_replace(" + col + ", '<[^>]*>', '', 'g') WHERE " + col + " LIKE '%%<%%'")
+            fixed += c.rowcount or 0
+        c.execute("UPDATE venue_configs SET category = regexp_replace(category, '<[^>]*>', '', 'g') WHERE category LIKE '%%<%%'")
+        c.execute("UPDATE venue_configs SET problem = regexp_replace(problem, '<[^>]*>', '', 'g') WHERE problem LIKE '%%<%%'")
+        conn.commit()
+        try:
+            log_action('安全清理', '清洗含 HTML 標籤嘅紀錄／問題項：%d 處' % fixed)
+        except Exception:
+            pass
+        bust()
+        return jsonify({'status': 'success', 'message': '✅ 已清洗 %d 處含 HTML 嘅資料' % fixed})
+    except Exception as e:
+        if conn:
+            try: conn.rollback()
+            except Exception: pass
+        return jsonify({'status': 'error', 'message': '❌ 清洗失敗：%s' % e})
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-13", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-14", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1377,13 +1427,13 @@ def submit():
         c.execute("""INSERT INTO records 
                      (name, shift, lux, temp, bgm, checklist, status, follower, on_duty, note, lux_issue, temp_issue, db_issue, guest_feedback, dlr_feedback, layout_side, soundbar, firecheck, firecheck15, firecheck30, wifi1, wifi15, shift_day, created_at, items) 
                      VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) RETURNING id""", 
-                  (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
-                   data.get('checklist'), data.get('status'), data.get('follower'), data.get('on_duty'), data.get('note'),
-                   data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
-                   data.get('guest_feedback'), data.get('dlr_feedback'),
-                   data.get('layout_side'), data.get('soundbar') or '', data.get('firecheck15') or data.get('firecheck') or '',
-                   data.get('firecheck15') or '', data.get('firecheck30') or '',
-                   data.get('wifi1') or '', data.get('wifi15') or '',
+                  (_clean_text(data.get('name'), 120), _clean_text(data.get('shift'), 40), _clean_text(data.get('lux'), 200), _clean_text(data.get('temp'), 200), _clean_text(data.get('bgm'), 200),
+                   _clean_text(data.get('checklist'), 4000), _clean_text(data.get('status'), 200), _clean_text(data.get('follower'), 200), _clean_text(data.get('on_duty'), 500), _clean_text(data.get('note'), 8000),
+                   _clean_text(data.get('lux_issue')), _clean_text(data.get('temp_issue')), _clean_text(data.get('db_issue')),
+                   _clean_text(data.get('guest_feedback'), 4000), _clean_text(data.get('dlr_feedback'), 4000),
+                   _clean_text(data.get('layout_side'), 200), _clean_text(data.get('soundbar'), 200) or '', _clean_text(data.get('firecheck15') or data.get('firecheck'), 200) or '',
+                   _clean_text(data.get('firecheck15'), 200) or '', _clean_text(data.get('firecheck30'), 200) or '',
+                   _clean_text(data.get('wifi1'), 200) or '', _clean_text(data.get('wifi15'), 200) or '',
                    data.get('shift_day') or None,
                    now_macau, psycopg2.extras.Json(_items)))
         _new_rid = c.fetchone()[0]
@@ -1448,13 +1498,13 @@ def overwrite_record():
                      guest_feedback=%s, dlr_feedback=%s, layout_side=%s, soundbar=%s, firecheck=%s,
                      firecheck15=%s, firecheck30=%s, wifi1=%s, wifi15=%s, shift_day=%s, items=%s
                      WHERE id=%s""", 
-                  (data.get('name'), data.get('shift'), data.get('lux'), data.get('temp'), data.get('bgm'), 
-                   data.get('checklist'), data.get('status'), data.get('follower'), data.get('on_duty'), data.get('note'),
-                   data.get('lux_issue'), data.get('temp_issue'), data.get('db_issue'),
-                   data.get('guest_feedback'), data.get('dlr_feedback'),
-                   data.get('layout_side'), data.get('soundbar') or '', data.get('firecheck15') or data.get('firecheck') or '',
-                   data.get('firecheck15') or '', data.get('firecheck30') or '',
-                   data.get('wifi1') or '', data.get('wifi15') or '', data.get('shift_day') or None,
+                  (_clean_text(data.get('name'), 120), _clean_text(data.get('shift'), 40), _clean_text(data.get('lux'), 200), _clean_text(data.get('temp'), 200), _clean_text(data.get('bgm'), 200),
+                   _clean_text(data.get('checklist'), 4000), _clean_text(data.get('status'), 200), _clean_text(data.get('follower'), 200), _clean_text(data.get('on_duty'), 500), _clean_text(data.get('note'), 8000),
+                   _clean_text(data.get('lux_issue')), _clean_text(data.get('temp_issue')), _clean_text(data.get('db_issue')),
+                   _clean_text(data.get('guest_feedback'), 4000), _clean_text(data.get('dlr_feedback'), 4000),
+                   _clean_text(data.get('layout_side'), 200), _clean_text(data.get('soundbar'), 200) or '', _clean_text(data.get('firecheck15') or data.get('firecheck'), 200) or '',
+                   _clean_text(data.get('firecheck15'), 200) or '', _clean_text(data.get('firecheck30'), 200) or '',
+                   _clean_text(data.get('wifi1'), 200) or '', _clean_text(data.get('wifi15'), 200) or '', data.get('shift_day') or None,
                    psycopg2.extras.Json(_items), old_id))
         # 該筆的問題項重寫（保留 mark_done 寫下的 resolve 記錄）
         # 重寫前記住每個 item_key 最早 event_at，避免「發生日期」變成修改日期
