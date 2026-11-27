@@ -195,7 +195,7 @@
             <div style="display: flex; gap: 6px; align-items: center; margin-top: 6px;">
                 <button onclick="openLayoutSchedule()" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#1a237e; background:#e8eaf6; padding:8px 4px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:bold;">🔄 換Layout行程</button>
                 <button onclick="toggleHomeSearch()" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#00695c; background:#e0f2f1; padding:8px 4px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:bold;">🔍 搜尋</button>
-                <button disabled style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#9e9e9e; background:#f5f5f5; padding:8px 4px; border-radius:6px; border:1px dashed #e0e0e0; font-size:12px; font-weight:bold;">➕ 待定</button>
+                <button onclick="plistOpen()" style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#6a1b9a; background:#f3e5f5; padding:8px 4px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:bold;">📋 待處理清單</button>
                 <button disabled style="flex:1 1 0; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#9e9e9e; background:#f5f5f5; padding:8px 4px; border-radius:6px; border:1px dashed #e0e0e0; font-size:12px; font-weight:bold;">➕ 待定</button>
             </div>
         </div>
@@ -2512,6 +2512,9 @@ async function loadPendingIssues() {
     const _resolvedKeys = resolvedHere.map(x => x.key);
     let items = (data.pending_items || []).filter(it =>
         _reportedKeys.indexOf(it.key) < 0 && _resolvedKeys.indexOf(it.key) < 0);
+    (data.done_items || []).forEach(function (it) {
+        if (it && it.manual) items.push(Object.assign({}, it, { __done: true, status: '已處理' }));
+    });
     // 補回本張已標記完成的項目（打勾顯示）
     resolvedHere.forEach(x => {
         items.push({ key: x.key, type: x.type, code: x.code, display: x.display || x.key,
@@ -2860,6 +2863,158 @@ async function loadPendingIssues() {
         }).catch(function () {
             box.innerHTML = '<div style="font-size:12px;color:#c62828;">❌ 搜尋失敗，請稍後再試。</div>';
         });
+    }
+
+    // ===== 待處理清單 =====
+    let PLIST_ITEMS = [];
+    let PLIST_OPEN = {};
+
+    function plistOpen() {
+        const box = document.getElementById('plist-box');
+        if (box) box.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        const d = document.getElementById('plist-date');
+        if (d && !d.value) d.value = new Date().toISOString().slice(0, 10);
+        plistLoadConfigs();
+        plistReload();
+    }
+
+    function plistClose() {
+        const box = document.getElementById('plist-box');
+        if (box) box.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+
+    function plistLoadConfigs() {
+        const sel = document.getElementById('plist-cat');
+        if (!sel) return;
+        const fill = function (cfgs) {
+            const keys = Object.keys(cfgs || {});
+            sel.innerHTML = keys.map(function (k) { return '<option value="' + htmlEsc(k) + '">' + htmlEsc(k) + '</option>'; }).join('');
+            plistFillProblems();
+        };
+        if (venueCategories && Object.keys(venueCategories).length) { fill(venueCategories); return; }
+        fetch('/api/get_configs?_t=' + Date.now()).then(function (r) { return r.json(); }).then(function (c) {
+            venueCategories = c || {};
+            fill(venueCategories);
+        }).catch(function () {});
+    }
+
+    function plistFillProblems() {
+        const cat = document.getElementById('plist-cat').value;
+        const sel = document.getElementById('plist-prob');
+        const arr = (venueCategories && venueCategories[cat]) || [];
+        sel.innerHTML = arr.map(function (p) { return '<option value="' + htmlEsc(p) + '">' + htmlEsc(p) + '</option>'; }).join('');
+    }
+
+    function plistOpenAdd() {
+        const el = document.getElementById('plist-add');
+        el.style.display = 'block';
+        const d = document.getElementById('plist-date');
+        if (d && !d.value) d.value = new Date().toISOString().slice(0, 10);
+        const m = document.getElementById('plist-add-msg');
+        if (m) m.textContent = '';
+    }
+
+    async function plistSaveAdd() {
+        const msg = document.getElementById('plist-add-msg');
+        const body = {
+            date: document.getElementById('plist-date').value,
+            category: document.getElementById('plist-cat').value,
+            problem: document.getElementById('plist-prob').value,
+            code: document.getElementById('plist-code').value,
+            note: document.getElementById('plist-note').value,
+            done: document.getElementById('plist-done').checked
+        };
+        if (msg) msg.textContent = '儲存中…';
+        try {
+            const r = await fetch('/api/manual_pending/add', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+            const d = await r.json();
+            if (!d || d.status !== 'success') { if (msg) msg.textContent = (d && d.message) || '❌ 儲存失敗'; return; }
+            document.getElementById('plist-code').value = '';
+            document.getElementById('plist-note').value = '';
+            document.getElementById('plist-done').checked = false;
+            document.getElementById('plist-add').style.display = 'none';
+            await plistReload();
+        } catch (e) {
+            if (msg) msg.textContent = '❌ 連線失敗';
+        }
+    }
+
+    async function plistReload() {
+        const box = document.getElementById('plist-list');
+        if (!box) return;
+        box.innerHTML = '<div style="font-size:12px; color:#666; padding:8px;">載入中…</div>';
+        try {
+            const d = await (await fetch('/api/pending_items?_t=' + Date.now(), { cache: 'no-store' })).json();
+            PLIST_ITEMS = (d.pending_items || []).concat(d.done_items || []);
+            PLIST_OPEN = {};
+            PLIST_ITEMS.forEach(function (it) { PLIST_OPEN[it.key] = !(String(it.status || '').indexOf('已處理') >= 0 || String(it.status || '').indexOf('已完成') >= 0); });
+            plistRender();
+        } catch (e) {
+            box.innerHTML = '<div style="font-size:12px; color:#c62828; padding:8px;">❌ 讀取失敗</div>';
+        }
+    }
+
+    function plistRender() {
+        const box = document.getElementById('plist-list');
+        const cnt = document.getElementById('plist-count');
+        if (!box) return;
+        const open = PLIST_ITEMS.filter(function (it) { return PLIST_OPEN[it.key]; });
+        const done = PLIST_ITEMS.filter(function (it) { return !PLIST_OPEN[it.key]; });
+        if (cnt) cnt.textContent = '待處理 ' + open.length + ' 項｜已處理 ' + done.length + ' 項';
+        const row = function (it) {
+            const isDone = !PLIST_OPEN[it.key];
+            const canEdit = !!it.manual;
+            const date = String(it.first_at || it.created_at || '').slice(0, 10);
+            return '<div style="display:flex; align-items:center; gap:8px; background:' + (isDone ? '#e8f5e9' : '#ffebee') + '; border:1px solid ' + (isDone ? '#c8e6c9' : '#ffcdd2') + '; border-radius:8px; padding:8px; margin:6px 0;">'
+                + '<input type="checkbox" data-key="' + htmlEsc(it.key) + '"' + (isDone ? ' checked' : '') + (canEdit ? '' : ' disabled') + ' onchange="plistToggle(this)" style="width:19px; height:19px;">'
+                + '<div style="flex:1; min-width:0; font-size:12.5px; color:#333;">'
+                + '<b>' + htmlEsc(it.display || it.key) + '</b>'
+                + '<div style="font-size:11px; color:#777; margin-top:2px;">' + (date ? '📅 ' + date + '　' : '') + htmlEsc(it.status || '待處理') + (it.manual ? '　｜手動' : '') + '</div>'
+                + '</div>'
+                + (canEdit ? '<button onclick="plistDelete(\'' + it.manual_id + '\')" style="border:none; background:#ffcdd2; color:#b71c1c; border-radius:6px; padding:6px 8px; font-size:11px; font-weight:bold;">🗑</button>' : '')
+                + '</div>';
+        };
+        box.innerHTML = '<div style="font-size:12px; font-weight:bold; color:#c62828; margin:8px 2px;">⚠️ 待處理項目（' + open.length + '）</div>'
+            + (open.length ? open.map(row).join('') : '<div style="font-size:12px; color:#777; padding:6px;">冇待處理項目</div>')
+            + '<div style="font-size:12px; font-weight:bold; color:#2e7d32; margin:14px 2px 0;">✅ 已處理（' + done.length + '）</div>'
+            + (done.length ? done.map(row).join('') : '<div style="font-size:12px; color:#777; padding:6px;">冇已處理項目</div>');
+    }
+
+    function plistToggle(el) {
+        const key = el.getAttribute('data-key');
+        PLIST_OPEN[key] = !!el.checked;
+        plistRender();
+    }
+
+    async function plistApply() {
+        const manual = PLIST_ITEMS.filter(function (it) { return it.manual; });
+        let changed = 0;
+        for (const it of manual) {
+            const wantDone = !PLIST_OPEN[it.key];
+            const isDone = (String(it.status || '').indexOf('已處理') >= 0);
+            if (wantDone === isDone) continue;
+            try {
+                const r = await fetch('/api/manual_pending/update', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: it.manual_id, done: wantDone }) });
+                const d = await r.json();
+                if (d && d.status === 'success') changed++;
+            } catch (e) {}
+        }
+        await plistReload();
+        if (typeof loadPendingIssues === 'function') { try { await loadPendingIssues(); } catch (e) {} }
+        alert(changed ? ('✅ 已更新 ' + changed + ' 個手動項目。') : '✅ 已套用（冇手動項目改動）。');
+    }
+
+    async function plistDelete(mid) {
+        if (!confirm('確定刪除此手動項目？')) return;
+        try {
+            const r = await fetch('/api/manual_pending/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: mid }) });
+            const d = await r.json();
+            if (!d || d.status !== 'success') { alert((d && d.message) || '❌ 刪除失敗'); return; }
+            await plistReload();
+            if (typeof loadPendingIssues === 'function') { try { await loadPendingIssues(); } catch (e) {} }
+        } catch (e) { alert('❌ 連線失敗'); }
     }
 
     function displayRecords() {
@@ -6786,6 +6941,62 @@ items: collectItems(),
         });
     })();
     </script>
+
+    <!-- ===== 待處理清單 ===== -->
+    <div id="plist-box" style="display:none; position:fixed; inset:0; background:#eef2f7; z-index:10035; overflow-y:auto;">
+        <div style="max-width:820px; margin:0 auto; padding:10px 10px 40px;">
+            <div class="lr-bar">
+                <button class="lr-b-close" onclick="plistClose()">✖ 返回</button>
+                <b style="font-size:14px; color:#6a1b9a;">📋 待處理清單</b>
+                <span id="plist-count" style="margin-left:auto; font-size:12px; color:#555;"></span>
+            </div>
+            <div class="lr-tip" style="font-size:11.5px; line-height:1.6;">
+                呢個清單包含：① 交更表狀態為「待處理」嘅問題；② 黃框舊問題（超過 30 日都會保留）；③ 手動新增項目。<br>
+                勾選＝已處理，撳「✅ 套用」後會喺「新增交更」自動顯示為早前已處理；提交交更後主頁會多一條舊問題已處理紀錄。
+            </div>
+            <div style="display:flex; gap:8px; margin:10px 0; flex-wrap:wrap;">
+                <button onclick="plistOpenAdd()" style="padding:10px 14px; border:none; border-radius:8px; background:#6a1b9a; color:#fff; font-size:13px; font-weight:bold;">＋ 新增待處理問題</button>
+                <button onclick="plistApply()" style="padding:10px 14px; border:none; border-radius:8px; background:#2e7d32; color:#fff; font-size:13px; font-weight:bold;">✅ 套用（確定）</button>
+                <button onclick="plistReload()" style="padding:10px 14px; border:none; border-radius:8px; background:#eceff1; color:#455a64; font-size:13px; font-weight:bold;">🔄 重新載入</button>
+            </div>
+            <div id="plist-add" style="display:none; background:#f7f9ff; border:1px solid #dbe4ff; border-radius:10px; padding:12px; margin-bottom:12px;">
+                <b style="font-size:13px; color:#283593;">➕ 新增待處理問題</b>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                    <div style="flex:0 0 150px;">
+                        <div style="font-size:11px; color:#666;">日期</div>
+                        <input type="date" id="plist-date" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; font-size:13px;">
+                    </div>
+                    <div style="flex:1 1 180px;">
+                        <div style="font-size:11px; color:#666;">類別（同系統選項同步）</div>
+                        <select id="plist-cat" onchange="plistFillProblems()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; font-size:13px; background:#fff;"></select>
+                    </div>
+                    <div style="flex:1 1 200px;">
+                        <div style="font-size:11px; color:#666;">問題</div>
+                        <select id="plist-prob" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; font-size:13px; background:#fff;"></select>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
+                    <div style="flex:0 0 140px;">
+                        <div style="font-size:11px; color:#666;">台號（可空）</div>
+                        <input type="text" id="plist-code" placeholder="例如 NB1236" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; font-size:13px;">
+                    </div>
+                    <div style="flex:1 1 220px;">
+                        <div style="font-size:11px; color:#666;">備註（可空）</div>
+                        <input type="text" id="plist-note" placeholder="例如 舊系統搬過嚟" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; font-size:13px;">
+                    </div>
+                    <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:bold; color:#2e7d32;">
+                        <input type="checkbox" id="plist-done" style="width:18px; height:18px;"> 已完成（直接加入已處理）
+                    </label>
+                </div>
+                <div style="display:flex; gap:8px; margin-top:10px;">
+                    <button onclick="plistSaveAdd()" style="flex:1; padding:10px; border:none; border-radius:8px; background:#1a73e8; color:#fff; font-size:13px; font-weight:bold;">儲存</button>
+                    <button onclick="document.getElementById('plist-add').style.display='none'" style="flex:1; padding:10px; border:none; border-radius:8px; background:#eceff1; color:#455a64; font-size:13px; font-weight:bold;">取消</button>
+                </div>
+                <div id="plist-add-msg" style="font-size:12px; color:#d32f2f; margin-top:6px;"></div>
+            </div>
+            <div id="plist-list" style="max-height:62vh; overflow:auto;"></div>
+        </div>
+    </div>
 
     <!-- ===== 新增交更三選一 ===== -->
     <div id="nr-choicebox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:10030; padding:16px; align-items:center; justify-content:center;">
