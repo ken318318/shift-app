@@ -2948,6 +2948,11 @@ async function loadPendingIssues() {
         try {
             const d = await (await fetch('/api/pending_items?_t=' + Date.now(), { cache: 'no-store' })).json();
             PLIST_ITEMS = (d.pending_items || []).concat((d.done_items || []).filter(function (x) { return x && x.manual; }));
+            PLIST_ITEMS = PLIST_ITEMS.filter(function (it) {
+                const st = String(it.status || '');
+                if (it.manual && st.indexOf('已處理') >= 0) return true;   // 手動項目完成後仍顯示
+                return st.indexOf('待處理') >= 0;                          // 只收「待處理」狀態
+            });
             PLIST_OPEN = {};
             PLIST_ITEMS.forEach(function (it) { PLIST_OPEN[it.key] = !(String(it.status || '').indexOf('已處理') >= 0 || String(it.status || '').indexOf('已完成') >= 0); });
             plistRender();
@@ -6951,7 +6956,7 @@ items: collectItems(),
                 <span id="plist-count" style="margin-left:auto; font-size:12px; color:#555;"></span>
             </div>
             <div class="lr-tip" style="font-size:11.5px; line-height:1.6;">
-                呢個清單包含：① 交更表狀態為「待處理」嘅問題；② 黃框舊問題（超過 30 日都會保留）；③ 手動新增項目。<br>
+                呢個清單只包含狀態為「<b>待處理</b>」嘅問題（黃框／交更表）＋手動新增項目；「已 Send mail」「已通知」「觀察中」唔會入清單（30 日以上舊問題只要狀態仍係待處理都會保留）。<br>
                 勾選＝已處理，撳「✅ 套用」後會喺「新增交更」自動顯示為早前已處理；提交交更後主頁會多一條舊問題已處理紀錄。
             </div>
             <div style="display:flex; gap:8px; margin:10px 0; flex-wrap:wrap;">
