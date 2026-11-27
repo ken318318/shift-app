@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-50", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-51", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -1196,6 +1196,20 @@ def submit():
         _new_rid = c.fetchone()[0]
         _si_write_items(c, _new_rid, data.get('items'), 'submit')
         _si_write_done(c, _new_rid, data.get('done_keys'), session.get('user_name') or '')
+        try:
+            _mk = set(str(k).strip() for k in (data.get('done_keys') or []))
+            if _mk:
+                _lst = _manual_pending()
+                _changed = False
+                for _m in _lst:
+                    if _m.get('key') in _mk and (_m.get('status') or '') != '已交更':
+                        _m['status'] = '已交更'
+                        _m['submitted_at'] = _up_today()
+                        _changed = True
+                if _changed:
+                    _manual_save(_lst)
+        except Exception as _e:
+            print('manual submit mark failed:', _e)
         _si_write_reopen(c, _new_rid, data.get('reopen_keys'))
         conn.commit()
         bust()
@@ -2232,6 +2246,108 @@ def mark_done():
             release_db_connection(conn)
 
 
+_MANUAL_PENDING_KEY = 'pending_manual'
+
+
+def _manual_pending():
+    raw = get_setting(_MANUAL_PENDING_KEY, '') or ''
+    try:
+        data = json.loads(raw) if raw.strip() else []
+    except Exception:
+        data = []
+    if not isinstance(data, list):
+        data = []
+    return [x for x in data if isinstance(x, dict)]
+
+
+def _manual_save(lst):
+    return set_setting(_MANUAL_PENDING_KEY, json.dumps(lst, ensure_ascii=False))
+
+
+@app.route('/api/manual_pending', methods=['GET'])
+def manual_pending_get():
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    items = [x for x in _manual_pending() if (x.get('status') or '待處理') not in ('已交更',)]
+    return jsonify({'status': 'success', 'items': items})
+
+
+@app.route('/api/manual_pending/add', methods=['POST'])
+def manual_pending_add():
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    data = request.json or {}
+    date_str = (data.get('date') or '').strip() or _up_today()
+    try:
+        datetime.datetime.strptime(date_str, '%Y-%m-%d')
+    except Exception:
+        return jsonify({'status': 'error', 'message': '❌ 日期格式必須係 YYYY-MM-DD。'})
+    category = (data.get('category') or '').strip()
+    problem = (data.get('problem') or '').strip()
+    code = (data.get('code') or '').strip().upper()
+    note = (data.get('note') or '').strip()
+    done = bool(data.get('done'))
+    if not category or not problem:
+        return jsonify({'status': 'error', 'message': '❌ 請選擇類別及問題。'})
+    key = '手動|' + (code or '-') + '|' + category + ' - ' + problem
+    lst = _manual_pending()
+    for x in lst:
+        if x.get('key') == key and (x.get('status') or '') not in ('已交更',):
+            return jsonify({'status': 'error', 'message': '⚠️ 相同項目已在清單內。'})
+    item = {'id': str(int(time.time() * 1000)), 'key': key, 'date': date_str,
+            'category': category, 'problem': problem, 'code': code, 'note': note,
+            'status': ('已處理' if done else '待處理'), 'created_at': _up_today()}
+    lst.append(item)
+    if not _manual_save(lst):
+        return jsonify({'status': 'error', 'message': '❌ 儲存失敗，請稍後再試。'})
+    bust()
+    try:
+        log_action('待處理清單', '新增 %s（%s）' % (key, item['status']))
+    except Exception:
+        pass
+    return jsonify({'status': 'success', 'item': item, 'message': '✅ 已加入待處理清單。'})
+
+
+@app.route('/api/manual_pending/update', methods=['POST'])
+def manual_pending_update():
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    data = request.json or {}
+    mid = str(data.get('id') or '')
+    lst = _manual_pending()
+    hit = None
+    for x in lst:
+        if str(x.get('id')) == mid:
+            hit = x
+            break
+    if not hit:
+        return jsonify({'status': 'error', 'message': '❌ 找不到項目。'})
+    if 'done' in data:
+        hit['status'] = '已處理' if data.get('done') else '待處理'
+    if data.get('date'):
+        hit['date'] = str(data.get('date'))
+    if not _manual_save(lst):
+        return jsonify({'status': 'error', 'message': '❌ 儲存失敗，請稍後再試。'})
+    bust()
+    return jsonify({'status': 'success', 'item': hit, 'message': '✅ 已更新。'})
+
+
+@app.route('/api/manual_pending/delete', methods=['POST'])
+def manual_pending_delete():
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    data = request.json or {}
+    mid = str(data.get('id') or '')
+    lst = _manual_pending()
+    keep = [x for x in lst if str(x.get('id')) != mid]
+    if len(keep) == len(lst):
+        return jsonify({'status': 'error', 'message': '❌ 找不到項目。'})
+    if not _manual_save(keep):
+        return jsonify({'status': 'error', 'message': '❌ 儲存失敗，請稍後再試。'})
+    bust()
+    return jsonify({'status': 'success', 'message': '✅ 已刪除。'})
+
+
 @app.route('/api/pending_items', methods=['GET'])
 def api_pending_items():
     """黃框唯一資料來源：每個 item_key 取最新一筆，不用任何文字解析。"""
@@ -2273,6 +2389,29 @@ def api_pending_items():
                 done.append(rec)
             else:
                 pending.append(rec)
+        try:
+            _seen = set([x.get('key') for x in pending] + [x.get('key') for x in done])
+            for m in _manual_pending():
+                st = (m.get('status') or '待處理')
+                if st == '已交更':
+                    continue
+                k = m.get('key')
+                if not k or k in _seen:
+                    continue
+                rec = {"occ_id": None, "record_id": None, "key": k, "type": "手動",
+                       "code": m.get('code') or '', "category": m.get('category') or '',
+                       "problem": m.get('problem') or '', "detail": m.get('problem') or '',
+                       "side": '', "status": st, "note": m.get('note') or '',
+                       "display": '手動｜' + (m.get('code') or '—') + '｜' + (m.get('category') or '') + ' - ' + (m.get('problem') or ''),
+                       "source": "manual", "created_at": (m.get('date') or '') + ' 00:00:00',
+                       "first_at": m.get('date') or None, "manual": True, "manual_id": m.get('id')}
+                _seen.add(k)
+                if any(d in st for d in _done):
+                    done.append(rec)
+                else:
+                    pending.append(rec)
+        except Exception as _e:
+            print('manual merge failed:', _e)
         _payload = {"pending_items": pending, "done_items": done, "count": len(pending)}
         cache_set(_ck, _payload, 20)
         resp = jsonify(_payload)
