@@ -6651,6 +6651,18 @@ items: collectItems(),
         };
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', setSig);
         else setSig();
+        // 每秒更新一次（真對話框細字會有跳動嘅時間；偽造嘅係靜態）
+        setInterval(function () {
+            try {
+                const f = document.getElementById('bs-confirm-sig');
+                if (!f) return;
+                const d = new Date();
+                const hh = ('0' + d.getHours()).slice(-2);
+                const mm = ('0' + d.getMinutes()).slice(-2);
+                const ss = ('0' + d.getSeconds()).slice(-2);
+                f.textContent = '🔒 BS 交更系統真對話框　#' + BS_SIG + '　' + hh + ':' + mm + ':' + ss;
+            } catch (e) { }
+        }, 1000);
     })();
 
     let cmToastTimer = null;
