@@ -863,7 +863,8 @@
                 </div>
                 <div style="flex:1; min-width:0;">
                     <div style="font-size:11.5px; color:#666; margin-bottom:4px;">位置（可自己打新位置）</div>
-                    <input id="inv-f-loc" type="text" placeholder="例如 A1" oninput="invRenderLocChips()" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
+                    <input id="inv-f-loc" type="text" placeholder="例如 A1 或 CP1" oninput="invRenderLocChips()" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
+                    <div style="font-size:10.5px; color:#999; margin-top:3px;">打 CP1 會自動歸入 CP；打 A1 自動歸回 82 倉庫</div>
                     <div id="inv-loc-chips" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;"></div>
                 </div>
             </div>
@@ -6090,15 +6091,25 @@ items: collectItems(),
         const it = invFind(id);
         if (!it) return;
         invMoveId = id;
-        document.getElementById('inv-move-name').textContent = it.name + '（現時：' + (it.loc || '未分類') + '）';
-        const locSet = {};
-        invItems.forEach(function (x) { if (x.zone === it.zone && x.loc) locSet[x.loc] = 1; });
-        const locs = Object.keys(locSet).sort(invLocSort);
+        document.getElementById('inv-move-name').innerHTML = invEsc(it.name) + '（現時：' + invEsc(zoneName(it.zone)) + ' / ' + invEsc(it.loc || '未分類') + '）';
+        const byZone = { WH: [], CP: [] };
+        invItems.forEach(function (x) {
+            if (!x.loc) return;
+            const z = x.zone === 'CP' ? 'CP' : 'WH';
+            if (byZone[z].indexOf(x.loc) < 0) byZone[z].push(x.loc);
+        });
         const box = document.getElementById('inv-move-list');
-        box.innerHTML = locs.map(function (l) {
-            const on = l === it.loc;
-            return '<button onclick="invMoveTo(' + JSON.stringify(l).replace(/"/g, '&quot;') + ')" style="padding:8px 12px; border-radius:8px; border:1px solid ' + (on ? '#3949ab' : '#ddd') + '; background:' + (on ? '#e8eaf6' : '#fff') + '; font-size:12.5px; font-weight:bold; cursor:pointer; color:#37474f;">' + invEsc(l) + (on ? ' ✓' : '') + '</button>';
-        }).join('') || '<span style="font-size:12px; color:#999;">未有其他位置</span>';
+        let h = '';
+        ['WH', 'CP'].forEach(function (z) {
+            const locs = byZone[z].sort(invLocSort);
+            if (!locs.length) return;
+            h += '<div style="flex:1 1 100%; font-size:11px; color:#666; font-weight:bold; margin:6px 0 2px;">' + zoneName(z) + '</div>';
+            h += locs.map(function (l) {
+                const on = (z === it.zone && l === it.loc);
+                return '<button onclick="invMoveTo(' + JSON.stringify(l).replace(/"/g, '&quot;') + ')" style="padding:7px 11px; border-radius:8px; border:1px solid ' + (on ? '#3949ab' : '#ddd') + '; background:' + (on ? '#e8eaf6' : '#fff') + '; font-size:12.5px; font-weight:bold; cursor:pointer; color:#37474f;">' + invEsc(l) + (on ? ' ✓' : '') + '</button>';
+            }).join('');
+        });
+        box.innerHTML = h || '<span style="font-size:12px; color:#999;">未有其他位置</span>';
         document.getElementById('inv-move-new').value = '';
         document.getElementById('inv-move-box').style.display = 'flex';
     }
