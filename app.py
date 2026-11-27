@@ -47,6 +47,7 @@ def release_db_connection(conn):
 # ---------- 系統設定 / 稽核（自動建表，無須手動修改資料庫） ----------
 _SET_CACHE = {}      # app_settings 讀取快取：key -> (時間, 值)
 _SET_TTL = 8         # 秒；寫入時會即時清掉該 key
+_LOGIN_FAIL = {}     # 登入失敗紀錄：IP -> {'ts': [時間...]}（防暴力破解）
 
 
 def ensure_tables():
@@ -673,7 +674,7 @@ def security_report():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-10", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-11", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -711,9 +712,27 @@ def catch_all_txt(filename):
 def login():
     error = None
     if request.method == 'POST':
+        # ---- 登入次數限制（防暴力破解）：同一 IP 10 分鐘內失敗 8 次即擋 10 分鐘 ----
+        _ip = (request.headers.get('X-Forwarded-For') or request.remote_addr or '').split(',')[0].strip()
+        _now = time.time()
+        _LFAIL = _LOGIN_FAIL.get(_ip)
+        if _LFAIL:
+            _LFAIL['ts'] = [t for t in _LFAIL['ts'] if _now - t < 600]
+            if len(_LFAIL['ts']) >= 8:
+                _wait = int(600 - (_now - _LFAIL['ts'][0]))
+                return render_template('login.html', error='❌ 嘗試次數太多，請等 %d 分鐘後再試。' % max(1, _wait // 60))
         pwd = (request.form.get('password') or '').strip()
         staff_pwd = get_setting('staff_password', STAFF_PASSWORD) or STAFF_PASSWORD
         admin_pwd = get_setting('admin_password', ADMIN_PASSWORD) or ADMIN_PASSWORD
+
+        def _fail_log():
+            try:
+                _rec = _LOGIN_FAIL.setdefault(_ip, {'ts': []})
+                _rec['ts'].append(time.time())
+                if len(_rec['ts']) > 20:
+                    _rec['ts'] = _rec['ts'][-20:]
+            except Exception:
+                pass
 
         if pwd and pwd == admin_pwd:
             session['logged_in'] = True
@@ -756,6 +775,7 @@ def login():
                 session['epoch'] = get_epoch(role, force=True)
                 log_action('登入', '個人帳號：%s' % member[0])
                 return redirect(url_for('index'))
+            _fail_log()
             error = "密碼錯誤！"
     return render_template('login.html', error=error)
 
