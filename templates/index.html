@@ -1062,6 +1062,12 @@
                     if (!rs || !rs.length) return;
                     rs.forEach(function (r) { try { r.unregister(); } catch (e) { } });
                     secBanner('⚠️ 偵測到本網站有異常 Service Worker（系統本身冇用），已自動移除。請去瀏覽器設定清除此網站資料，再重新載入。');
+                    try {
+                        fetch('/api/security_report', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ detail: '異常 Service Worker：' + rs.map(function (r) { return r.scope; }).join(',') + ' ; url=' + location.href })
+                        });
+                    } catch (e) { }
                 }).catch(function () { });
             }
         } catch (e) { }
@@ -1074,6 +1080,12 @@
                 const inlineN = Array.from(document.scripts).filter(function (s) { return !s.src; }).length;
                 if (bad.length || inlineN > 3) {
                     secBanner('⚠️ 頁面出現額外腳本（外來 ' + bad.length + ' 個／內嵌 ' + inlineN + ' 段），可能被注入。請清除瀏覽器網站資料或改用無痕模式。');
+                    try {
+                        fetch('/api/security_report', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ detail: '額外腳本：外部=' + bad.map(function (s) { return s.src; }).join(',') + ' ; inline=' + inlineN + ' ; url=' + location.href + ' ; scripts=' + document.scripts.length })
+                        });
+                    } catch (e) { }
                 }
             } catch (e) { }
         });
