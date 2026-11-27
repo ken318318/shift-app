@@ -702,6 +702,53 @@ def security_report():
         return jsonify({'status': 'error', 'message': str(e)})
 
 
+@app.route('/api/member_set_password', methods=['POST'])
+def member_set_password():
+    """管理員設定某同事帳號嘅新密碼。"""
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以使用。'}), 403
+    d = request.get_json(silent=True) or {}
+    acct = (d.get('account') or '').strip()
+    pwd = (d.get('new_password') or '').strip()
+    cur = d.get('current_admin_password') or ''
+    admin_pwd = get_setting('admin_password', ADMIN_PASSWORD) or ADMIN_PASSWORD
+    if cur != admin_pwd:
+        return jsonify({'status': 'error', 'message': '❌ 目前管理員密碼不正確。'})
+    if not acct:
+        return jsonify({'status': 'error', 'message': '❌ 請選擇同事帳號。'})
+    if len(pwd) < 8:
+        return jsonify({'status': 'error', 'message': '❌ 新密碼最少 8 個字元。'})
+    if pwd.upper().startswith('BS'):
+        return jsonify({'status': 'error', 'message': '❌ 唔可以再用「BS+員工編號」。'})
+    norm = acct.upper()[2:] if acct.upper().startswith('BS') else acct.upper()
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""UPDATE members SET password=%s, pwd_changed=TRUE
+                     WHERE UPPER(account)=%s OR UPPER(account)=%s RETURNING name""",
+                  (pwd, norm, 'BS' + norm))
+        row = c.fetchone()
+        if not row:
+            conn.rollback()
+            return jsonify({'status': 'error', 'message': '❌ 找不到該帳號。'})
+        conn.commit()
+        try:
+            log_action('更改密碼', '管理員重設同事密碼：%s' % row[0])
+        except Exception:
+            pass
+        return jsonify({'status': 'success', 'message': '✅ 已更新「%s」嘅密碼' % row[0]})
+    except Exception as e:
+        if conn:
+            try: conn.rollback()
+            except Exception: pass
+        return jsonify({'status': 'error', 'message': '❌ 更新失敗：%s' % e})
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+
 @app.route('/api/security_blocked', methods=['GET', 'POST'])
 def security_blocked():
     """查看／管理 IP 黑名單（app_settings: blocked_ips）。限管理員。"""
@@ -835,7 +882,7 @@ def security_clean_records():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-22", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-23", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3298,8 +3345,10 @@ def change_password():
         return jsonify({"status": "error", "message": "❌ 目前管理員密碼不正確。"})
     if target not in ('staff', 'admin'):
         return jsonify({"status": "error", "message": "❌ 目標帳號不正確。"})
-    if len(new_pwd) < 4:
-        return jsonify({"status": "error", "message": "❌ 新密碼最少 4 個字元。"})
+    if target == 'staff':
+        return jsonify({"status": "error", "message": "⚠️ 共用密碼已停用；請用「同事個人密碼」逐個帳號重設。"})
+    if len(new_pwd) < 8:
+        return jsonify({"status": "error", "message": "❌ 新密碼最少 8 個字元。"})
 
     key = 'staff_password' if target == 'staff' else 'admin_password'
     if not set_setting(key, new_pwd):
