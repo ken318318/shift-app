@@ -614,9 +614,66 @@ def _security_headers(response):
     return response
 
 
+@app.route('/diag')
+def diag_page():
+    """診斷頁：完全冇 JavaScript。若此頁仍彈窗，證明彈窗唔係本站發出。"""
+    import hashlib as _hl
+    _idx = os.path.join(app.root_path, 'templates', 'index.html')
+    _sha = ''
+    try:
+        with open(_idx, 'rb') as _f:
+            _sha = _hl.sha256(_f.read()).hexdigest()[:16]
+    except Exception:
+        _sha = 'n/a'
+    html = """<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>診斷頁 - BS 交更系統</title>
+<style>body{font-family:system-ui,-apple-system,sans-serif;margin:0;padding:18px;background:#f6f7fb;color:#222;line-height:1.7}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+h1{font-size:18px;margin:0 0 10px}code{background:#eef1f5;padding:2px 6px;border-radius:6px;font-size:12px}
+.warn{color:#c62828;font-weight:bold}</style></head><body>
+<div class="card"><h1>🔍 安全診斷頁</h1>
+<div><b>本頁完全冇 JavaScript</b>（冇任何 script 標籤、冇 onclick）。</div>
+<div style="margin-top:8px">如果喺呢頁都彈「將公司數據掛載在外部伺服器…」或者其他怪彈窗，<span class="warn">就 100% 證明唔係網站發出</span>，而係手機／瀏覽器／其他 App 層面。</div>
+</div>
+<div class="card">
+<div>伺服器版本：<code>%(ver)s</code></div>
+<div>index.html SHA256（前 16 位）：<code>%(sha)s</code></div>
+<div>伺服器時間：<code>%(now)s</code></div>
+<div>你嘅瀏覽器：<code>%(ua)s</code></div>
+</div>
+<div class="card">
+<div>下一步：</div>
+<div>1. 若本頁冇彈 → 請回主頁，留意頁面頂部有冇<b>紅色警告條</b>（有就表示被注入，並會自動上報詳情給我）。</div>
+<div>2. 若本頁有彈 → 請清除此網站資料（Chrome → 設定 → 網站設定 → 所有網站 → bs-shift.xyz → 清除並重設），或用無痕模式／另一個瀏覽器再測。</div>
+<div style="margin-top:8px"><a href="/">← 返回主頁</a></div>
+</div>
+</body></html>""" % {
+        'ver': 'v20261127-09',
+        'sha': _sha,
+        'now': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'ua': (request.headers.get('User-Agent') or '')[:160],
+    }
+    return Response(html, mimetype='text/html')
+
+
+@app.route('/api/security_report', methods=['POST'])
+def security_report():
+    """前端自我檢查發現異常時上報（寫 audit_logs，方便日後追查）。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    d = request.get_json(silent=True) or {}
+    detail = (str(d.get('detail') or ''))[:900]
+    try:
+        log_action('安全報告', 'UA=' + (request.headers.get('User-Agent') or '')[:120] + ' | ' + detail)
+    except Exception:
+        pass
+    return jsonify({'status': 'success'})
+
+
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-08", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-09", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
