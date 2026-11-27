@@ -5760,6 +5760,7 @@ items: collectItems(),
             invLoaded = true;
             if (msg) msg.textContent = '';
             invRender();
+            if (document.getElementById('inv-edit-box') && document.getElementById('inv-edit-box').style.display === 'flex') invFillLocOptions();
         } catch (e) {
             if (msg) msg.textContent = '❌ 連線失敗';
         }
