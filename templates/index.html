@@ -2511,7 +2511,8 @@ async function loadPendingIssues() {
     const _reportedKeys = ownReported.map(x => x.key);
     const _resolvedKeys = resolvedHere.map(x => x.key);
     let items = (data.pending_items || []).filter(it =>
-        _reportedKeys.indexOf(it.key) < 0 && _resolvedKeys.indexOf(it.key) < 0);
+        _reportedKeys.indexOf(it.key) < 0 && _resolvedKeys.indexOf(it.key) < 0
+        && String(it.status || '').indexOf('待處理') < 0);   // 「待處理」交去待處理清單，黃框唔顯示
     (data.done_items || []).forEach(function (it) {
         if (it && it.manual) items.push(Object.assign({}, it, { __done: true, status: '已處理' }));
     });
@@ -2989,7 +2990,7 @@ async function loadPendingIssues() {
 
     function plistToggle(el) {
         const key = el.getAttribute('data-key');
-        PLIST_OPEN[key] = !!el.checked;
+        PLIST_OPEN[key] = !el.checked;   // 勾選＝已完成
         plistRender();
     }
 
