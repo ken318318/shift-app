@@ -6535,6 +6535,40 @@ items: collectItems(),
         // 保存原生 alert 作最後備用，然後全面改用自家提示
         window.__bsRawAlert = window.alert.bind(window);
         window.alert = function (m) { try { bsAlert(String(m == null ? '' : m)); } catch (e) { } };
+        // 鎖死 alert，防止被其他腳本改寫
+        try {
+            Object.defineProperty(window, 'alert', {
+                configurable: false, writable: false,
+                value: function (m) { try { bsAlert(String(m == null ? '' : m)); } catch (e) { } }
+            });
+        } catch (e) { }
+    })();
+
+    // ===== 監視有冇外來 script 被插入（一發現即移除並上報） =====
+    (function () {
+        try {
+            const mo = new MutationObserver(function (muts) {
+                muts.forEach(function (m) {
+                    Array.prototype.forEach.call(m.addedNodes, function (n) {
+                        if (!n || n.tagName !== 'SCRIPT') return;
+                        const src = n.src || '';
+                        if (src && src.indexOf(location.origin + '/static/') !== 0) {
+                            try { n.remove(); } catch (e) { }
+                            secBanner('⚠️ 偵測到外來腳本被插入（' + src + '），已即時移除。請清除瀏覽器網站資料。');
+                            try {
+                                fetch('/api/security_report', {
+                                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ detail: 'MutationObserver 攔截 script：' + src + ' ; url=' + location.href })
+                                });
+                            } catch (e) { }
+                        }
+                    });
+                });
+            });
+            const start = function () { try { mo.observe(document.documentElement, { childList: true, subtree: true }); } catch (e) { } };
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+            else start();
+        } catch (e) { }
     })();
 
     let cmToastTimer = null;
