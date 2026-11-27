@@ -16,6 +16,12 @@ app.json.sort_keys = False          # 保留字典原有次序（否則 jsonify 
 app.secret_key = "Ken_Shift_App_Secret_123" 
 CORS(app)
 
+# ---------- 安全設定 ----------
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+if os.environ.get('ALLOW_INSECURE_COOKIE') != '1':
+    app.config['SESSION_COOKIE_SECURE'] = True
+
 STAFF_PASSWORD = "BS2026"       
 ADMIN_PASSWORD = "ADMIN888"     
 DB_URL = os.environ.get("DB_URL")
@@ -580,9 +586,37 @@ def _gzip_response(response):
     return response
 
 
+@app.after_request
+def _security_headers(response):
+    """安全標頭＋CSP（只准自己網站嘅 script，阻止任何外來腳本／內嵌框架）。"""
+    try:
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'DENY')
+        response.headers.setdefault('Referrer-Policy', 'same-origin')
+        response.headers.setdefault('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=()')
+        response.headers.setdefault('Cross-Origin-Opener-Policy', 'same-origin')
+        if not response.headers.get('Content-Security-Policy'):
+            response.headers['Content-Security-Policy'] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data: blob:; "
+                "font-src 'self' data:; "
+                "connect-src 'self'; "
+                "media-src 'self'; "
+                "object-src 'none'; "
+                "base-uri 'self'; "
+                "form-action 'self'; "
+                "frame-ancestors 'none'"
+            )
+    except Exception as _e:
+        print('security header skip:', _e)
+    return response
+
+
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-07", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-08", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
