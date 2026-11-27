@@ -6748,7 +6748,7 @@ items: collectItems(),
                 el.value = v;
             }
             const up = String(v).toUpperCase();
-            const isCode = tableCodeSet.has(up) || /^[A-Z]{1,4}\d{4,6}$/.test(up);
+            const isCode = tableCodeSet.has(up);
             if (!isCode) return;
             const item = el.closest('.lux-item, .temp-item, .bgm-item, .venue-item, .nfc-item');
             if (el.classList.contains('lux-table')) { var n1 = pick(item, 'lux-box1'); if (n1) n1.focus(); return; }
