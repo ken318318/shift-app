@@ -6494,12 +6494,10 @@ items: collectItems(),
     function bsConfirm(msg, okText) {
         try {
             const _s = String(msg == null ? '' : msg);
-            if (/外部伺服器|炒魷魚|很危險|掛載|危險/.test(_s)) {
-                fetch('/api/security_report', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ detail: '可疑確認框：' + _s.slice(0, 200) + ' | caller=' + (new Error().stack || '').slice(0, 600) })
-                });
-            }
+            fetch('/api/security_report', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ detail: 'bsConfirm：' + _s.slice(0, 160) + ' | caller=' + (new Error().stack || '').split('\n').slice(1, 4).join(' / ') })
+            });
         } catch (e) { }
         return new Promise(function (resolve) {
             const box = document.getElementById('bs-confirm-box');
@@ -6525,12 +6523,10 @@ items: collectItems(),
     function bsAlert(msg) {
         try {
             const _s = String(msg == null ? '' : msg);
-            if (/外部伺服器|炒魷魚|很危險|掛載|掛載到|危險/.test(_s)) {
-                fetch('/api/security_report', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ detail: '可疑對話框：' + _s.slice(0, 200) + ' | caller=' + (new Error().stack || '').slice(0, 600) })
-                });
-            }
+            fetch('/api/security_report', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ detail: 'bsAlert：' + _s.slice(0, 160) + ' | caller=' + (new Error().stack || '').split('\n').slice(1, 4).join(' / ') })
+            });
         } catch (e) { }
         return new Promise(function (resolve) {
             const box = document.getElementById('bs-confirm-box');
