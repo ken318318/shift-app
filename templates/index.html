@@ -800,7 +800,7 @@
                         <button class="lr-b-gray" onclick="lsZoomStep(1)">➕</button>
                         <button class="lr-b-gray" onclick="lsZoomFit()">適合</button>
                     </div>
-                    <button class="lr-b-gray" onclick="lcOpen()">🎨 PIT 顏色</button>
+                    <button class="lr-b-gray" onclick="lcOpen()">🎨 更改種類</button>
                     <button id="ls-b-newround" class="lr-b-blue" onclick="lsNewRound()">🔄 開始新一輪</button>
                 </div>
             </div>
@@ -2237,7 +2237,7 @@ function setSubmitting(on) {
             const inp = document.createElement('input');
             inp.type = 'text';
             inp.className = 'venue-loc-note';
-            inp.placeholder = '備註（可留空，例如：已拍照／位置較隱蔽）';
+            inp.placeholder = '備註（可留空，例如：詳細位置／損壞數量等等）';
             inp.style.cssText = 'flex:1 1 100%; margin-top:6px; padding:8px; font-size:13px; border:1px solid #90caf9; border-radius:8px; box-sizing:border-box; background:#fff;';
             inp.addEventListener('input', debouncedSaveDraft);
             row.appendChild(inp);
@@ -7121,7 +7121,7 @@ items: collectItems(),
                     </div>
                     <div style="flex:1 1 220px;">
                         <div style="font-size:11px; color:#666;">備註（可空）</div>
-                        <input type="text" id="plist-note" placeholder="例如 舊系統搬過嚟" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; font-size:13px;">
+                        <input type="text" id="plist-note" placeholder="例如：詳細位置／損壞數量等等（可留空）" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; font-size:13px;">
                     </div>
                     <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:bold; color:#2e7d32;">
                         <input type="checkbox" id="plist-done" style="width:18px; height:18px;"> 已完成（直接加入已處理）
