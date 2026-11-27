@@ -702,6 +702,33 @@ def security_report():
         return jsonify({'status': 'error', 'message': str(e)})
 
 
+@app.route('/api/security_blocked', methods=['GET', 'POST'])
+def security_blocked():
+    """查看／管理 IP 黑名單（app_settings: blocked_ips）。限管理員。"""
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以使用。'}), 403
+    cur = [x.strip() for x in (get_setting('blocked_ips', '') or '').split(',') if x.strip()]
+    if request.method == 'GET':
+        return jsonify({'status': 'success', 'hardcoded': sorted(_BLOCK_IPS), 'dynamic': cur})
+    d = request.get_json(silent=True) or {}
+    ip = (d.get('ip') or '').strip()
+    action = (d.get('action') or 'add').strip()
+    if not ip or not re.match(r'^\d{1,3}(\.\d{1,3}){3}$', ip):
+        return jsonify({'status': 'error', 'message': '❌ IP 格式不正確'})
+    if action == 'add':
+        if ip not in cur:
+            cur.append(ip)
+    else:
+        cur = [x for x in cur if x != ip]
+    if not set_setting('blocked_ips', ','.join(cur)):
+        return jsonify({'status': 'error', 'message': '❌ 儲存失敗'})
+    try:
+        log_action('IP 黑名單', ('加入 ' if action == 'add' else '移除 ') + ip)
+    except Exception:
+        pass
+    return jsonify({'status': 'success', 'dynamic': cur})
+
+
 @app.route('/api/security_rotate_passwords', methods=['POST'])
 def security_rotate_passwords():
     """一次性將所有個人帳號密碼重置為隨機 10 字（只回一次清單）。限管理員。"""
@@ -808,17 +835,23 @@ def security_clean_records():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-20", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-21", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
 def require_login():
     allowed_routes = ['login', 'static', 'verify_wechat', 'catch_all_txt', 'healthz']
     endpoint = request.endpoint
-    # 已知攻擊來源 IP：全站直接拒絕
+    # 已知攻擊來源 IP：全站直接拒絕（硬編 + app_settings 動態名單）
     try:
         _cip = (request.headers.get('X-Forwarded-For') or request.remote_addr or '').split(',')[0].strip()
-        if _cip in _BLOCK_IPS and endpoint != 'healthz':
+        _dyn = (get_setting('blocked_ips', '') or '')
+        _blocked = set(_BLOCK_IPS)
+        for _x in _dyn.split(','):
+            _x = _x.strip()
+            if _x:
+                _blocked.add(_x)
+        if _cip and _cip in _blocked and endpoint != 'healthz':
             if request.path.startswith('/api/'):
                 return jsonify({'status': 'error', 'message': '❌ 拒絕存取。'}), 403
             return Response('403 Forbidden', status=403, mimetype='text/plain')
