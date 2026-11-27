@@ -78,6 +78,7 @@
         .ur-check input { width: 15px; height: 15px; margin: 0; }
         .lr-msg { font-size: 12px; color: #555; margin: 6px 2px; min-height: 16px; line-height: 1.5; }
         .lr-tip { font-size: 12px; color: #5d4037; background: #fff8e1; border: 1px solid #ffe0a3; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; line-height: 1.6; }
+        #plist-add input, #plist-add select { box-sizing: border-box; max-width: 100%; min-width: 0; }
         .lr-pool { background: #fff; border: 1px dashed #90a4ae; border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
         .lr-pool b { font-size: 12px; color: #37474f; display: block; margin-bottom: 6px; }
         .lr-chip { display: inline-block; padding: 5px 9px; margin: 0 6px 6px 0; border-radius: 14px; background: #e3f2fd; border: 1px solid #90caf9; color: #0d47a1; font-size: 12px; font-weight: bold; cursor: pointer; }
@@ -7724,25 +7725,25 @@ items: collectItems(),
             <div id="plist-add" style="display:none; background:#f7f9ff; border:1px solid #dbe4ff; border-radius:10px; padding:12px; margin-bottom:12px;">
                 <b style="font-size:13px; color:#283593;">➕ 新增待處理問題</b>
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-                    <div style="flex:0 0 150px;">
+                    <div style="flex:1 1 150px; min-width:0;">
                         <div style="font-size:11px; color:#666;">日期</div>
                         <input type="date" id="plist-date" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; font-size:13px;">
                     </div>
-                    <div style="flex:1 1 180px;">
+                    <div style="flex:1 1 180px; min-width:0;">
                         <div style="font-size:11px; color:#666;">類別（同系統選項同步）</div>
                         <select id="plist-cat" onchange="plistFillProblems()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; font-size:13px; background:#fff;"></select>
                     </div>
-                    <div style="flex:1 1 200px;">
+                    <div style="flex:1 1 200px; min-width:0;">
                         <div style="font-size:11px; color:#666;">問題</div>
                         <select id="plist-prob" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; font-size:13px; background:#fff;"></select>
                     </div>
                 </div>
                 <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;">
-                    <div style="flex:0 0 140px;">
+                    <div style="flex:1 1 140px; min-width:0;">
                         <div style="font-size:11px; color:#666;">台號（可空）</div>
                         <input type="text" id="plist-code" placeholder="例如 NB1236" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; font-size:13px;">
                     </div>
-                    <div style="flex:1 1 220px;">
+                    <div style="flex:1 1 220px; min-width:0;">
                         <div style="font-size:11px; color:#666;">備註（可空）</div>
                         <input type="text" id="plist-note" placeholder="例如：詳細位置／損壞數量等等（可留空）" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:8px; font-size:13px;">
                     </div>
