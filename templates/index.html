@@ -776,8 +776,13 @@
                 <option value="">↩️ 還原預設顏色</option>
             </select>
             <input id="lc-q" type="text" placeholder="搜尋台號，例如 1236" oninput="lcRender()" style="width:100%; margin-top:8px; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
-            <div style="font-size:11.5px; color:#666; margin:8px 2px;">打勾＝該台用上面揀嘅顏色；取消打勾＝還原（停運灰／PIT 顏色）。</div>
-            <div id="lc-list" style="max-height:52vh; overflow:auto; border:1px solid #eee; border-radius:8px; padding:4px 6px;"></div>
+            <div style="font-size:11.5px; color:#666; margin:8px 2px;">打勾＝預覽用上面揀嘅顏色；取消打勾＝還原（停運灰／PIT 顏色）。改完要按下面「✅ 確定（套用）」才會寫入。</div>
+            <div id="lc-list" style="max-height:48vh; overflow:auto; border:1px solid #eee; border-radius:8px; padding:4px 6px;"></div>
+            <div id="lc-pending" style="font-size:11.5px; color:#6a1b9a; font-weight:bold; margin:6px 2px 0; min-height:16px;"></div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+                <button type="button" onclick="lcApply()" id="lc-ok" style="flex:1; padding:11px; border:none; border-radius:8px; background:#2e7d32; color:#fff; font-size:13px; font-weight:bold; cursor:pointer;">✅ 確定（套用）</button>
+                <button type="button" onclick="lcResetDraft()" style="flex:1; padding:11px; border:none; border-radius:8px; background:#eceff1; color:#455a64; font-size:13px; font-weight:bold; cursor:pointer;">取消改動</button>
+            </div>
             <div id="lc-msg" style="font-size:12px; color:#d32f2f; margin-top:6px; min-height:16px;"></div>
         </div>
     </div>
@@ -5195,8 +5200,23 @@ items: collectItems(),
         return codes;
     }
 
+    let lcDraft = {};
+
+    function lcOv(r) {
+        return Object.prototype.hasOwnProperty.call(lcDraft, r.key) ? (lcDraft[r.key] || '') : (layoutCodeColors[r.key] || '');
+    }
+
+    function lcDraftCount() { return Object.keys(lcDraft).length; }
+
+    function lcPendingMsg() {
+        const el = document.getElementById('lc-pending');
+        if (!el) return;
+        const n = lcDraftCount();
+        el.textContent = n ? ('未套用嘅改動：' + n + ' 個台號　（按「✅ 確定（套用）」才寫入）') : '';
+    }
+
     function lcEffectiveName(r) {
-        const ov = layoutCodeColors[r.key];
+        const ov = lcOv(r);
         if (ov) return '手動・' + (LC_NAMES[ov] || '');
         if (r.status === '停運') return '預設・停運灰';
         const key = 'PIT' + String(r.pit || '').padStart(2, '0');
@@ -5211,7 +5231,7 @@ items: collectItems(),
     }
 
     function lcEffColor(r) {
-        const ov = layoutCodeColors[r.key];
+        const ov = lcOv(r);
         if (ov) return LAYOUT_COLORS[ov];
         if (r.status === '停運') return '#cfd8dc';
         const key = 'PIT' + String(r.pit || '').padStart(2, '0');
@@ -5232,17 +5252,26 @@ items: collectItems(),
         if (msg) msg.textContent = '';
         const q = document.getElementById('lc-q');
         if (q) q.value = '';
+        lcDraft = {};
         if (box) box.style.display = 'flex';
         if (!cmData) { try { await lsRenderMap(); } catch (e) { } }
         lcRender();
     }
 
     function lcClose() {
+        lcDraft = {};
         const box = document.getElementById('lc-box');
         if (box) box.style.display = 'none';
     }
 
-    function lcRender() {
+    function lcResetDraft() {
+        lcDraft = {};
+        const msg = document.getElementById('lc-msg');
+        if (msg) msg.textContent = '';
+        lcRender();
+    }
+
+    async function lcRender() {
         const box = document.getElementById('lc-list');
         if (!box) return;
         if (!cmData) { box.innerHTML = '<div style="padding:16px;text-align:center;color:#999;font-size:12px;">載入台號中…</div>'; return; }
@@ -5252,47 +5281,72 @@ items: collectItems(),
         const rows = lcAllCodes().filter(function (r) { return !q || r.key.indexOf(q) >= 0; });
         if (!rows.length) {
             box.innerHTML = '<div style="padding:16px;text-align:center;color:#999;font-size:12px;">冇符合台號</div>';
+            lcPendingMsg();
             return;
         }
+        const st = box.scrollTop;
         box.innerHTML = rows.map(function (r) {
-            const ov = layoutCodeColors[r.key] || '';
+            const ov = lcOv(r);
             const checked = mode ? (ov === mode) : !!ov;
-            return '<label style="display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px solid #f2f2f2; font-size:13px; cursor:pointer;">'
+            const pend = Object.prototype.hasOwnProperty.call(lcDraft, r.key);
+            return '<label style="display:flex; align-items:center; gap:8px; padding:8px; border-bottom:1px solid #f2f2f2; font-size:13px; cursor:pointer;' + (pend ? 'font-weight:bold;' : '') + '">'
                 + '<input type="checkbox" data-code="' + r.key + '"' + (checked ? ' checked' : '') + ' onchange="lcToggle(this)" style="width:18px; height:18px;">'
                 + '<span style="font-weight:bold;">' + r.key + '</span>'
                 + '<span style="display:inline-block; width:16px; height:12px; background:' + lcEffColor(r) + '; border:1px solid #999;"></span>'
+                + (pend ? '<span style="font-size:10px; color:#6a1b9a; border:1px solid #ce93d8; border-radius:6px; padding:1px 4px;">未套用</span>' : '')
                 + '<span style="font-size:11px; color:#666; margin-left:auto;">' + lcEffectiveName(r) + '</span>'
                 + '</label>';
         }).join('');
+        box.scrollTop = st;
+        lcPendingMsg();
     }
 
-    async function lcToggle(el) {
+    // 打勾只記入草稿（唔即時寫入），按「確定」才一次過套用
+    function lcToggle(el) {
         const code = el.getAttribute('data-code');
         const mode = document.getElementById('lc-mode').value;
-        const colour = el.checked ? (mode || '') : '';
+        if (!lcDraft) lcDraft = {};
+        if (el.checked) lcDraft[code] = (mode || '');
+        else lcDraft[code] = '';
         const msg = document.getElementById('lc-msg');
-        el.disabled = true;
+        if (msg) msg.textContent = '';
+        lcRender();
+    }
+
+    async function lcApply() {
+        const codes = Object.keys(lcDraft || {});
+        if (!codes.length) { lcClose(); return; }
+        const btn = document.getElementById('lc-ok');
+        const msg = document.getElementById('lc-msg');
+        const pend = document.getElementById('lc-pending');
+        if (btn) { btn.disabled = true; btn.textContent = '套用中…'; }
+        let done = 0;
         try {
-            const r = await fetch('/api/layout_colors', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code: code, colour: colour })
-            });
-            const d = await r.json();
-            if (!d || d.status !== 'success') {
-                if (msg) msg.textContent = (d && d.message) || '❌ 儲存失敗';
-                el.checked = !el.checked;
-                return;
+            for (let i = 0; i < codes.length; i++) {
+                const code = codes[i];
+                if (pend) pend.textContent = '套用中… ' + (i + 1) + '／' + codes.length;
+                const r = await fetch('/api/layout_colors', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code, colour: lcDraft[code] || '' })
+                });
+                const d = await r.json();
+                if (!d || d.status !== 'success') {
+                    if (msg) msg.textContent = (d && d.message) || ('❌ 儲存失敗（' + code + '）');
+                    if (btn) { btn.disabled = false; btn.textContent = '✅ 確定（套用）'; }
+                    return;
+                }
+                layoutCodeColors = d.code_colors || {};
+                done++;
             }
-            layoutCodeColors = d.code_colors || {};
-            if (msg) msg.textContent = d.message || '';
-            await lsRenderMap();
-            lsApplyZoom();
-            lcRender();
+            lcDraft = {};
+            lcClose();
+            try { await lsRenderMap(); lsApplyZoom(); } catch (e) { }
+            if (typeof cmToast === 'function') cmToast('✅ 已套用 ' + done + ' 個台號顏色');
         } catch (e) {
-            if (msg) msg.textContent = '❌ 連線失敗';
-            el.checked = !el.checked;
+            if (msg) msg.textContent = '❌ 連線失敗（已套用 ' + done + ' 個）';
         } finally {
-            el.disabled = false;
+            if (btn) { btn.disabled = false; btn.textContent = '✅ 確定（套用）'; }
+            if (pend) pend.textContent = '';
         }
     }
 
