@@ -80,6 +80,12 @@
         .lr-tip { font-size: 12px; color: #5d4037; background: #fff8e1; border: 1px solid #ffe0a3; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; line-height: 1.6; }
         #plist-add input, #plist-add select { box-sizing: border-box; max-width: 100%; min-width: 0; margin: 0; height: 38px; }
         #plist-add input[type=checkbox] { height: 18px; width: 18px; }
+        input[type="date"], input[type="time"], input[type="number"] { box-sizing: border-box; font-family: inherit; font-size: 14px; }
+        #ur-date { padding: 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 13px; margin: 0; height: 36px; }
+        #inv-edit-box input, #inv-edit-box select { margin: 0; height: 38px; box-sizing: border-box; max-width: 100%; min-width: 0; }
+        #inv-edit-box input[type=checkbox] { height: 18px; width: 18px; }
+        .inv-chip { display: inline-block; padding: 5px 9px; border-radius: 999px; border: 1px solid #ddd; background: #fff; color: #455a64; font-size: 11.5px; font-weight: bold; cursor: pointer; }
+        .inv-chip.on { border-color: #3949ab; background: #e8eaf6; color: #283593; }
         .lr-pool { background: #fff; border: 1px dashed #90a4ae; border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
         .lr-pool b { font-size: 12px; color: #37474f; display: block; margin-bottom: 6px; }
         .lr-chip { display: inline-block; padding: 5px 9px; margin: 0 6px 6px 0; border-radius: 14px; background: #e3f2fd; border: 1px solid #90caf9; color: #0d47a1; font-size: 12px; font-weight: bold; cursor: pointer; }
@@ -850,15 +856,15 @@
             <div style="display:flex; gap:8px; margin-top:8px;">
                 <div style="flex:0 0 120px;">
                     <div style="font-size:11.5px; color:#666; margin-bottom:4px;">倉庫</div>
-                    <select id="inv-f-zone" onchange="invFillLocOptions()" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; background:#fff;">
+                    <select id="inv-f-zone" onchange="invOnZoneChange()" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; background:#fff;">
                         <option value="WH">82 倉庫</option>
                         <option value="CP">CP</option>
                     </select>
                 </div>
                 <div style="flex:1; min-width:0;">
                     <div style="font-size:11.5px; color:#666; margin-bottom:4px;">位置（可自己打新位置）</div>
-                    <input id="inv-f-loc" type="text" list="inv-loc-options" placeholder="例如 A1" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
-                    <datalist id="inv-loc-options"></datalist>
+                    <input id="inv-f-loc" type="text" placeholder="例如 A1" oninput="invRenderLocChips()" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
+                    <div id="inv-loc-chips" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;"></div>
                 </div>
             </div>
             <div style="display:flex; gap:8px; margin-top:8px;">
@@ -868,12 +874,8 @@
                 </div>
                 <div style="flex:0 0 100px;">
                     <div style="font-size:11.5px; color:#666; margin-bottom:4px;">單位</div>
-                    <input id="inv-f-unit" type="text" placeholder="個／箱／本" list="inv-unit-options" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
-                    <datalist id="inv-unit-options">
-                        <option>個</option><option>箱</option><option>本</option><option>張</option><option>條</option>
-                        <option>粒</option><option>塊</option><option>包</option><option>盒</option><option>卷</option>
-                        <option>部</option><option>支</option><option>件</option><option>套</option><option>對</option><option>排</option>
-                    </datalist>
+                    <input id="inv-f-unit" type="text" placeholder="個" oninput="invRenderUnitChips()" style="width:100%; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
+                    <div id="inv-unit-chips" style="display:flex; flex-wrap:wrap; gap:4px; margin-top:6px;"></div>
                 </div>
             </div>
             <div style="font-size:11.5px; color:#666; margin:8px 0 4px;">附加數量（例如 1 箱 = 8 卷時嘅「8卷」）</div>
@@ -1025,6 +1027,13 @@
         }
         if (typeof loadLayoutProgress === 'function') loadLayoutProgress();
     });
+
+    // 減少 Render 免費層休眠（冷啟動）造成的慢：頁面開住時每 4 分鐘 ping 一次
+    (function () {
+        setInterval(function () {
+            try { fetch('/healthz', { cache: 'no-store' }); } catch (e) { }
+        }, 4 * 60 * 1000);
+    })();
 
     // UI 繪製中標記：轉轉圈會等呢個清零先收
     window.__uiBusy = window.__uiBusy || 0;
@@ -4625,11 +4634,11 @@ items: collectItems(),
         document.body.style.overflow = '';
     }
 
-    async function loadChairMap() {
+    async function loadChairMap(fresh) {
         const tip = document.getElementById('cm-tip');
         if (tip) tip.textContent = '載入中…';
         try {
-            const r = await fetch('/api/chair_map?_t=' + Date.now());
+            const r = await fetch('/api/chair_map' + (fresh ? ('?_t=' + Date.now()) : ''), { cache: 'no-store' });
             const d = await r.json();
             if (!d || d.status !== 'success') { if (tip) tip.textContent = (d && d.message) || '讀取失敗'; return; }
             cmData = d;
@@ -4954,7 +4963,7 @@ items: collectItems(),
             const r = await fetch('/api/chair_map/reset', { method: 'POST' });
             const d = await r.json();
             if (!d || d.status !== 'success') { alert((d && d.message) || '❌ 還原失敗'); return; }
-            await loadChairMap();
+            await loadChairMap(true);
             cmToast('✅ 已還原預設版面');
         } catch (e) {
             alert('❌ 連線失敗');
@@ -4977,7 +4986,7 @@ items: collectItems(),
             const d = await r.json();
             if (!d || d.status !== 'success') { alert((d && d.message) || '❌ 上傳失敗'); return; }
             cmSel = null;
-            await loadChairMap();
+            await loadChairMap(true);
             cmToast('✅ 已套用（' + (d.codes || 0) + ' 個台號）');
         } catch (e) {
             alert('❌ 上傳失敗：' + e.message);
@@ -5019,7 +5028,7 @@ items: collectItems(),
                 }
             });
             if (changed) await cmSaveEdits();
-            await loadChairMap();
+            await loadChairMap(true);
             cmToast(d.message || ('✅ ' + label));
         } catch (e) {
             alert('❌ 連線失敗');
@@ -5042,7 +5051,7 @@ items: collectItems(),
             });
             const d = await r.json();
             if (!d || d.status !== 'success') { alert((d && d.message) || '❌ 失敗'); return; }
-            await loadChairMap();
+            await loadChairMap(true);
             cmToast(on ? '✅ 已標記活動台' : '✅ 已恢復台');
         } catch (e) {
             alert('❌ 連線失敗');
@@ -5209,7 +5218,7 @@ items: collectItems(),
                 if (groups[act].length) await post('/api/chair_map/bulk', { action: act, codes: groups[act] });
             }
             cmDraft = {};
-            await loadChairMap();
+            await loadChairMap(true);
             cmRenderEventList();
             if (msg) msg.textContent = '✅ 已套用 ' + keys.length + ' 項改動。';
             cmToast('✅ 已套用改動');
@@ -5910,16 +5919,55 @@ items: collectItems(),
         } catch (e) { invNote('❌ 連線失敗'); }
     }
 
-    function invFillLocOptions() {
-        const zone = (document.getElementById('inv-f-zone') || {}).value || 'WH';
+    const INV_UNITS = ['個', '箱', '本', '張', '條', '粒', '塊', '包', '盒', '卷', '部', '支', '件', '套', '對', '排'];
+
+    function invLocList(zone) {
         const locs = [];
         invItems.forEach(function (it) {
             if (it.zone === zone && it.loc && locs.indexOf(it.loc) < 0) locs.push(it.loc);
         });
-        locs.sort(invLocSort);
-        const dl = document.getElementById('inv-loc-options');
-        if (dl) dl.innerHTML = locs.map(function (l) { return '<option value="' + invEsc(l) + '"></option>'; }).join('');
+        return locs.sort(invLocSort);
     }
+
+    function invRenderLocChips() {
+        const zone = (document.getElementById('inv-f-zone') || {}).value || 'WH';
+        const cur = ((document.getElementById('inv-f-loc') || {}).value || '').trim().toUpperCase();
+        const box = document.getElementById('inv-loc-chips');
+        if (!box) return;
+        const locs = invLocList(zone);
+        box.innerHTML = locs.map(function (l) {
+            const on = (String(l).toUpperCase() === cur);
+            return '<button type="button" class="inv-chip' + (on ? ' on' : '') + '" data-loc="' + invEsc(l) + '" onclick="invPickLoc(this.getAttribute(&quot;data-loc&quot;))">' + invEsc(l) + '</button>';
+        }).join('') || '<span style="font-size:11px;color:#999;">未有位置，直接打新位置</span>';
+    }
+
+    function invPickLoc(l) {
+        const el = document.getElementById('inv-f-loc');
+        if (!el) return;
+        el.value = l;
+        invRenderLocChips();
+    }
+
+    function invRenderUnitChips() {
+        const cur = ((document.getElementById('inv-f-unit') || {}).value || '').trim();
+        const box = document.getElementById('inv-unit-chips');
+        if (!box) return;
+        box.innerHTML = INV_UNITS.map(function (u) {
+            const on = (u === cur);
+            return '<button type="button" class="inv-chip' + (on ? ' on' : '') + '" onclick="invPickUnit(\'' + u + '\')">' + u + '</button>';
+        }).join('');
+    }
+
+    function invPickUnit(u) {
+        const el = document.getElementById('inv-f-unit');
+        if (!el) return;
+        el.value = (String(el.value || '').trim() === u) ? '' : u;
+        invRenderUnitChips();
+    }
+
+    function invOnZoneChange() { invRenderLocChips(); }
+
+    function invFillLocOptions() { invRenderLocChips(); invRenderUnitChips(); }
 
     function invOpenAdd() {
         invEditId = 0;
@@ -6166,7 +6214,7 @@ items: collectItems(),
     async function lsRenderMap() {
         if (!cmData) {
             try {
-                cmData = await (await fetch('/api/chair_map?_t=' + Date.now(), { cache: 'no-store' })).json();
+                cmData = await (await fetch('/api/chair_map', { cache: 'no-store' })).json();
             } catch (e) { cmData = null; return; }
             if (!cmData || cmData.status === 'error') { cmData = null; return; }
         }
