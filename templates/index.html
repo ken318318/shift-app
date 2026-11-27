@@ -71,6 +71,8 @@
         .lr-b-blue { background: #1a73e8; color: #fff; }
         .lr-b-gray { background: #eceff1; color: #455a64; }
         .lr-b-close { background: #e67c73; color: #fff; }
+        .lr-title { font-size: 13px; color: #1a237e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 120px; }
+        .lr-tools { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
         .ur-select { padding: 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 13px; margin: 0; flex: 1 1 170px; max-width: 240px; background: #fff; }
         .ur-check { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #455a64; background: #f4f6f8; padding: 7px 9px; border-radius: 8px; white-space: nowrap; }
         .ur-check input { width: 15px; height: 15px; margin: 0; }
@@ -785,18 +787,20 @@
         <div class="lr-wrap" style="max-width:1100px;">
             <div class="lr-bar">
                 <button class="lr-b-close" onclick="closeLayoutSchedule()">✖ 返回</button>
-                <b style="font-size:13px; color:#1a237e; white-space:nowrap;">🔄 TG Layout 更換行程</b>
-                <div class="cm-zoom" style="margin-left:auto;">
-                    <button class="lr-b-gray" onclick="lsZoomStep(-1)">➖</button>
-                    <span id="ls-zoom-label" class="cm-zoom-label">100%</span>
-                    <button class="lr-b-gray" onclick="lsZoomStep(1)">➕</button>
-                    <button class="lr-b-gray" onclick="lsZoomFit()">適合</button>
+                <b class="lr-title">🔄 TG Layout 更換行程</b>
+                <div class="lr-tools">
+                    <div class="cm-zoom">
+                        <button class="lr-b-gray" onclick="lsZoomStep(-1)">➖</button>
+                        <span id="ls-zoom-label" class="cm-zoom-label">100%</span>
+                        <button class="lr-b-gray" onclick="lsZoomStep(1)">➕</button>
+                        <button class="lr-b-gray" onclick="lsZoomFit()">適合</button>
+                    </div>
+                    <button class="lr-b-gray" onclick="lcOpen()">🎨 PIT 顏色</button>
+                    <button id="ls-b-newround" class="lr-b-blue" onclick="lsNewRound()">🔄 開始新一輪</button>
                 </div>
-                <button class="lr-b-gray" onclick="lcOpen()">🎨 PIT 顏色</button>
-                <button id="ls-b-newround" class="lr-b-blue" onclick="lsNewRound()">🔄 開始新一輪</button>
             </div>
             <div class="lr-tip" style="font-size:11.5px;">
-                地圖顏色＝該台所屬 PIT 喺下面「TG Layout Replacement Schedule」嘅分類顏色；停運台顯示灰色。表格打勾＝該 PIT 更換完成（只作記錄，不影響櫈況圖自動顏色同交更邏輯）。
+                顏色＝該台所屬 PIT 喺下面「TG Layout Replacement Schedule」嘅分類顏色，停運台灰色；打勾＝該 PIT 已更換（只作記錄）。
             </div>
             <div id="ls-msg" style="font-size:11px; color:#555; margin:2px 2px 4px;"></div>
             <div id="ls-mapbox" style="overflow:auto; background:#fff; border:1px solid #e0e0e0; border-radius:10px; max-height:58vh; margin-top:6px;">
