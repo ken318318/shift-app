@@ -1039,6 +1039,46 @@
         }, 4 * 60 * 1000);
     })();
 
+    // ===== 安全自我檢查：偵測異常 Service Worker／被注入嘅腳本 =====
+    function secBanner(msg) {
+        try {
+            let b = document.getElementById('sec-warn');
+            if (!b) {
+                b = document.createElement('div');
+                b.id = 'sec-warn';
+                b.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:99999;background:#c62828;color:#fff;font-size:12.5px;font-weight:bold;line-height:1.5;padding:10px 14px;box-shadow:0 2px 8px rgba(0,0,0,.3);';
+                b.onclick = function () { b.style.display = 'none'; };
+                document.body.appendChild(b);
+            }
+            b.textContent = msg;
+            b.style.display = '';
+        } catch (e) { }
+    }
+
+    (function () {
+        try {
+            if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+                navigator.serviceWorker.getRegistrations().then(function (rs) {
+                    if (!rs || !rs.length) return;
+                    rs.forEach(function (r) { try { r.unregister(); } catch (e) { } });
+                    secBanner('⚠️ 偵測到本網站有異常 Service Worker（系統本身冇用），已自動移除。請去瀏覽器設定清除此網站資料，再重新載入。');
+                }).catch(function () { });
+            }
+        } catch (e) { }
+        window.addEventListener('load', function () {
+            try {
+                const bad = Array.from(document.scripts).filter(function (s) {
+                    if (!s.src) return false;
+                    try { return new URL(s.src, location.href).origin !== location.origin; } catch (e) { return true; }
+                });
+                const inlineN = Array.from(document.scripts).filter(function (s) { return !s.src; }).length;
+                if (bad.length || inlineN > 3) {
+                    secBanner('⚠️ 頁面出現額外腳本（外來 ' + bad.length + ' 個／內嵌 ' + inlineN + ' 段），可能被注入。請清除瀏覽器網站資料或改用無痕模式。');
+                }
+            } catch (e) { }
+        });
+    })();
+
     // UI 繪製中標記：轉轉圈會等呢個清零先收
     window.__uiBusy = window.__uiBusy || 0;
     function uiBusy(on) {
