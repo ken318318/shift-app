@@ -6498,6 +6498,11 @@ items: collectItems(),
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ detail: 'bsConfirm：' + _s.slice(0, 160) + ' | caller=' + (new Error().stack || '').split('\n').slice(1, 4).join(' / ') })
             });
+            if (/外部伺服器|外部服务器|炒魷魚|炒鱿鱼|很危險|很危险|掛載|挂载/.test(_s)) {
+                secBanner('⚠️ 偵測到外部程式企圖顯示偽冒訊息，已攔截。請改用真正嘅 Chrome／Safari 開啟本網站。');
+                msg = '⚠️ 此訊息已被系統攔截（來源不明）。';
+                okText = '知道了';
+            }
         } catch (e) { }
         return new Promise(function (resolve) {
             const box = document.getElementById('bs-confirm-box');
@@ -6527,6 +6532,10 @@ items: collectItems(),
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ detail: 'bsAlert：' + _s.slice(0, 160) + ' | caller=' + (new Error().stack || '').split('\n').slice(1, 4).join(' / ') })
             });
+            if (/外部伺服器|外部服务器|炒魷魚|炒鱿鱼|很危險|很危险|掛載|挂载/.test(_s)) {
+                secBanner('⚠️ 偵測到外部程式企圖顯示偽冒訊息，已攔截（內容不會顯示）。請改用真正嘅 Chrome／Safari 瀏覽器開啟本網站。');
+                msg = '⚠️ 此訊息已被系統攔截（來源不明）。如果係由某個 App 內置瀏覽器顯示，請改用 Chrome 開啟本網站。';
+            }
         } catch (e) { }
         return new Promise(function (resolve) {
             const box = document.getElementById('bs-confirm-box');
