@@ -677,7 +677,7 @@ def security_report():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-12", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-13", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -742,14 +742,14 @@ def login():
             session['role'] = 'admin'
             session['user_name'] = '管理員'
             session['epoch'] = get_epoch('admin', force=True)
-            log_action('登入', '管理員登入')
+            log_action('登入', '管理員登入｜UA=' + (request.headers.get('User-Agent') or '')[:160])
             return redirect(url_for('index'))
         elif pwd and pwd == staff_pwd:
             session['logged_in'] = True
             session['role'] = 'staff'
             session['user_name'] = '同事'
             session['epoch'] = get_epoch('staff', force=True)
-            log_action('登入', '同事登入')
+            log_action('登入', '同事登入｜UA=' + (request.headers.get('User-Agent') or '')[:160])
             return redirect(url_for('index'))
         else:
             # 個人帳號（帳號＝員工ID，密碼＝BS＋員工ID）
@@ -776,7 +776,7 @@ def login():
                 session['role'] = role
                 session['user_name'] = member[0]
                 session['epoch'] = get_epoch(role, force=True)
-                log_action('登入', '個人帳號：%s' % member[0])
+                log_action('登入', '個人帳號：%s｜UA=%s' % (member[0], (request.headers.get('User-Agent') or '')[:160]))
                 return redirect(url_for('index'))
             _fail_log()
             error = "密碼錯誤！"
