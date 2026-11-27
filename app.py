@@ -527,7 +527,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-54", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261123-55", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -5036,7 +5036,7 @@ def chair_map_get():
     if not session.get('logged_in'):
         return jsonify({'status': 'error', 'message': '請先登入'}), 401
 
-    _cached = cache_get('chair_map')
+    _cached = None if request.args.get('_t') else cache_get('chair_map')   # 帶 _t＝強制讀最新（避免多 worker 快取未同步）
     if _cached is not None:
         return jsonify(_cached)
     layout = _chair_layout()
@@ -5125,7 +5125,7 @@ def chair_map_get():
                 'pits': layout.get('pits', []), 'extras': layout.get('extras', []),
                 'merges': layout.get('merges', []), 'cells': cells,
                 'edits': _chair_edits()}
-    cache_set('chair_map', _payload, 45)
+    cache_set('chair_map', _payload, 15)
     return jsonify(_payload)
 
 
