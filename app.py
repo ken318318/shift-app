@@ -121,6 +121,50 @@ def ensure_tables():
                 c.execute("""UPDATE members SET account = %s, password = %s,
                                           role = COALESCE(NULLIF(role, ''), 'staff')
                              WHERE id = %s""", (nm, nm + '888', mid))
+        # ---------- 存貨記錄（82倉庫 / CP） ----------
+        c.execute("""CREATE TABLE IF NOT EXISTS inventory_items (
+                        id BIGSERIAL PRIMARY KEY,
+                        zone TEXT NOT NULL DEFAULT 'WH',
+                        loc TEXT NOT NULL DEFAULT '',
+                        name TEXT NOT NULL,
+                        qty INTEGER,
+                        unit TEXT DEFAULT '',
+                        detail TEXT DEFAULT '',
+                        note TEXT DEFAULT '',
+                        sort INTEGER DEFAULT 0,
+                        updated_at TIMESTAMPTZ DEFAULT NOW(),
+                        updated_by TEXT DEFAULT '',
+                        deleted BOOLEAN DEFAULT FALSE
+                     )""")
+        c.execute("""CREATE TABLE IF NOT EXISTS inventory_logs (
+                        id BIGSERIAL PRIMARY KEY,
+                        item_id BIGINT,
+                        action TEXT,
+                        detail TEXT,
+                        actor TEXT,
+                        created_at TIMESTAMPTZ DEFAULT NOW()
+                     )""")
+        c.execute("CREATE INDEX IF NOT EXISTS idx_inventory_zone_loc ON inventory_items (zone, loc)")
+        c.execute("SELECT COUNT(*) FROM inventory_items")
+        if (c.fetchone()[0] or 0) == 0:
+            _seed_path = os.path.join(app.root_path, 'static', 'inventory_seed.json')
+            if os.path.exists(_seed_path):
+                try:
+                    with open(_seed_path, 'r', encoding='utf-8') as _f:
+                        _seed_obj = json.load(_f)
+                    _rows = []
+                    for _it in _seed_obj.get('items', []):
+                        _rows.append((_it.get('zone', 'WH'), _it.get('loc', ''), _it.get('name', ''),
+                                      _it.get('qty'), _it.get('unit', ''), _it.get('detail', ''),
+                                      _it.get('note', ''), _it.get('sort', 0), 'Excel 匯入'))
+                    if _rows:
+                        c.executemany("""INSERT INTO inventory_items
+                                        (zone, loc, name, qty, unit, detail, note, sort, updated_by)
+                                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""", _rows)
+                        print("存貨初始資料已匯入：%d 項" % len(_rows))
+                except Exception as _e:
+                    print("存貨初始資料匯入失敗:", _e)
+
         conn.commit()
         print("系統資料表檢查完成（app_settings / audit_logs）")
     except Exception as e:
@@ -527,7 +571,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261123-55", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-01", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -5378,6 +5422,283 @@ def chair_map_reset():
     _CHAIR_LAYOUT_CACHE = None
     bust()
     return jsonify({'status': 'success', 'message': '✅ 已還原預設版面'})
+
+
+# ================= 存貨記錄（82倉庫 / CP） =================
+INV_ZONES = ('WH', 'CP')
+
+
+def _inv_actor():
+    return session.get('user_name') or session.get('role') or 'unknown'
+
+
+def _inv_int(v):
+    if v is None or v == '':
+        return None
+    try:
+        n = int(float(v))
+    except Exception:
+        return None
+    return max(0, n)
+
+
+def _inv_str(v, maxlen=200):
+    return (str(v) if v is not None else '').strip()[:maxlen]
+
+
+@app.route('/api/inventory', methods=['GET'])
+def inventory_list():
+    """存貨清單（已登入同事均可讀）。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""SELECT id, zone, loc, name, qty, COALESCE(unit,''), COALESCE(detail,''),
+                            COALESCE(note,''), COALESCE(updated_by,''),
+                            COALESCE(to_char(updated_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
+                                             'YYYY-MM-DD HH24:MI'), '')
+                     FROM inventory_items
+                     WHERE COALESCE(deleted, FALSE) = FALSE
+                     ORDER BY zone, loc, sort, id""")
+        rows = c.fetchall()
+        items = []
+        for r in rows:
+            items.append({
+                'id': r[0], 'zone': r[1] or 'WH', 'loc': r[2] or '', 'name': r[3] or '',
+                'qty': r[4], 'unit': r[5], 'detail': r[6], 'note': r[7],
+                'updated_by': r[8], 'updated_at': r[9]
+            })
+        c.execute("""SELECT item_id, action, COALESCE(detail,''), COALESCE(actor,''),
+                            COALESCE(to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
+                                             'MM-DD HH24:MI'), '')
+                     FROM inventory_logs ORDER BY id DESC LIMIT 40""")
+        logs = [{'item_id': x[0], 'action': x[1], 'detail': x[2], 'actor': x[3], 'at': x[4]}
+                for x in c.fetchall()]
+        return jsonify({'status': 'success', 'items': items, 'logs': logs,
+                        'total': len(items)})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': '❌ 讀取存貨失敗：%s' % e})
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+
+@app.route('/api/inventory/add', methods=['POST'])
+def inventory_add():
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    d = request.get_json(silent=True) or {}
+    name = _inv_str(d.get('name'), 120)
+    zone = _inv_str(d.get('zone'), 4) or 'WH'
+    if zone not in INV_ZONES:
+        zone = 'WH'
+    if not name:
+        return jsonify({'status': 'error', 'message': '❌ 請輸入物品名稱'})
+    loc = _inv_str(d.get('loc'), 20) or '未分類'
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""INSERT INTO inventory_items
+                     (zone, loc, name, qty, unit, detail, note, sort, updated_by)
+                     VALUES (%s, %s, %s, %s, %s, %s, %s,
+                             COALESCE((SELECT MAX(sort) FROM inventory_items), 0) + 1, %s)
+                     RETURNING id""",
+                  (zone, loc, name, _inv_int(d.get('qty')), _inv_str(d.get('unit'), 20),
+                   _inv_str(d.get('detail'), 120), _inv_str(d.get('note'), 300), _inv_actor()))
+        new_id = c.fetchone()[0]
+        c.execute("INSERT INTO inventory_logs (item_id, action, detail, actor) VALUES (%s, %s, %s, %s)",
+                  (new_id, 'add', '%s %s／%s' % (zone, loc, name), _inv_actor()))
+        conn.commit()
+        try: log_action('存貨新增', '%s %s／%s' % (zone, loc, name))
+        except Exception: pass
+        return jsonify({'status': 'success', 'id': new_id, 'message': '✅ 已新增 %s' % name})
+    except Exception as e:
+        if conn:
+            try: conn.rollback()
+            except Exception: pass
+        return jsonify({'status': 'error', 'message': '❌ 新增失敗：%s' % e})
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+
+@app.route('/api/inventory/update', methods=['POST'])
+def inventory_update():
+    """修改物品資料（名稱／位置／數量／單位／附加數量／備註）。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    d = request.get_json(silent=True) or {}
+    try:
+        iid = int(d.get('id'))
+    except Exception:
+        return jsonify({'status': 'error', 'message': '❌ 缺少 id'})
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""SELECT name, loc, qty, COALESCE(unit,''), COALESCE(detail,''), COALESCE(note,'')
+                     FROM inventory_items WHERE id = %s AND COALESCE(deleted, FALSE) = FALSE""", (iid,))
+        row = c.fetchone()
+        if not row:
+            return jsonify({'status': 'error', 'message': '❌ 找不到該物品（可能已刪除）'})
+        name = _inv_str(d['name'], 120) if 'name' in d else row[0]
+        loc = _inv_str(d['loc'], 20) if 'loc' in d else row[1]
+        qty = _inv_int(d['qty']) if 'qty' in d else row[2]
+        unit = _inv_str(d['unit'], 20) if 'unit' in d else row[3]
+        detail = _inv_str(d['detail'], 120) if 'detail' in d else row[4]
+        note = _inv_str(d['note'], 300) if 'note' in d else row[5]
+        if not name:
+            name = row[0]
+        if not loc:
+            loc = row[1] or '未分類'
+        c.execute("""UPDATE inventory_items
+                     SET name=%s, loc=%s, qty=%s, unit=%s, detail=%s, note=%s,
+                         updated_at=NOW(), updated_by=%s
+                     WHERE id=%s""", (name, loc, qty, unit, detail, note, _inv_actor(), iid))
+        parts = []
+        if name != row[0]: parts.append('名稱 %s→%s' % (row[0], name))
+        if loc != row[1]: parts.append('位置 %s→%s' % (row[1], loc))
+        if qty != row[2]: parts.append('數量 %s→%s' % (row[2], qty))
+        if note != row[5]: parts.append('備註更新')
+        c.execute("INSERT INTO inventory_logs (item_id, action, detail, actor) VALUES (%s, %s, %s, %s)",
+                  (iid, 'update', '%s：%s' % (name, '、'.join(parts) or '資料更新'), _inv_actor()))
+        conn.commit()
+        return jsonify({'status': 'success', 'message': '✅ 已更新 %s' % name})
+    except Exception as e:
+        if conn:
+            try: conn.rollback()
+            except Exception: pass
+        return jsonify({'status': 'error', 'message': '❌ 更新失敗：%s' % e})
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+
+@app.route('/api/inventory/adjust', methods=['POST'])
+def inventory_adjust():
+    """數量加減（delta 可正可負，最少 0）。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    d = request.get_json(silent=True) or {}
+    try:
+        iid = int(d.get('id'))
+        delta = int(d.get('delta', 0))
+    except Exception:
+        return jsonify({'status': 'error', 'message': '❌ 參數錯誤'})
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""SELECT name, qty FROM inventory_items
+                     WHERE id = %s AND COALESCE(deleted, FALSE) = FALSE""", (iid,))
+        row = c.fetchone()
+        if not row:
+            return jsonify({'status': 'error', 'message': '❌ 找不到該物品'})
+        before = row[1] if row[1] is not None else 0
+        after = max(0, before + delta)
+        c.execute("""UPDATE inventory_items SET qty=%s, updated_at=NOW(), updated_by=%s WHERE id=%s""",
+                  (after, _inv_actor(), iid))
+        c.execute("INSERT INTO inventory_logs (item_id, action, detail, actor) VALUES (%s, %s, %s, %s)",
+                  (iid, 'adjust', '%s：%d → %d（%+d）' % (row[0], before, after, delta), _inv_actor()))
+        conn.commit()
+        return jsonify({'status': 'success', 'qty': after, 'message': '✅ %s：%d' % (row[0], after)})
+    except Exception as e:
+        if conn:
+            try: conn.rollback()
+            except Exception: pass
+        return jsonify({'status': 'error', 'message': '❌ 更新數量失敗：%s' % e})
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+
+@app.route('/api/inventory/move', methods=['POST'])
+def inventory_move():
+    """搬移位置（可一次過多件）。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    d = request.get_json(silent=True) or {}
+    loc = _inv_str(d.get('loc'), 20)
+    if not loc:
+        return jsonify({'status': 'error', 'message': '❌ 請選擇目標位置'})
+    ids = d.get('ids')
+    if not isinstance(ids, list):
+        ids = [d.get('id')]
+    clean = []
+    for x in ids:
+        try: clean.append(int(x))
+        except Exception: pass
+    if not clean:
+        return jsonify({'status': 'error', 'message': '❌ 缺少 id'})
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        moved = 0
+        for iid in clean:
+            c.execute("""SELECT name, loc FROM inventory_items
+                         WHERE id=%s AND COALESCE(deleted, FALSE)=FALSE""", (iid,))
+            row = c.fetchone()
+            if not row:
+                continue
+            c.execute("""UPDATE inventory_items SET loc=%s, updated_at=NOW(), updated_by=%s
+                         WHERE id=%s""", (loc, _inv_actor(), iid))
+            c.execute("INSERT INTO inventory_logs (item_id, action, detail, actor) VALUES (%s, %s, %s, %s)",
+                      (iid, 'move', '%s：%s → %s' % (row[0], row[1] or '未分類', loc), _inv_actor()))
+            moved += 1
+        conn.commit()
+        return jsonify({'status': 'success', 'moved': moved, 'message': '✅ 已搬 %d 項去 %s' % (moved, loc)})
+    except Exception as e:
+        if conn:
+            try: conn.rollback()
+            except Exception: pass
+        return jsonify({'status': 'error', 'message': '❌ 搬移失敗：%s' % e})
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
+
+
+@app.route('/api/inventory/delete', methods=['POST'])
+def inventory_delete():
+    """刪除物品（soft delete，可從稽核紀錄追查）。"""
+    if not session.get('logged_in'):
+        return jsonify({'status': 'error', 'message': '請先登入'}), 401
+    d = request.get_json(silent=True) or {}
+    try:
+        iid = int(d.get('id'))
+    except Exception:
+        return jsonify({'status': 'error', 'message': '❌ 缺少 id'})
+    conn = None
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT name, loc FROM inventory_items WHERE id=%s AND COALESCE(deleted, FALSE)=FALSE", (iid,))
+        row = c.fetchone()
+        if not row:
+            return jsonify({'status': 'error', 'message': '❌ 找不到該物品'})
+        c.execute("""UPDATE inventory_items SET deleted=TRUE, updated_at=NOW(), updated_by=%s WHERE id=%s""",
+                  (_inv_actor(), iid))
+        c.execute("INSERT INTO inventory_logs (item_id, action, detail, actor) VALUES (%s, %s, %s, %s)",
+                  (iid, 'delete', '%s（%s）' % (row[0], row[1] or '未分類'), _inv_actor()))
+        conn.commit()
+        return jsonify({'status': 'success', 'message': '🗑️ 已刪除 %s' % row[0]})
+    except Exception as e:
+        if conn:
+            try: conn.rollback()
+            except Exception: pass
+        return jsonify({'status': 'error', 'message': '❌ 刪除失敗：%s' % e})
+    finally:
+        if conn:
+            try: release_db_connection(conn)
+            except Exception: pass
 
 
 @app.route('/')
