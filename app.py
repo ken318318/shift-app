@@ -571,7 +571,7 @@ def _gzip_response(response):
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-01", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-02", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -5457,7 +5457,7 @@ def inventory_list():
         c = conn.cursor()
         c.execute("""SELECT id, zone, loc, name, qty, COALESCE(unit,''), COALESCE(detail,''),
                             COALESCE(note,''), COALESCE(updated_by,''),
-                            COALESCE(to_char(updated_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
+                            COALESCE(to_char(updated_at AT TIME ZONE 'Asia/Macau',
                                              'YYYY-MM-DD HH24:MI'), '')
                      FROM inventory_items
                      WHERE COALESCE(deleted, FALSE) = FALSE
@@ -5471,7 +5471,7 @@ def inventory_list():
                 'updated_by': r[8], 'updated_at': r[9]
             })
         c.execute("""SELECT item_id, action, COALESCE(detail,''), COALESCE(actor,''),
-                            COALESCE(to_char(created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau',
+                            COALESCE(to_char(created_at AT TIME ZONE 'Asia/Macau',
                                              'MM-DD HH24:MI'), '')
                      FROM inventory_logs ORDER BY id DESC LIMIT 40""")
         logs = [{'item_id': x[0], 'action': x[1], 'detail': x[2], 'actor': x[3], 'at': x[4]}
