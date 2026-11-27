@@ -6510,6 +6510,33 @@ items: collectItems(),
         });
     }
 
+    // 自家 alert（取代瀏覽器原生彈窗）
+    function bsAlert(msg) {
+        return new Promise(function (resolve) {
+            const box = document.getElementById('bs-confirm-box');
+            const m = document.getElementById('bs-confirm-msg');
+            const ok = document.getElementById('bs-confirm-ok');
+            const cancel = document.getElementById('bs-confirm-cancel');
+            if (!box || !m || !ok || !cancel) { window.__bsRawAlert(msg); resolve(); return; }
+            m.textContent = msg;
+            ok.textContent = '確定';
+            cancel.style.display = 'none';
+            box.style.display = 'flex';
+            ok.onclick = function () {
+                box.style.display = 'none';
+                cancel.style.display = '';
+                ok.onclick = null;
+                resolve();
+            };
+        });
+    }
+
+    (function () {
+        // 保存原生 alert 作最後備用，然後全面改用自家提示
+        window.__bsRawAlert = window.alert.bind(window);
+        window.alert = function (m) { try { bsAlert(String(m == null ? '' : m)); } catch (e) { } };
+    })();
+
     let cmToastTimer = null;
     function cmToast(t) {
         try {
