@@ -71,8 +71,8 @@
         .lr-b-blue { background: #1a73e8; color: #fff; }
         .lr-b-gray { background: #eceff1; color: #455a64; }
         .lr-b-close { background: #e67c73; color: #fff; }
-        .lr-title { font-size: 13px; color: #1a237e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 120px; }
-        .lr-tools { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+        .ls-bar-title { font-size: 13px; color: #1a237e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1 1 120px; }
+        .ls-bar-tools { margin-left: auto; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
         .ur-select { padding: 8px; border: 1px solid #ccc; border-radius: 8px; font-size: 13px; margin: 0; flex: 1 1 170px; max-width: 240px; background: #fff; }
         .ur-check { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #455a64; background: #f4f6f8; padding: 7px 9px; border-radius: 8px; white-space: nowrap; }
         .ur-check input { width: 15px; height: 15px; margin: 0; }
@@ -787,8 +787,8 @@
         <div class="lr-wrap" style="max-width:1100px;">
             <div class="lr-bar">
                 <button class="lr-b-close" onclick="closeLayoutSchedule()">✖ 返回</button>
-                <b class="lr-title">🔄 TG Layout 更換行程</b>
-                <div class="lr-tools">
+                <b class="ls-bar-title">🔄 TG Layout 更換行程</b>
+                <div class="ls-bar-tools">
                     <div class="cm-zoom">
                         <button class="lr-b-gray" onclick="lsZoomStep(-1)">➖</button>
                         <span id="ls-zoom-label" class="cm-zoom-label">100%</span>
