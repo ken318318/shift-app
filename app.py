@@ -660,21 +660,24 @@ h1{font-size:18px;margin:0 0 10px}code{background:#eef1f5;padding:2px 6px;border
 
 @app.route('/api/security_report', methods=['POST'])
 def security_report():
-    """前端自我檢查發現異常時上報（寫 audit_logs，方便日後追查）。"""
-    if not session.get('logged_in'):
-        return jsonify({'status': 'error', 'message': '請先登入'}), 401
-    d = request.get_json(silent=True) or {}
-    detail = (str(d.get('detail') or ''))[:900]
+    """前端自檢發現異常時上報（寫 audit_logs，方便追查）。不需登入（避免 session 過期令證據消失）。"""
     try:
-        log_action('安全報告', 'UA=' + (request.headers.get('User-Agent') or '')[:120] + ' | ' + detail)
-    except Exception:
-        pass
-    return jsonify({'status': 'success'})
+        d = request.get_json(silent=True) or {}
+        detail = (str(d.get('detail') or ''))[:900]
+        ua = (request.headers.get('User-Agent') or '')[:120]
+        referer = (request.headers.get('Referer') or '')[:120]
+        try:
+            log_action('安全報告', 'UA=' + ua + ' | IP=' + (request.headers.get('X-Forwarded-For') or request.remote_addr or '')[:40] + ' | ref=' + referer + ' | ' + detail)
+        except Exception:
+            pass
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
 
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-11", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-12", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
