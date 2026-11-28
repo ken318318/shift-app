@@ -962,7 +962,7 @@ def access_info():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261128-08", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261128-09", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3044,10 +3044,10 @@ def api_pending_items():
                " d.problem, d.detail, d.side, d.status, d.note, d.display, d.source,"
                " to_char(d.created_at AT TIME ZONE 'Asia/Macau', 'YYYY-MM-DD HH24:MI:SS') AS created_at,"
                " (SELECT to_char(MIN(x.event_at) AT TIME ZONE 'Asia/Macau', 'YYYY-MM-DD')"
-               "    FROM shift_items x WHERE x.item_key = d.item_key) AS first_at"
+               "    FROM shift_items x WHERE x.item_key = d.item_key AND COALESCE(x.source,'') <> 'fire_import') AS first_at"
                " FROM (SELECT DISTINCT ON (item_key) id, record_id, item_key, type, code, category,"
                " problem, detail, side, status, note, display, source, created_at, event_at"
-               " FROM shift_items ORDER BY item_key, event_at DESC, id DESC) d")
+               " FROM shift_items WHERE COALESCE(source,'') <> 'fire_import' ORDER BY item_key, event_at DESC, id DESC) d")
         params = []
         if before_id:
             sql += " WHERE (d.record_id IS NULL OR d.record_id < %s)"
@@ -4322,7 +4322,7 @@ def update_report_get():
             'side': e.get('side') or '',
             'note': e.get('note') or '',
             'date': e.get('last_seen') or '',
-            'is_new': code not in baseline,
+            'is_new': str(e.get('last_seen') or '') >= date_str,
         }
 
     def sort_items(items):
