@@ -7570,6 +7570,8 @@ items: collectItems(),
             items.push({ main: '', sub: it.problem || '', it: it });
         });
         items.sort(function (a, b) {
+            const da = String(a.it.date || ''), db = String(b.it.date || '');
+            if (da !== db) return da.localeCompare(db);
             const ha = parseInt(a.it.hall, 10), hb = parseInt(b.it.hall, 10);
             const pa = parseInt(a.it.pit, 10), pb = parseInt(b.it.pit, 10);
             return ((isNaN(ha) ? 9999 : ha) - (isNaN(hb) ? 9999 : hb))
@@ -7607,7 +7609,11 @@ items: collectItems(),
             const st = String(it.status || '');
             const doneMark = /\[Done\]/i.test(note);
             const prog = (doneMark || st.indexOf('已處理') >= 0 || /done/i.test(st)) ? 'Done' : 'Pending';
-            const row = [dlCell, it.hall || '', it.pit || '', it.table || '', x.main || '', codeNo, remark, prog];
+            const rd = String(it.date || '');
+            const rdl = /^\d{4}-\d{2}-\d{2}$/.test(rd)
+                ? (parseInt(rd.slice(5, 7), 10) + '/' + parseInt(rd.slice(8, 10), 10) + '/' + rd.slice(0, 4))
+                : dlCell;
+            const row = [rdl, it.hall || '', it.pit || '', it.table || '', x.main || '', codeNo, remark, prog];
             const nowrapCols = [0, 1, 2, 5, 7];
             html += '<tr>' + row.map(function (v, k) {
                 const extra = nowrapCols.indexOf(k) >= 0 ? 'white-space:nowrap;' : '';
