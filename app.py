@@ -49,6 +49,7 @@ _SET_CACHE = {}      # app_settings 讀取快取：key -> (時間, 值)
 _SET_TTL = 8         # 秒；寫入時會即時清掉該 key
 _LOGIN_FAIL = {}     # 登入失敗紀錄：IP -> {'ts': [時間...]}（防暴力破解）
 _BLOCK_IPS = {'60.246.67.123'}   # 已確認攻擊來源 IP（可直接加／删）
+_ACCESS_COOKIE = 'bs_ak'         # 入口閘 cookie
 
 
 def ensure_tables():
@@ -369,6 +370,18 @@ def _clean_text(v, maxlen=8000):
     s = re.sub(r'<[^>]*>', '', s)
     s = s.replace('\x00', '')
     return s[:maxlen]
+
+
+def _access_key():
+    """入場密鑰（存 app_settings.access_key；首次用環境變數或預設值，之後可用 API 旋轉）。"""
+    k = get_setting('access_key', '') or ''
+    if not k:
+        k = os.environ.get('ACCESS_KEY') or 'bsinit2026'
+        try:
+            set_setting('access_key', k)
+        except Exception:
+            pass
+    return k
 
 
 def _strip_tags(v):
@@ -912,9 +925,44 @@ def robots_txt():
     return Response("User-agent: *\nDisallow: /\n", mimetype='text/plain')
 
 
+@app.route('/k/<token>')
+def access_entry(token):
+    """入口密鑰連結：正確就設 cookie 並轉去主頁；錯誤一律 404。"""
+    try:
+        if token != _access_key():
+            return Response('404 Not Found', status=404, mimetype='text/plain')
+        resp = redirect(url_for('index'))
+        resp.set_cookie(_ACCESS_COOKIE, token, max_age=60 * 60 * 24 * 365,
+                        httponly=True, samesite='Lax',
+                        secure=bool(app.config.get('SESSION_COOKIE_SECURE', True)))
+        return resp
+    except Exception:
+        return Response('404 Not Found', status=404, mimetype='text/plain')
+
+
+@app.route('/api/access_info', methods=['GET', 'POST'])
+def access_info():
+    """管理員：查看／重新生成入口密鑰連結。"""
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以使用。'}), 403
+    if request.method == 'POST':
+        import secrets as _sec
+        nk = ''.join(_sec.choice('abcdefghkmnpqrstuvwxyz23456789') for _ in range(20))
+        if not set_setting('access_key', nk):
+            return jsonify({'status': 'error', 'message': '❌ 儲存失敗'})
+        try:
+            log_action('入口密鑰', '重新生成')
+        except Exception:
+            pass
+        return jsonify({'status': 'success', 'key': nk, 'link': 'https://bs-shift.xyz/k/' + nk,
+                        'message': '✅ 舊連結已失效'})
+    k = _access_key()
+    return jsonify({'status': 'success', 'key': k, 'link': 'https://bs-shift.xyz/k/' + k})
+
+
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-26", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-27", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -934,6 +982,15 @@ def require_login():
             if request.path.startswith('/api/'):
                 return jsonify({'status': 'error', 'message': '❌ 拒絕存取。'}), 403
             return Response('403 Forbidden', status=403, mimetype='text/plain')
+    except Exception:
+        pass
+
+    # ===== 入口閘：冇密鑰 cookie 一律 404（不公開）=====
+    try:
+        _pass_eps = ('access_entry', 'healthz', 'static', 'robots_txt', 'verify_wechat', 'catch_all_txt')
+        if endpoint not in _pass_eps:
+            if request.cookies.get(_ACCESS_COOKIE, '') != _access_key():
+                return Response('404 Not Found', status=404, mimetype='text/plain')
     except Exception:
         pass
 
