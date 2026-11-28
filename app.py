@@ -962,7 +962,7 @@ def access_info():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261128-10", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261128-11", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -4845,7 +4845,7 @@ def _layout_colors_override():
     try:
         d = json.loads(raw) if raw.strip() else {}
         if isinstance(d, dict):
-            return {str(k).upper(): str(v) for k, v in d.items() if str(v) in ('b', 'v', 'p', 'o')}
+            return {str(k).upper(): str(v) for k, v in d.items() if str(v) in ('b', 'g', 'v', 'p', 'o')}
     except Exception:
         pass
     return {}
@@ -4856,7 +4856,7 @@ def _layout_code_colors():
     try:
         d = json.loads(raw) if raw.strip() else {}
         if isinstance(d, dict):
-            return {str(k).upper(): str(v) for k, v in d.items() if str(v) in ('b', 'v', 'p', 'o')}
+            return {str(k).upper(): str(v) for k, v in d.items() if str(v) in ('b', 'g', 'v', 'p', 'o')}
     except Exception:
         pass
     return {}
