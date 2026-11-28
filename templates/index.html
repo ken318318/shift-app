@@ -2763,6 +2763,16 @@ async function loadPendingIssues() {
     let html = '';
     Object.keys(groups).forEach(t => {
         const arr = groups[t];
+        // 按發生日期排序（新 → 舊；同日期按項目名），確保時間有排好
+        arr.sort(function (a, b) {
+            const da = String(a.first_at || a.created_at || '');
+            const db = String(b.first_at || b.created_at || '');
+            if (!da && !db) return String(a.key || '').localeCompare(String(b.key || ''));
+            if (!da) return 1;      // 無日期排最後
+            if (!db) return -1;
+            if (da === db) return String(a.key || '').localeCompare(String(b.key || ''));
+            return db.localeCompare(da);
+        });
         html += '<div class="pending-card" style="border-left:4px solid #ffa000;margin-bottom:15px;">'
              + '<details open><summary style="cursor:pointer;font-weight:bold;color:#856404;padding:6px;display:flex;align-items:center;">'
              + '<input type="checkbox" class="select-all-cb" onclick="event.stopPropagation()" onchange="toggleSelectAll(this)" style="width:18px;height:18px;margin-right:10px;cursor:pointer;">'

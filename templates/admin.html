@@ -306,7 +306,7 @@
         <hr style="border:none; border-top:1px solid #eef1f5; margin:20px 0;">
 
         <h3 style="font-size:15px; margin:0 0 8px 0; color:#333;">📜 操作紀錄</h3>
-        <div class="muted">最近 100 條（登入、新增／刪除選項、刪除及修改紀錄、改密碼）</div>
+        <div class="muted">最近 100 條（登入、新增／刪除選項、刪除及修改紀錄、改密碼）｜本頁每 15 秒自動更新</div>
         <div class="row" style="margin-top:10px;">
             <button class="btn btn-gray" onclick="loadAuditLogs()">🔄 重新載入</button>
             <button class="btn btn-red" onclick="clearAuditLogs()">清理 90 日前</button>
@@ -467,6 +467,7 @@
 
         function switchTab(name) {
             currentTab = name;
+            if (window.__auditTimer) { clearInterval(window.__auditTimer); window.__auditTimer = null; }
             document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
             ['options', 'records', 'progress', 'export', 'stats', 'hall', 'members', 'account'].forEach(k => {
                 document.getElementById('panel-' + k).classList.toggle('hide', k !== name);
@@ -477,7 +478,13 @@
             if (name === 'stats') jobs.push(loadRecords().then(renderStats));
             if (name === 'hall') jobs.push(loadHallSummary(), loadHallTables());
             if (name === 'members') jobs.push(loadMembers());
-            if (name === 'account') jobs.push(loadAuthStatus(), loadAuditLogs(), loadMemberAccounts());
+            if (name === 'account') {
+                jobs.push(loadAuthStatus(), loadAuditLogs(), loadMemberAccounts());
+                window.__auditTimer = setInterval(function () {
+                    const p = document.getElementById('panel-account');
+                    if (p && !p.classList.contains('hide') && !document.hidden) loadAuditLogs(true);
+                }, 15000);
+            }
             if (name === 'options') jobs.push(renderOptions());
             if (jobs.length) {
                 bsLoading(true, '載入中…');
@@ -1689,11 +1696,11 @@
             }
         }
 
-        async function loadAuditLogs() {
+        async function loadAuditLogs(silent) {
             let wrap = document.getElementById('audit-list');
-            wrap.innerHTML = '<div class="muted">載入中…</div>';
+            if (!silent) wrap.innerHTML = '<div class="muted">載入中…</div>';
             try {
-                let data = await (await fetch('/api/audit_logs?limit=100')).json();
+                let data = await (await fetch('/api/audit_logs?limit=100&_t=' + Date.now(), { cache: 'no-store' })).json();
                 if (data.status !== 'success') { wrap.innerHTML = '<div class="muted">' + (data.message || '讀取失敗') + '</div>'; return; }
                 if (!data.logs || data.logs.length === 0) { wrap.innerHTML = '<div class="empty" style="padding:10px 0;">暫時未有紀錄</div>'; return; }
                 wrap.innerHTML = '<table><thead><tr><th>時間</th><th>身份</th><th>動作</th><th>詳情</th></tr></thead><tbody>'
@@ -1703,7 +1710,7 @@
                         + '<td style="word-break:break-word;">' + esc(l.detail || '') + '</td></tr>').join('')
                     + '</tbody></table>';
             } catch (e) {
-                wrap.innerHTML = '<div class="muted">❌ 讀取失敗</div>';
+                if (!silent) wrap.innerHTML = '<div class="muted">❌ 讀取失敗</div>';
             }
         }
 
