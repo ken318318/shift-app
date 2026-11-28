@@ -962,12 +962,12 @@ def access_info():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-28", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261128-01", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
 def require_login():
-    allowed_routes = ['login', 'static', 'verify_wechat', 'catch_all_txt', 'healthz', 'robots_txt', 'diag_page']
+    allowed_routes = ['login', 'static', 'verify_wechat', 'catch_all_txt', 'healthz', 'robots_txt', 'diag_page', 'access_entry']
     endpoint = request.endpoint
     # 已知攻擊來源 IP：全站直接拒絕（硬編 + app_settings 動態名單）
     try:
