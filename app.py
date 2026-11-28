@@ -962,7 +962,7 @@ def access_info():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261128-02", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261128-03", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -4007,6 +4007,14 @@ def update_report_cats():
     cats = [{'cat': k, 'short': _up_short_cat(k), 'mail': v['mail'], 'all': v['all']}
             for k, v in agg.items() if k and not _up_is_layout(k, '')]
     cats.sort(key=lambda x: (-x['mail'], -x['all'], x['short']))
+    # 「消防（全部）」：把所有含「消防」的類別合併成一份報表（面板插座等消防檢查發現的問題也一併計算）
+    _f_mail = _f_all = 0
+    for _k, _v in agg.items():
+        if _k and '消防' in _k:
+            _f_mail += _v['mail']
+            _f_all += _v['all']
+    if _f_all:
+        cats.insert(0, {'cat': '__fire__', 'short': '🔥 消防（全部）', 'mail': _f_mail, 'all': _f_all})
     resp = jsonify({'status': 'success', 'date': date_str, 'cats': cats,
                     'layout_mail': layout_mail, 'layout_all': layout_all})
     resp.headers['Cache-Control'] = 'no-store, max-age=0'
@@ -4019,11 +4027,12 @@ def update_report_get():
     if not re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
         date_str = _up_today()
     rtype = (request.args.get('type') or 'layout').strip()
-    if not (rtype == 'layout' or rtype.startswith('cat:')):
+    if not (rtype == 'layout' or rtype == 'fire' or rtype.startswith('cat:')):
         rtype = 'layout'
     mail_only = (request.args.get('mail_only', '1') != '0')
     is_layout = (rtype == 'layout')
-    cat_name = None if is_layout else rtype[4:]
+    is_fire = (rtype == 'fire')
+    cat_name = None if (is_layout or is_fire) else rtype[4:]
 
     reports = _up_load_reports()
     saved = reports.get(_up_key(date_str, rtype)) or {}
@@ -4076,7 +4085,10 @@ def update_report_get():
             if not _up_is_layout(e['category'], e['problem']):
                 return False
         else:
-            if (e['category'] or '') != cat_name:
+            if is_fire:
+                if '消防' not in (e['category'] or ''):
+                    return False
+            elif (e['category'] or '') != cat_name:
                 return False
         if mail_only and not _up_mailish(e['status']):
             return False
@@ -4097,6 +4109,9 @@ def update_report_get():
         if is_layout:
             if _up_is_layout(e['category'], e['problem']):
                 present_all.add(code)
+        elif is_fire:
+            if '消防' in (e['category'] or ''):
+                present_all.add(code)
         elif e['category'] == cat_name:
             present_all.add(code)
     manual = set()
@@ -4112,7 +4127,10 @@ def update_report_get():
             if not _up_is_layout(c, ''):
                 continue
         else:
-            if c != cat_name:
+            if is_fire:
+                if '消防' not in (c or ''):
+                    continue
+            elif c != cat_name:
                 continue
         if code not in det:
             done_only.add(code)
