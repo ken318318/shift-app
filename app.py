@@ -618,6 +618,7 @@ def _gzip_response(response):
 def _security_headers(response):
     """安全標頭＋CSP（只准自己網站嘅 script，阻止任何外來腳本／內嵌框架）。"""
     try:
+        response.headers.setdefault('X-Robots-Tag', 'noindex, nofollow, noarchive')
         response.headers.setdefault('X-Content-Type-Options', 'nosniff')
         response.headers.setdefault('X-Frame-Options', 'DENY')
         response.headers.setdefault('Referrer-Policy', 'same-origin')
@@ -905,9 +906,15 @@ def security_clean_records():
             except Exception: pass
 
 
+@app.route('/robots.txt')
+def robots_txt():
+    """禁止搜尋引擎索引（內部系統）。"""
+    return Response("User-agent: *\nDisallow: /\n", mimetype='text/plain')
+
+
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-24", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-25", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
