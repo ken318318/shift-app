@@ -962,7 +962,7 @@ def access_info():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261128-04", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261128-05", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3740,7 +3740,7 @@ def _si_overlay_detect(out, date_str, done_at=None):
             continue
         k = (catname, _up_norm(code))
         ds = _d.strftime('%Y-%m-%d') if hasattr(_d, 'strftime') else str(_d)[:10]
-        latest[k] = {'status': status or '', 'problem': prob or '', 'date': ds}
+        latest[k] = {'status': status or '', 'problem': prob or '', 'date': ds, 'detail': detail or ''}
         if k not in first_seen:
             first_seen[k] = ds
 
@@ -3769,7 +3769,7 @@ def _si_overlay_detect(out, date_str, done_at=None):
             if k in done_norm:
                 continue
             out[k] = {'category': k[0], 'code': k[1], 'problem': v['problem'],
-                      'status': v['status'], 'note': '', 'side': '',
+                      'status': v['status'], 'note': v.get('detail') or '', 'side': '',
                       'first_seen': first_seen.get(k, v['date']), 'last_seen': v['date']}
             idx[k] = k
             added += 1
@@ -3917,6 +3917,58 @@ def _up_detect(date_str):
     _DBG['out_after_overlay'] = len(out)
 
     return out, done_at, nfc_nocode
+
+
+@app.route('/api/fire_import', methods=['POST'])
+def fire_import():
+    """管理員：一次性匯入歷史消防檢查項目（寫入 shift_items，source='fire_import'，重複會跳過）。"""
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以使用。'}), 403
+    rows = (request.json or {}).get('rows') or []
+    if not isinstance(rows, list) or not rows:
+        return jsonify({'status': 'error', 'message': '沒有資料。'})
+    conn = None
+    added = skipped = 0
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        for r in rows:
+            code = (r.get('code') or '').strip()
+            cat = (r.get('category') or '').strip()
+            d = (r.get('date') or '').strip()
+            if not code or not cat or not re.match(r'^\d{4}-\d{2}-\d{2}$', d):
+                skipped += 1
+                continue
+            c.execute("""SELECT id FROM shift_items
+                         WHERE source = 'fire_import' AND code = %s AND category = %s
+                           AND (event_at AT TIME ZONE 'Asia/Macau')::date = %s::date""", (code, cat, d))
+            if c.fetchone():
+                skipped += 1
+                continue
+            detail = r.get('detail') or ''
+            c.execute("""INSERT INTO shift_items
+                         (record_id, source, item_key, type, code, category, problem, detail, side,
+                          status, note, display, event_at)
+                         VALUES (NULL, 'fire_import', %s, '場面', %s, %s, %s, %s, '',
+                                 %s, %s, %s, %s::date + time '09:00')""",
+                      (cat + '|' + code, code, cat, r.get('problem') or '', detail,
+                       r.get('status') or '已 Send mail', detail,
+                       '%s - %s（%s）' % (cat, r.get('problem') or '', code), d))
+            added += 1
+        conn.commit()
+        try: bust()
+        except Exception: pass
+        try: log_action('匯入消防歷史', '%d 項' % added)
+        except Exception: pass
+        return jsonify({'status': 'success', 'added': added, 'skipped': skipped,
+                        'message': '✅ 已匯入 %d 項（跳過 %d）' % (added, skipped)})
+    except Exception as e:
+        if conn:
+            try: conn.rollback()
+            except Exception: pass
+        return jsonify({'status': 'error', 'message': '❌ 匯入失敗：' + str(e)})
+    finally:
+        if conn: release_db_connection(conn)
 
 
 def _up_table_lookup():
