@@ -782,10 +782,11 @@
                 <button onclick="lcClose()" style="border:none; background:#eee; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:bold;">✖ 關閉</button>
             </div>
             <select id="lc-mode" onchange="lcRender()" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:8px; font-size:13px; font-weight:bold; color:#37474f; background:#fff;">
-                <option value="b">🔵 藍（#99CCFF）</option>
-                <option value="v">🟣 紫（#CCCCFF）</option>
-                <option value="p">🩷 粉（#FF99CC）</option>
-                <option value="o">🟠 橙（#FFCC99）</option>
+                <option value="b">🔵 藍（#BDD7EE）</option>
+                <option value="g">🟢 綠（#4EA72E）</option>
+                <option value="p">🩷 粉（#F26AA0）</option>
+                <option value="o">🟠 橙（#FFB066）</option>
+                <option value="v">🟣 紫（舊制用，可選）</option>
                 <option value="">↩️ 還原預設顏色</option>
             </select>
             <input id="lc-q" type="text" placeholder="搜尋台號，例如 1236" oninput="lcRender()" style="width:100%; margin-top:8px; padding:9px; border:1px solid #ccc; border-radius:8px; font-size:13px; box-sizing:border-box;">
@@ -5387,7 +5388,7 @@ items: collectItems(),
         { cycle: 'Week 3', total: 128, pits: [['PIT19', 5, 'b'], ['PIT25', 34, 'b'], ['PIT28', 23, 'b'], ['PIT18', 22, 'g'], ['PIT32', 11, 'b'], ['PIT33', 12, 'b'], ['PIT35', 2, 'b'], ['PIT01', 0, 'o']] },
         { cycle: 'Week 4', total: 114, pits: [['PIT02', 19, 'b'], ['PIT09', 23, 'b'], ['PIT13', 24, 'p'], ['PIT03', 16, 'b'], ['PIT11', 23, 'b'], ['PIT105', 9, 'b']] }
     ];
-    const LAYOUT_COLORS = { b: '#BDD7EE', g: '#4EA72E', p: '#F26AA0', o: '#FFB066' };
+    const LAYOUT_COLORS = { b: '#BDD7EE', g: '#4EA72E', p: '#F26AA0', o: '#FFB066', v: '#CCCCFF' };
     const LAYOUT_LEGEND = [
         ['#4EA72E', 'No Stand Betting Area, Have Pair+ & Lucky6&7 stand Betting Area'],
         ['#BDD7EE', 'Stand Betting Area & no pair+'],
@@ -5431,7 +5432,7 @@ items: collectItems(),
     }
 
     // ===== 台號顏色手動設定 =====
-    const LC_NAMES = { b: '藍', v: '紫', p: '粉', o: '橙' };
+    const LC_NAMES = { b: '藍', g: '綠', v: '紫', p: '粉', o: '橙' };
 
     function lcAllCodes() {
         const codes = [];
