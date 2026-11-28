@@ -7457,7 +7457,8 @@ items: collectItems(),
                     '<option value="layout">📐 Layout 生成表格（三欄）' +
                     (data.layout_mail ? '（' + data.layout_mail + '）' : '') + '</option>';
                 (data.cats || []).forEach(function (c) {
-                    html += '<option value="cat:' + urAttr(c.cat) + '">' + urEscape(c.short) + '（' + c.mail + '）</option>';
+                    const _val = (c.cat === '__fire__') ? 'fire' : ('cat:' + urAttr(c.cat));
+                    html += '<option value="' + _val + '">' + urEscape(c.short) + '（' + c.mail + '）</option>';
                 });
                 sel.innerHTML = html;
                 let ok = false;
