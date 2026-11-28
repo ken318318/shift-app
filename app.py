@@ -962,7 +962,7 @@ def access_info():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261128-03", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261128-04", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3572,6 +3572,10 @@ def _up_short_cat(cat):
     c = (cat or '').strip()
     if ' - ' in c:
         return c.split(' - ', 1)[1].strip()
+    # 「消防設備-滅火筒」這種無空格寫法也統一去掉前綴，避免同一類別兩種寫法顯示不一
+    for _p in ('消防設備-', '消防設備－', '消防設備 '):
+        if c.startswith(_p):
+            return c[len(_p):].strip() or c
     return c or '（未分類）'
 
 
