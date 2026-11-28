@@ -962,7 +962,7 @@ def access_info():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261128-06", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261128-07", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -4255,7 +4255,7 @@ def update_report_get():
         e = det.get(code) or {}
         hall, pit = resolve_hp(code)
         return {
-            'table': code,
+            'table': e.get('code') or code,
             'hall': hall,
             'pit': pit,
             'problem': e.get('problem') or '',
