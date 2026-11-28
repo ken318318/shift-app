@@ -914,12 +914,12 @@ def robots_txt():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-25", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-26", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
 def require_login():
-    allowed_routes = ['login', 'static', 'verify_wechat', 'catch_all_txt', 'healthz']
+    allowed_routes = ['login', 'static', 'verify_wechat', 'catch_all_txt', 'healthz', 'robots_txt', 'diag_page']
     endpoint = request.endpoint
     # 已知攻擊來源 IP：全站直接拒絕（硬編 + app_settings 動態名單）
     try:
