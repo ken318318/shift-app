@@ -962,7 +962,7 @@ def access_info():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261128-09", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261128-10", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -4871,7 +4871,7 @@ def layout_colors_set():
     colour = (data.get('colour') or '').strip().lower()
     code = (data.get('code') or '').strip().upper()
     pit = (data.get('pit') or '').strip().upper()
-    if colour not in ('b', 'v', 'p', 'o', ''):
+    if colour not in ('b', 'g', 'p', 'o', 'v', ''):
         return jsonify({'status': 'error', 'message': '❌ 顏色不正確。'})
     if code:
         if not re.match(r'^[A-Z]{1,4}\d{2,6}$', code):
