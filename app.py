@@ -962,7 +962,7 @@ def access_info():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261128-07", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261128-08", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3972,6 +3972,64 @@ def fire_import():
         if conn: release_db_connection(conn)
 
 
+def _up_hp_map():
+    """自訂「位置名 → Hall/Pit」對照表（存 app_settings.location_hp，JSON）。
+    用於 LT31、角子機45-54-01 這類不在 hall_tables 內的位置名。"""
+    try:
+        raw = get_setting('location_hp', '') or ''
+        if not raw:
+            return {}
+        d = json.loads(raw)
+        if not isinstance(d, dict):
+            return {}
+        out = {}
+        for k, v in d.items():
+            nk = _up_norm(k)
+            if not nk or not v:
+                continue
+            if isinstance(v, dict):
+                out[nk] = {'hall': str(v.get('hall', '') or ''), 'pit': str(v.get('pit', '') or '')}
+            elif isinstance(v, (list, tuple)) and len(v) == 2:
+                out[nk] = {'hall': str(v[0] or ''), 'pit': str(v[1] or '')}
+        return out
+    except Exception:
+        return {}
+
+
+@app.route('/api/hp_map', methods=['GET', 'POST'])
+def hp_map_api():
+    """管理員：查看／設定「位置名 → Hall/Pit」對照表。POST {"map": {"LT31": ["1","31"]}} 會合併。"""
+    if session.get('role') != 'admin':
+        return jsonify({'status': 'error', 'message': '⚠️ 只有管理員可以使用。'}), 403
+    if request.method == 'POST':
+        incoming = (request.json or {}).get('map') or {}
+        if not isinstance(incoming, dict):
+            return jsonify({'status': 'error', 'message': '格式錯誤'})
+        cur = {}
+        try:
+            raw = get_setting('location_hp', '') or ''
+            if raw:
+                cur = json.loads(raw)
+                if not isinstance(cur, dict):
+                    cur = {}
+        except Exception:
+            cur = {}
+        for k, v in incoming.items():
+            k = (k or '').strip()
+            if not k:
+                continue
+            if isinstance(v, dict):
+                cur[k] = [str(v.get('hall', '') or ''), str(v.get('pit', '') or '')]
+            elif isinstance(v, (list, tuple)) and len(v) == 2:
+                cur[k] = [str(v[0] or ''), str(v[1] or '')]
+        if not set_setting('location_hp', json.dumps(cur, ensure_ascii=False)):
+            return jsonify({'status': 'error', 'message': '❌ 儲存失敗'})
+        try: log_action('位置對照表', '更新 %d 筆' % len(incoming))
+        except Exception: pass
+        return jsonify({'status': 'success', 'count': len(cur), 'message': '✅ 已儲存 %d 筆位置對照' % len(cur)})
+    return jsonify({'status': 'success', 'map': _up_hp_map()})
+
+
 def _up_table_lookup():
     lut = {}
     conn = None
@@ -4125,10 +4183,11 @@ def update_report_get():
 
     det_all, done_map, nfc_nocode = _up_detect(date_str)
     lut = _up_table_lookup()
+    hp_extra = _up_hp_map()
 
     def resolve_hp(code):
         """台號對應 Hall／Pit。若只輸入數字（例：0307），嘗試用結尾比對。"""
-        hp = lut.get(code)
+        hp = lut.get(code) or hp_extra.get(code)
         if hp:
             return hp.get('hall', ''), hp.get('pit', '')
         if re.match(r'^\d{3,6}$', code or ''):
