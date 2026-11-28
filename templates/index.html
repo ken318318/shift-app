@@ -7557,6 +7557,60 @@ items: collectItems(),
         return out;
     }
 
+    // 🔥 消防（全部）：按用戶原檔的縱向 8 欄格式輸出（報告日期/Hall/Pit/附近樓號/異常項目/編號/備註/跟進進度）
+    function renderFireSheet(sheet) {
+        sheet.style.width = '100%';
+        const items = [];
+        (urState.columns || []).forEach(function (c) {
+            (c.items || []).forEach(function (it) {
+                items.push({ main: c.main, sub: c.sub, it: it });
+            });
+        });
+        (urState.pool || []).forEach(function (it) {
+            items.push({ main: '', sub: it.problem || '', it: it });
+        });
+        items.sort(function (a, b) {
+            const ha = parseInt(a.it.hall, 10), hb = parseInt(b.it.hall, 10);
+            const pa = parseInt(a.it.pit, 10), pb = parseInt(b.it.pit, 10);
+            return ((isNaN(ha) ? 9999 : ha) - (isNaN(hb) ? 9999 : hb))
+                || ((isNaN(pa) ? 9999 : pa) - (isNaN(pb) ? 9999 : pb))
+                || String(a.it.table || '').localeCompare(String(b.it.table || ''));
+        });
+        const d = urState.date || '';
+        let dl = d;
+        const mm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+        if (mm) dl = parseInt(mm[2], 10) + '/' + parseInt(mm[3], 10) + '/' + mm[1];
+
+        const FF = "font-family:'MSung-Light','PMingLiU',SimSun,serif;";
+        const tdBase = 'border:1px solid #000;padding:4px;text-align:center;background:#fff;font-size:13px;' + FF;
+        const thS = 'border:1px solid #000;background:#FFCC99;padding:5px;text-align:center;font-size:13px;' + FF;
+
+        let html = '<table style="width:100%;border-collapse:collapse;border:2px solid #000;">';
+        html += '<tr><td colspan="8" style="border:2px solid #000;padding:7px;text-align:center;font-size:16px;font-weight:bold;color:#00B0F0;background:#fff;' + FF + '">更新-' + urEscape(dl) + '</td></tr>';
+        html += '<tr><td colspan="8" style="border:1px solid #000;background:#FFCC99;padding:5px;text-align:center;font-size:14px;' + FF + '">消防安全檢查異常</td></tr>';
+        html += '<tr>' + ['報告日期', 'Hall位置', 'Pit位置', '附近/檯號', '異常項目', '編號', '備注Remarks', '跟進進度']
+            .map(function (h) { return '<td style="' + thS + '">' + h + '</td>'; }).join('') + '</tr>';
+
+        items.forEach(function (x) {
+            const it = x.it;
+            const note = String(it.note || '');
+            const cm = /Code[:：]\s*(\d+)/i.exec(note);
+            const codeNo = cm ? cm[1] : '';
+            const remark = (note.replace(/\(?Code[:：]\s*\d+\)?/ig, '').trim()) || x.sub || '';
+            const color = it.is_new ? '#FF0000' : '#0D0D0D';
+            const st = String(it.status || '');
+            const prog = (st.indexOf('已處理') >= 0 || /done/i.test(st)) ? 'Done' : 'Pending';
+            const row = [dl, it.hall || '', it.pit || '', it.table || '', x.main || '', codeNo, remark, prog];
+            html += '<tr>' + row.map(function (v) {
+                return '<td style="' + tdBase + 'color:' + color + ';">' + urEscape(String(v)) + '</td>';
+            }).join('') + '</tr>';
+        });
+        html += '</table>';
+        html += '<div style="margin-top:8px;font-size:12px;color:#d32f2f;">※ 紅色字為新增（對比同一類別上一份更新表）</div>';
+        sheet.innerHTML = html;
+        renderUrPool();
+    }
+
     function renderUpdateReport() {
         const sheet = document.getElementById('lr-sheet');
         if (!sheet || !urState) return;
@@ -7591,6 +7645,7 @@ items: collectItems(),
         const title = urEnTitle();
         sheet.style.width = Math.min(1000, Math.max(560, nc * 240)) + 'px';
 
+        if (urState.type === 'fire') { renderFireSheet(sheet); return; }
         if (urState.type === 'layout') { renderLayoutTemplate(sheet); return; }
 
         const w1 = (100 / nc * 0.25).toFixed(3);
