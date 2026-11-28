@@ -7577,18 +7577,21 @@ items: collectItems(),
                 || String(a.it.table || '').localeCompare(String(b.it.table || ''));
         });
         const d = urState.date || '';
-        let dl = d;
+        let dl = d, dlCell = d;
         const mm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
-        if (mm) dl = parseInt(mm[1], 10) + '年' + parseInt(mm[2], 10) + '月' + parseInt(mm[3], 10) + '日';
+        if (mm) {
+            dl = parseInt(mm[1], 10) + '年' + parseInt(mm[2], 10) + '月' + parseInt(mm[3], 10) + '日';
+            dlCell = parseInt(mm[2], 10) + '/' + parseInt(mm[3], 10) + '/' + mm[1];
+        }
 
         const FF = "font-family:'MSung-Light','PMingLiU',SimSun,serif;";
         const tdBase = 'border:1px solid #000;padding:4px;text-align:center;background:#fff;font-size:13px;' + FF;
         const thS = 'border:1px solid #000;background:#FFCC99;padding:5px;text-align:center;font-size:13px;' + FF;
 
         let html = '<table style="width:100%;border-collapse:collapse;border:2px solid #000;">';
-        html += '<colgroup><col style="width:11%"><col style="width:8%"><col style="width:8%">'
-              + '<col style="width:24%"><col style="width:13%"><col style="width:10%">'
-              + '<col style="width:16%"><col style="width:10%"></colgroup>';
+        html += '<colgroup><col style="width:12%"><col style="width:7%"><col style="width:7%">'
+              + '<col style="width:22%"><col style="width:12%"><col style="width:10%">'
+              + '<col style="width:18%"><col style="width:12%"></colgroup>';
         html += '<tr><td colspan="8" style="border:2px solid #000;padding:7px;text-align:center;font-size:16px;font-weight:bold;color:#00B0F0;background:#fff;' + FF + '">更新-' + urEscape(dl) + '</td></tr>';
         html += '<tr><td colspan="8" style="border:1px solid #000;background:#FFCC99;padding:5px;text-align:center;font-size:14px;' + FF + '">消防安全檢查異常</td></tr>';
         html += '<tr>' + ['報告日期', 'Hall位置', 'Pit位置', '附近/檯號', '異常項目', '編號', '備注Remarks', '跟進進度']
@@ -7603,7 +7606,7 @@ items: collectItems(),
             const color = it.is_new ? '#FF0000' : '#0D0D0D';
             const st = String(it.status || '');
             const prog = (st.indexOf('已處理') >= 0 || /done/i.test(st)) ? 'Done' : 'Pending';
-            const row = [dl, it.hall || '', it.pit || '', it.table || '', x.main || '', codeNo, remark, prog];
+            const row = [dlCell, it.hall || '', it.pit || '', it.table || '', x.main || '', codeNo, remark, prog];
             html += '<tr>' + row.map(function (v) {
                 return '<td style="' + tdBase + 'color:' + color + ';">' + urEscape(String(v)) + '</td>';
             }).join('') + '</tr>';
