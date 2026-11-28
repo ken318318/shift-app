@@ -962,7 +962,7 @@ def access_info():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261128-05", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261128-06", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3740,7 +3740,8 @@ def _si_overlay_detect(out, date_str, done_at=None):
             continue
         k = (catname, _up_norm(code))
         ds = _d.strftime('%Y-%m-%d') if hasattr(_d, 'strftime') else str(_d)[:10]
-        latest[k] = {'status': status or '', 'problem': prob or '', 'date': ds, 'detail': detail or ''}
+        latest[k] = {'status': status or '', 'problem': prob or '', 'date': ds,
+                     'detail': detail or '', 'raw_code': code}
         if k not in first_seen:
             first_seen[k] = ds
 
@@ -3768,7 +3769,7 @@ def _si_overlay_detect(out, date_str, done_at=None):
             # 文字解析唔到（例如只打 API 寫 items[]、冇 note）都要出現在更新表
             if k in done_norm:
                 continue
-            out[k] = {'category': k[0], 'code': k[1], 'problem': v['problem'],
+            out[k] = {'category': k[0], 'code': v.get('raw_code') or k[1], 'problem': v['problem'],
                       'status': v['status'], 'note': v.get('detail') or '', 'side': '',
                       'first_seen': first_seen.get(k, v['date']), 'last_seen': v['date']}
             idx[k] = k
@@ -4261,6 +4262,7 @@ def update_report_get():
             'status': e.get('status') or '',
             'side': e.get('side') or '',
             'note': e.get('note') or '',
+            'date': e.get('last_seen') or '',
             'is_new': code not in baseline,
         }
 
