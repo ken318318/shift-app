@@ -921,8 +921,8 @@ def security_clean_records():
 
 @app.route('/robots.txt')
 def robots_txt():
-    """禁止搜尋引擎索引（內部系統）。"""
-    return Response("User-agent: *\nDisallow: /\n", mimetype='text/plain')
+    """允許爬取（配合 X-Robots-Tag: noindex，令 Google 盡快剔除舊索引）。"""
+    return Response("User-agent: *\nAllow: /\n", mimetype='text/plain')
 
 
 @app.route('/k/<token>')
@@ -962,7 +962,7 @@ def access_info():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261127-27", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261127-28", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
