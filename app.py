@@ -962,7 +962,7 @@ def access_info():
 
 @app.route('/healthz')
 def healthz():
-    return "ok v20261128-01", 200, {'Content-Type': 'text/plain'}
+    return "ok v20261128-02", 200, {'Content-Type': 'text/plain'}
 
 
 @app.before_request
@@ -3497,7 +3497,7 @@ def audit_logs():
         conn = get_db_connection()
         c = conn.cursor()
         c.execute("""SELECT id, actor, action, detail,
-                            created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Asia/Macau'
+                            to_char(created_at AT TIME ZONE 'Asia/Macau', 'YYYY-MM-DD HH24:MI:SS')
                      FROM audit_logs ORDER BY id DESC LIMIT %s""", (limit,))
         rows = c.fetchall()
         logs = [{"id": r[0], "actor": r[1], "action": r[2], "detail": r[3],
